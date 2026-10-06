@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>出面LIFFテスト</title>
+<style>
+  body{margin:0;padding:24px 16px;font-family:sans-serif;background:#f7f6f3;color:#1a1a18}
+  h1{font-size:22px;margin:0 0 16px}
+  .box{background:#fff;border:1.5px solid #e0ddd6;border-radius:12px;padding:14px;margin-bottom:14px;font-size:14px;line-height:1.7;word-break:break-all}
+  button{width:100%;padding:16px;border:none;border-radius:12px;background:#1E7B45;color:#fff;font-size:16px;margin-bottom:10px}
+  button:disabled{opacity:.5}
+  #log{white-space:pre-wrap;font-size:13px}
+</style>
+</head>
+<body>
+<h1>出面 LIFFテスト1</h1>
+<div class="box" id="state">準備中…</div>
+<button id="btn" disabled onclick="sendTest()">このトークにテスト送信（文＋写真1枚）</button>
+<div class="box" id="log"></div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+// ★LINE Developers で LIFF アプリを作ったら、その LIFF ID をここに入れる
+const LIFF_ID = '';
+
+const $ = id => document.getElementById(id);
+const log = t => { $('log').textContent += t + '\n'; };
+const here = location.href.replace(/[?#].*$/, '').replace(/index\.html$/, '');
+
+async function main() {
+  if (!LIFF_ID) { $('state').textContent = 'LIFF_ID が未設定です'; return; }
+  try {
+    await liff.init({ liffId: LIFF_ID });
+  } catch (e) { $('state').textContent = 'liff.init 失敗: ' + e; return; }
+  const ctx = liff.getContext() || {};
+  const inClient = liff.isInClient();
+  const can = liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker');
+  let name = '';
+  try { name = (await liff.getProfile()).displayName; } catch (e) { name = '(取得できず)'; }
+  $('state').innerHTML =
+    'LINEの中で開いている: <b>' + (inClient ? 'はい' : 'いいえ') + '</b><br>' +
+    '開いた場所: <b>' + (ctx.type || '不明') + '</b>（group=グループ / utou=1対1）<br>' +
+    'あなた: <b>' + name + '</b><br>' +
+    'shareTargetPicker: ' + (can ? '使える' : '使えない');
+  $('btn').disabled = !(inClient && ['group', 'room', 'utou'].includes(ctx.type));
+  if ($('btn').disabled) log('グループのトーク画面に貼ったリンクから開いてください');
+}
+
+async function sendTest() {
+  $('btn').disabled = true;
+  const img = here + 'sample.jpg';
+  try {
+    await liff.sendMessages([
+      { type: 'text', text: '【出面テスト】' + new Date().toLocaleString('ja-JP') + '\nLIFFから本人として送信しています' },
+      { type: 'image', originalContentUrl: img, previewImageUrl: img }
+    ]);
+    log('送信OK。トークを見てください');
+  } catch (e) {
+    log('送信失敗: ' + (e.code || '') + ' ' + (e.message || e));
+    $('btn').disabled = false;
+  }
+}
+main();
+</script>
+</body>
+</html>
