@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>業務報告（仮）</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:0 0 40px;font-family:sans-serif;background:#f7f6f3;color:#1a1a18}
+  .hero{padding:22px 18px 14px;border-bottom:1px solid #e8e6e0}
+  .hero small{font-size:10px;letter-spacing:.12em;color:#999}
+  .hero h1{font-size:26px;font-weight:400;margin:4px 0 0}
+  .note{margin:10px 18px 0;padding:8px 10px;background:#FFF4E5;color:#7a4a0a;border-radius:8px;font-size:12px}
+  .mode{display:flex;gap:8px;padding:14px 18px 0}
+  .mode div{flex:1;text-align:center;padding:14px 4px;border-radius:12px;border:1.5px solid #e0ddd6;background:#fff;font-size:15px}
+  .mode div.on{background:#1a1a18;color:#fff;border-color:#1a1a18}
+  .b{padding:16px 18px 0}
+  .lab{font-size:15px;font-weight:600;margin-bottom:6px}
+  .sub{font-size:12px;color:#999;margin:-4px 0 6px}
+  select,input,textarea{width:100%;height:42px;padding:0 10px;font-size:15px;border:1.5px solid #e0ddd6;border-radius:10px;background:#fff;color:#1a1a18}
+  textarea{height:64px;padding:8px 10px}
+  .row{display:flex;gap:8px}
+  .row > *{flex:1}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chips span{padding:7px 12px;border-radius:18px;border:1.5px solid #e0ddd6;background:#fff;font-size:14px}
+  .chips span.on{background:#1a1a18;color:#fff;border-color:#1a1a18}
+  button{width:calc(100% - 36px);margin:22px 18px 0;padding:16px;border:none;border-radius:14px;background:#1a1a18;color:#fff;font-size:16px}
+  button:disabled{opacity:.5}
+  #log{margin:12px 18px 0;font-size:13px;white-space:pre-wrap;color:#555}
+</style>
+</head>
+<body>
+<div class="hero"><small>DAILY REPORT（仮）</small><h1>業務報告</h1></div>
+<div class="note">仮のフォームです。送信してもスプレッドシートには書き込まれず、LINEにカードが出るだけです。写真はテスト画像を使います。</div>
+
+<div class="mode"><div id="m1" class="on" onclick="setMode('施工')">出面（施工）</div><div id="m2" onclick="setMode('現調・打合せ')">現調・打合せ</div></div>
+
+<div class="b"><div class="lab">日付</div><input type="date" id="date"></div>
+<div class="b"><div class="lab">会社</div><select id="company" onchange="onCompany()"></select></div>
+<div class="b"><div class="lab">報告者</div><select id="reporter" onchange="drawMembers()"></select></div>
+<div class="b"><div class="lab">現場名</div><div class="sub" id="gsub"></div><select id="genba"></select></div>
+<div class="b"><div class="lab">勤務区分</div><select id="kinmu"><option value="1">1.0　一日</option><option value="0.5">0.5　半日</option></select></div>
+<div class="b"><div class="lab">自社メンバー（タップで追加）</div><div class="chips" id="members"></div></div>
+<div class="b"><div class="lab">残業（分・1人あたり）</div><input type="number" id="zangyo" min="0" step="10" placeholder="0"></div>
+<div class="b"><div class="lab">協力会社</div>
+  <div class="row"><select id="partner"><option value="">なし</option><option>葛西組</option><option>望</option><option>疋田工業</option><option>(株)SHIMIZU</option></select>
+  <input type="number" id="pninku" min="0" step="0.5" placeholder="人役"></div></div>
+<div class="b"><div class="lab">車・ユニック</div><div class="row"><input type="number" id="cars" min="0" placeholder="車"><input type="number" id="unic" min="0" placeholder="ユニック"></div></div>
+<div class="b"><div class="lab">MEMO</div><textarea id="memo" placeholder="特記事項があれば"></textarea></div>
+<div class="b"><div class="lab">写真の枚数（テスト画像）</div>
+  <select id="photos"><option>0</option><option>1</option><option>2</option><option selected>4</option><option>6</option><option>10</option><option>15</option><option>30</option></select></div>
+
+<button id="send" disabled onclick="submitKari()">報告を送信する（仮）</button>
+<div id="log"></div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+const LIFF_ID = '2011897591-HBBipfnN';
+const $ = id => document.getElementById(id);
+const here = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
+
+// 今の本物のデータ（2026-10-06 時点の社員DB・台帳から）
+const PEOPLE = {
+  '白石工業': ['白石(英)','白石(周)','中村(秀)','中村(光)','座木','永淵','三川','儀間','荒川','中野','森田','汐満 玲央'],
+  '中嶋板金工業': ['横手','芳本','御手洗 大喜','上村 竜二'],
+  '山下板金工作所': ['鮫島 竜男','葛西 道明']
+};
+const GENBA = {
+  '工事中': ['金古様邸','高田屋箱崎','西区商業施設','ネグロス電工','GUDEN','大森様邸','ダイワ北九州','網場町ホテル','田中農園','ユニクロ八幡東','ﾋﾞﾊﾞﾓｰﾙ','LP福岡古賀'],
+  '準備中': ['嘉麻市養豚場'],
+  '契約確定': ['千早5丁目','井尻ﾏﾝｼｮﾝ','店屋町マンション'],
+  '見積完了': ['松崎3丁目','SHIMIZU本社','夕原未来工房','KRP','松尾サービス整備工場','グローバルステイ吉塚','リバーサイド呉服','佐賀駅前ホテル','祇園ホテル','バリューリンク福津','金龍行橋店'],
+  '見積中': ['カフェ四稀','ブリジストン北九州','YSP小倉ビル','金城工業　トイレ棟','三交自動車','九州管材','東神野石灰鉱山拡張事業','大江鉄工所　ルーフファン改修工事','九州ハセック','ハローパーク拾六町','一井工業','ダイレックスつつじヶ丘','ベビーフェイス宗像','アトム篠栗','シャトレーゼ横代','中州二丁目PJ','八幡板金工業事務所庇改修工事','大光炉材ベンチレータ(シノダ建工)']
+};
+const MODE_ST = { '施工': ['工事中','準備中','契約確定'], '現調・打合せ': ['見積中','見積完了','契約確定','準備中','工事中'] };
+let mode = '施工', picked = [];
+
+function opt(sel, list, ph) { sel.innerHTML = (ph ? '<option value="">' + ph + '</option>' : '') + list.map(x => '<option>' + x + '</option>').join(''); }
+function setMode(m) {
+  mode = m; $('m1').className = m === '施工' ? 'on' : ''; $('m2').className = m === '施工' ? '' : 'on';
+  const g = $('genba'); g.innerHTML = '<option value="">選択してください</option>';
+  const og = document.createElement('optgroup'); og.label = '白石工業';
+  MODE_ST[m].forEach(st => GENBA[st].forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = st + '　' + n; og.appendChild(o); }));
+  g.appendChild(og);
+  $('gsub').textContent = (m === '施工' ? '工事中・準備中・契約確定' : '見積中〜工事中') + '　' + og.children.length + '件';
+}
+function onCompany() { opt($('reporter'), PEOPLE[$('company').value] || [], '選択してください'); picked = []; drawMembers(); }
+function drawMembers() {
+  const rep = $('reporter').value, list = (PEOPLE[$('company').value] || []).filter(n => n !== rep);
+  picked = picked.filter(n => n !== rep);
+  $('members').innerHTML = '';
+  list.forEach(n => { const s = document.createElement('span'); s.textContent = n; s.className = picked.includes(n) ? 'on' : '';
+    s.onclick = () => { picked = picked.includes(n) ? picked.filter(x => x !== n) : picked.concat(n); drawMembers(); }; $('members').appendChild(s); });
+}
+
+// ---- LINEに出すカード（本番と同じ形）----
+function colsFor(n) { return n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4; }
+function buildCard(r) {
+  const n = r.photos.length, COLS = colsFor(n), green = r.mode === '施工' ? '#1E7B45' : '#2B6CB0';
+  const tile = u => ({ type: 'image', url: u, size: 'full', aspectRatio: COLS === 1 ? '4:3' : '1:1', aspectMode: 'cover', flex: 1, action: { type: 'uri', uri: u } });
+  const grid = list => { const rows = []; for (let i = 0; i < list.length; i += COLS) { const row = list.slice(i, i + COLS).map(tile); while (row.length < COLS) row.push({ type: 'filler' }); rows.push({ type: 'box', layout: 'horizontal', spacing: 'xs', contents: row }); } return { type: 'box', layout: 'vertical', spacing: 'xs', contents: rows }; };
+  const line = (t, c) => ({ type: 'text', text: t, size: 'xxs', color: c || '#1F2429', wrap: true });
+  const md = r.date.slice(5).replace('-', '/').replace(/^0/, '').replace('/0', '/');
+  const tag = r.mode === '施工' ? '' : '［現調］';
+  const pages = n ? [r.photos.slice(0, 12)] : [[]];
+  for (let i = 12; i < n; i += 12) pages.push(r.photos.slice(i, i + 12));
+  let from = 1;
+  const bubbles = pages.map((list, p) => {
+    const head = { type: 'box', layout: 'horizontal', backgroundColor: green, paddingAll: '8px', paddingStart: '10px', paddingEnd: '10px', contents: [
+      { type: 'text', text: p === 0 ? tag + md + ' ' + r.genba : r.genba + ' つづき', size: 'sm', weight: 'bold', color: '#FFFFFF', flex: 5 },
+      { type: 'text', text: p === 0 ? (n ? '写真' + n + '枚' : '写真なし') : from + '〜' + (from + list.length - 1) + '枚目', size: 'xxs', color: '#EEF5F0', align: 'end', gravity: 'center', flex: 3 } ] };
+    const body = [];
+    if (p === 0) {
+      body.push(line(r.members.map((m, i) => i === 0 ? m + '★' : m).join('・') + '（' + r.ninku + '人役' + (r.zangyo ? '／残業' + r.zangyo + '分' : '') + '）'));
+      const l2 = [];
+      if (r.partner) l2.push('協力 ' + r.partner + '×' + (r.pninku || 0));
+      if (r.cars || r.unic) l2.push('車' + (r.cars || 0) + '・ユニ' + (r.unic || 0));
+      if (l2.length) body.push(line(l2.join('／')));
+      if (r.memo) body.push(line('メモ：' + r.memo, '#5F5E5A'));
+      body.push(line(r.company, '#8C959F'));
+    }
+    if (list.length) body.push(grid(list));
+    from += list.length;
+    return { type: 'bubble', size: 'mega', header: head, body: { type: 'box', layout: 'vertical', spacing: 'xs', paddingAll: '8px', contents: body } };
+  });
+  return { type: 'flex', altText: '【' + (r.mode === '施工' ? '出面' : '現調') + '】' + md + ' ' + r.genba + '（' + r.members[0] + '）',
+    contents: bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles } };
+}
+
+async function submitKari() {
+  const r = { mode: mode, date: $('date').value, company: $('company').value, genba: $('genba').value,
+    members: [$('reporter').value].concat(picked).filter(Boolean), kinmu: Number($('kinmu').value),
+    zangyo: Number($('zangyo').value || 0), partner: $('partner').value, pninku: $('pninku').value,
+    cars: Number($('cars').value || 0), unic: Number($('unic').value || 0), memo: $('memo').value.trim(), photos: [] };
+  if (!r.date || !r.company || !r.genba || !r.members.length) { alert('日付・会社・報告者・現場名を入れてください'); return; }
+  r.ninku = r.members.length * r.kinmu;
+  const n = Number($('photos').value);
+  for (let i = 1; i <= n; i++) r.photos.push(here + 'photo' + String(((i - 1) % 10) + 1).padStart(2, '0') + '.jpg');
+  $('send').disabled = true;
+  try { await liff.sendMessages([buildCard(r)]); $('log').textContent = '送りました。トークを見てください'; }
+  catch (e) { $('log').textContent = '送信失敗: ' + (e.code || '') + ' ' + (e.message || e); }
+  $('send').disabled = false;
+}
+
+async function main() {
+  $('date').value = new Date().toISOString().slice(0, 10);
+  opt($('company'), Object.keys(PEOPLE), '選択してください');
+  onCompany(); setMode('施工');
+  try { await liff.init({ liffId: LIFF_ID }); } catch (e) { $('log').textContent = 'liff.init 失敗: ' + e; return; }
+  const ctx = liff.getContext() || {};
+  const ok = liff.isInClient() && ['group', 'room', 'utou'].includes(ctx.type);
+  $('send').disabled = !ok;
+  if (!ok) $('log').textContent = 'LINEのグループに貼ったリンクから開いてください';
+}
+main();
+</script>
+</body>
+</html>

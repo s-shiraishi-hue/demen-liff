@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>業務報告カードテスト</title>
+<style>
+  body{margin:0;padding:24px 16px;font-family:sans-serif;background:#f7f6f3;color:#1a1a18}
+  h1{font-size:20px;margin:0 0 6px}
+  p{font-size:13px;color:#666;margin:0 0 16px}
+  .box{background:#fff;border:1.5px solid #e0ddd6;border-radius:12px;padding:12px;margin-bottom:14px;font-size:14px;line-height:1.7}
+  button{width:100%;padding:15px;border:none;border-radius:12px;background:#1E7B45;color:#fff;font-size:15px;margin-bottom:10px}
+  button.alt{background:#2B6CB0}
+  button:disabled{opacity:.5}
+  #log{white-space:pre-wrap;font-size:13px}
+</style>
+</head>
+<body>
+<h1>業務報告カード＋写真</h1>
+<p>前の「業務報告」カードの中身に、写真のタイルを付けた形。施工完了のときだけ🎉の帯。写真の枚数で列が変わります（1枚＝1列／2〜4＝2列／5〜9＝3列／10以上＝4列）</p>
+<div class="box" id="state">準備中…</div>
+<button disabled onclick="send(4,'終了')">本日の作業終了：写真4枚</button>
+<button disabled onclick="send(10,'終了')">本日の作業終了：写真10枚</button>
+<button disabled onclick="send(30,'終了')">本日の作業終了：写真30枚</button>
+<button disabled onclick="send(1,'完了')">🎉施工完了：写真1枚</button>
+<button disabled onclick="send(6,'完了')">🎉施工完了：写真6枚</button>
+<button class="alt" disabled onclick="send(4,'終了',true)">現調・打合せ：写真4枚</button>
+<div class="box" id="log"></div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+const LIFF_ID = '2011897591-HBBipfnN';
+const $ = id => document.getElementById(id);
+const log = t => { $('log').textContent += t + '\n'; };
+const here = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
+
+async function main() {
+  try { await liff.init({ liffId: LIFF_ID }); } catch (e) { $('state').textContent = 'liff.init 失敗: ' + e; return; }
+  const ctx = liff.getContext() || {};
+  const ok = liff.isInClient() && ['group', 'room', 'utou'].includes(ctx.type);
+  $('state').textContent = '開いた場所: ' + (ctx.type || '不明') + (ok ? '' : '（グループのリンクから開いてください）');
+  document.querySelectorAll('button').forEach(b => b.disabled = !ok);
+}
+
+// 見本の報告（前のカードの中身と同じ）
+const SAMPLE = {
+  date: '2026/06/05(金)', kubun: '施工', company: '白石工業', genba: '略称テスト②', reporter: '儀間',
+  members: ['儀間', '永渕', '座木', '三川'], zangyo: [60, 60, 60, 60], kinmu: 1,
+  partners: '(株)中嶋板金工業 2人工（残0分）、葛西組 1人工（残0分）、(株)アクトライズ 1人工（残0分）',
+  partnerNinku: 4, cars: 1, unic: 0, memo: '雨のため午後から。明日は棟包み予定'
+};
+
+function colsFor(n) { return n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4; }
+
+function buildCard(r, photos) {
+  const n = photos.length, COLS = colsFor(n);
+  const gencho = r.kubun !== '施工';
+  const t = (s, o) => Object.assign({ type: 'text', text: s, size: 'sm', color: '#1F2429', wrap: true }, o || {});
+  const tile = u => ({ type: 'image', url: u, size: 'full', aspectRatio: COLS === 1 ? '4:3' : '1:1', aspectMode: 'cover', flex: 1,
+    action: { type: 'uri', uri: u } });
+  const grid = list => {
+    const rows = [];
+    for (let i = 0; i < list.length; i += COLS) {
+      const row = list.slice(i, i + COLS).map(tile);
+      while (row.length < COLS) row.push({ type: 'filler' });
+      rows.push({ type: 'box', layout: 'horizontal', spacing: 'xs', contents: row });
+    }
+    return { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: rows };
+  };
+  const selfNinku = r.members.length * r.kinmu;
+  // 送信した内容は全部出す（入れていない項目は「なし」）
+  const lines = [
+    t('▼区分：' + r.kubun),
+    t('▼会社：' + r.company),
+    t('▼現場：' + r.genba),
+    t('▼報告者：' + r.reporter),
+    t('▼勤務区分：' + (r.kinmu === 0.5 ? '0.5 半日' : '1.0 一日')),
+    t('▼自社（' + selfNinku + '人工）'),
+    t('　' + r.members.join('・')),
+    t('　残業 ' + r.members.map((m, i) => m + (r.zangyo[i] || 0)).join('・') + '（分）'),
+    t('▼協力：' + (r.partners || 'なし')),
+    t('▼車両：車' + r.cars + '台・ユニック' + r.unic + '台'),
+    t('▼MEMO：' + (r.memo || 'なし'))
+  ];
+  const pages = [photos.slice(0, 12)];
+  for (let i = 12; i < n; i += 12) pages.push(photos.slice(i, i + 12));
+  let from = 1;
+  const bubbles = pages.map((list, p) => {
+    let contents;
+    if (p === 0) {
+      contents = [
+        t('【業務報告】' + r.date, { size: 'md', weight: 'bold' }),
+        r.end === '完了'
+          ? { type: 'box', layout: 'vertical', backgroundColor: '#E6F4EC', cornerRadius: '10px', paddingAll: '8px', margin: 'md', contents: [
+              t('🎉 施工完了', { weight: 'bold', align: 'center', color: '#1E7B45' }),
+              t('お疲れさまでした！', { size: 'xs', align: 'center', color: '#2E7D4F' }) ] }
+          : t(gencho ? '📝 現調・打合せ' : '本日の作業終了', { size: 'xs', color: gencho ? '#185FA5' : '#5F5E5A', margin: 'sm' }),
+        { type: 'separator', margin: 'md' },
+        { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: lines },
+        { type: 'separator', margin: 'md' },
+        t('合計：' + (selfNinku + r.partnerNinku) + '人工' + (n ? '　📷 写真' + n + '枚' : ''), { margin: 'md' })
+      ];
+      if (list.length) contents.push(grid(list));
+    } else {
+      contents = [t('📷 写真 ' + from + '〜' + (from + list.length - 1) + ' / ' + n + '枚', { size: 'xs', color: '#5F5E5A' }), grid(list)];
+    }
+    from += list.length;
+    return { type: 'bubble', size: 'mega', body: { type: 'box', layout: 'vertical', paddingAll: '14px', contents: contents } };
+  });
+  return { type: 'flex', altText: '【業務報告】' + r.date + ' ' + r.genba + '（' + r.reporter + '）',
+    contents: bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles } };
+}
+
+async function send(n, end, gencho) {
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  const r = Object.assign({}, SAMPLE, { end: end || '終了' }, gencho ? { kubun: '現調・打合せ' } : {});
+  const photos = [];
+  for (let i = 1; i <= n; i++) photos.push(here + 'photo' + String(((i - 1) % 10) + 1).padStart(2, '0') + '.jpg');
+  try { await liff.sendMessages([buildCard(r, photos)]); log('送りました（' + r.kubun + '・' + r.end + '・写真' + n + '枚）'); }
+  catch (e) { log('送信失敗: ' + (e.code || '') + ' ' + (e.message || e)); }
+  document.querySelectorAll('button').forEach(b => b.disabled = false);
+}
+main();
+</script>
+</body>
+</html>
