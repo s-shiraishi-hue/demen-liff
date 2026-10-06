@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>出面カードテスト</title>
+<style>
+  body{margin:0;padding:24px 16px;font-family:sans-serif;background:#f7f6f3;color:#1a1a18}
+  h1{font-size:20px;margin:0 0 6px}
+  p{font-size:13px;color:#666;margin:0 0 16px}
+  .box{background:#fff;border:1.5px solid #e0ddd6;border-radius:12px;padding:12px;margin-bottom:14px;font-size:14px;line-height:1.7}
+  button{width:100%;padding:15px;border:none;border-radius:12px;background:#1E7B45;color:#fff;font-size:15px;margin-bottom:10px}
+  button.alt{background:#2B6CB0}
+  button:disabled{opacity:.5}
+  #log{white-space:pre-wrap;font-size:13px}
+</style>
+</head>
+<body>
+<h1>まとめカード 枚数で大きさが変わる版</h1>
+<p>1枚＝1列／2〜4枚＝2列／5〜9枚＝3列／10枚以上＝4列</p>
+<div class="box" id="state">準備中…</div>
+<button disabled onclick="send(1)">写真1枚</button>
+<button disabled onclick="send(2)">写真2枚</button>
+<button disabled onclick="send(4)">写真4枚</button>
+<button disabled onclick="send(6)">写真6枚</button>
+<button disabled onclick="send(10)">写真10枚</button>
+<button disabled onclick="send(30)">写真30枚</button>
+<div class="box" id="log"></div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+const LIFF_ID = '2011897591-HBBipfnN';
+const $ = id => document.getElementById(id);
+const log = t => { $('log').textContent += t + '\n'; };
+const here = location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
+
+async function main() {
+  try { await liff.init({ liffId: LIFF_ID }); } catch (e) { $('state').textContent = 'liff.init 失敗: ' + e; return; }
+  const ctx = liff.getContext() || {};
+  const ok = liff.isInClient() && ['group', 'room', 'utou'].includes(ctx.type);
+  $('state').textContent = '開いた場所: ' + (ctx.type || '不明') + (ok ? '' : '（グループのリンクから開いてください）');
+  document.querySelectorAll('button').forEach(b => b.disabled = !ok);
+}
+
+// 枚数で列の数を変える：1枚=1列／2〜4枚=2列／5〜9枚=3列／10枚以上=4列（12枚ずつ横スクロール）
+function colsFor(n) { return n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4; }
+async function send(n, size, first) {
+  size = size || 'mega'; first = first || 12;
+  const COLS = colsFor(n);
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  const urls = [];
+  for (let i = 1; i <= n; i++) urls.push(here + 'photo' + String(((i - 1) % 10) + 1).padStart(2, '0') + '.jpg');
+  const kv = (k, v) => ({ type: 'box', layout: 'baseline', spacing: 'sm', contents: [
+    { type: 'text', text: k, size: 'xs', color: '#8C959F', flex: 2 },
+    { type: 'text', text: v, size: 'xs', color: '#1F2429', flex: 7, wrap: true } ] });
+  const tile = u => ({ type: 'image', url: u, size: 'full', aspectRatio: COLS === 1 ? '4:3' : '1:1', aspectMode: 'cover', flex: 1,
+    action: { type: 'uri', uri: u } });
+  const grid = list => {
+    const rows = [];
+    for (let i = 0; i < list.length; i += COLS) {
+      const row = list.slice(i, i + COLS).map(tile);
+      while (row.length < COLS) row.push({ type: 'filler' });
+      rows.push({ type: 'box', layout: 'horizontal', spacing: 'xs', contents: row });
+    }
+    return { type: 'box', layout: 'vertical', spacing: 'xs', contents: rows };
+  };
+  const pages = [urls.slice(0, first)];
+  for (let i = first; i < urls.length; i += 12) pages.push(urls.slice(i, i + 12));
+  let from = 1;
+  const bubbles = pages.map((list, p) => {
+    // 見出し1行（日付・現場・枚数）＋文字2行（自社／協力・車）。2枚目以降のカードは見出しだけ
+    const head = { type: 'box', layout: 'horizontal', backgroundColor: '#1E7B45', paddingAll: '8px', paddingStart: '10px', paddingEnd: '10px', contents: [
+      { type: 'text', text: p === 0 ? '10/6 高田屋箱崎' : '高田屋箱崎 つづき', size: 'sm', weight: 'bold', color: '#FFFFFF', flex: 5, wrap: false },
+      { type: 'text', text: p === 0 ? '写真' + n + '枚' : from + '〜' + (from + list.length - 1) + '枚目', size: 'xxs', color: '#DFF3E6', align: 'end', gravity: 'center', flex: 3 } ] };
+    const line = t => ({ type: 'text', text: t, size: 'xxs', color: '#1F2429', wrap: true });
+    const body = { type: 'box', layout: 'vertical', spacing: 'xs', paddingAll: '8px', contents:
+      (p === 0 ? [line('永渕★・座木・三川（3人役）'), line('協力 葛西組×1／車2・ユニ0')] : []).concat([grid(list)]) };
+    from += list.length;
+    return { type: 'bubble', size: size, header: head, body: body };
+  });
+  const contents = bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles };
+  try {
+    await liff.sendMessages([{ type: 'flex', altText: '【出面】10/6 高田屋箱崎 写真' + n + '枚', contents: contents }]);
+    log('送りました（' + n + '枚・' + COLS + '列）');
+  } catch (e) { log('送信失敗: ' + (e.code || '') + ' ' + (e.message || e)); }
+  document.querySelectorAll('button').forEach(b => b.disabled = false);
+}
+main();
+</script>
+</body>
+</html>
