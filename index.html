@@ -19,6 +19,8 @@
 <button id="btn" disabled onclick="sendTest()">このトークにテスト送信（文＋写真1枚）</button>
 <button class="multi" disabled onclick="sendPhotos(4)">文＋写真4枚（1回で送る）</button>
 <button class="multi" disabled onclick="sendPhotos(10)">文＋写真10枚（3回に分けて送る）</button>
+<button class="multi" disabled onclick="sendCard(10)">まとめカード：写真10枚</button>
+<button class="multi" disabled onclick="sendCard(30)">まとめカード：写真30枚（横スクロール）</button>
 <div class="box" id="log"></div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -87,6 +89,47 @@ async function sendTest() {
     log('送信失敗: ' + (e.code || '') + ' ' + (e.message || e));
     $('btn').disabled = false;
   }
+}
+// 1通のカード（Flex）に、報告の文字＋写真タイル（3列）。12枚ごとにカードを分け、2枚以上なら横スクロール
+async function sendCard(n) {
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  const urls = [];
+  for (let i = 1; i <= n; i++) urls.push(here + 'photo' + String(((i - 1) % 10) + 1).padStart(2, '0') + '.jpg');
+  const kv = (k, v) => ({ type: 'box', layout: 'baseline', spacing: 'sm', contents: [
+    { type: 'text', text: k, size: 'sm', color: '#8C959F', flex: 2 },
+    { type: 'text', text: v, size: 'sm', color: '#1F2429', flex: 6, wrap: true } ] });
+  const tile = u => ({ type: 'image', url: u, size: 'full', aspectRatio: '1:1', aspectMode: 'cover', flex: 1,
+    action: { type: 'uri', uri: u } });
+  const grid = list => {
+    const rows = [];
+    for (let i = 0; i < list.length; i += 3) {
+      const row = list.slice(i, i + 3).map(tile);
+      while (row.length < 3) row.push({ type: 'filler' });
+      rows.push({ type: 'box', layout: 'horizontal', spacing: 'xs', contents: row });
+    }
+    return { type: 'box', layout: 'vertical', spacing: 'xs', contents: rows };
+  };
+  const PER = 12, pages = [];
+  for (let i = 0; i < urls.length; i += PER) pages.push(urls.slice(i, i + PER));
+  const bubbles = pages.map((list, p) => ({
+    type: 'bubble', size: 'giga',
+    header: p === 0 ? { type: 'box', layout: 'vertical', backgroundColor: '#1E7B45', paddingAll: '12px', contents: [
+      { type: 'text', text: '出面報告 10/6（月）', size: 'sm', color: '#DFF3E6' },
+      { type: 'text', text: '126007-00 高田屋箱崎', size: 'lg', weight: 'bold', color: '#FFFFFF', wrap: true } ] }
+      : { type: 'box', layout: 'vertical', backgroundColor: '#1E7B45', paddingAll: '12px', contents: [
+      { type: 'text', text: '写真 ' + (p * PER + 1) + '〜' + (p * PER + list.length) + ' / ' + n + '枚', size: 'sm', color: '#FFFFFF' } ] },
+    body: { type: 'box', layout: 'vertical', spacing: 'md', paddingAll: '12px', contents:
+      (p === 0 ? [kv('報告', '永渕'), kv('自社', '永渕・座木・三川（3人役）'), kv('協力', '葛西組×1'),
+        kv('車', '2台／ユニック 0台'), kv('写真', n + '枚（施工）'), { type: 'separator' }] : []).concat([grid(list)]) }
+  }));
+  const contents = bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles };
+  try {
+    await liff.sendMessages([{ type: 'flex', altText: '【出面】10/6 高田屋箱崎 写真' + n + '枚', contents: contents }]);
+    log('カードを送りました。トークを見てください');
+  } catch (e) {
+    log('送信失敗: ' + (e.code || '') + ' ' + (e.message || e));
+  }
+  document.querySelectorAll('button').forEach(b => b.disabled = false);
 }
 main();
 </script>
