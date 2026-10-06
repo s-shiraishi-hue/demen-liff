@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>業務報告</title>
+<style>
+  html,body{margin:0;height:100%;background:#f7f6f3;font-family:sans-serif}
+  #bar{position:fixed;top:0;left:0;right:0;height:28px;line-height:28px;padding:0 10px;font-size:12px;color:#fff;background:#1E7B45;z-index:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #frame{position:fixed;top:28px;left:0;width:100%;height:calc(100% - 28px);border:0}
+</style>
+</head>
+<body>
+<div id="bar">LINE枠テスト：準備中…</div>
+<iframe id="frame" allow="camera; microphone; clipboard-write"></iframe>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+const LIFF_ID = '2011897591-HBBipfnN';
+// 針崎さんの最新版（出面アプリ_針崎テスト用）のウェブアプリURL
+const FORM_URL = 'https://script.google.com/macros/s/AKfycbzqiWQbCs0Pf7I3lraH5aGjGlGDcKIhVm-gXVxWv8mkdvd3X--ZxAh-7hkscPLRpSWS/exec';
+
+const bar = t => { document.getElementById('bar').textContent = t; };
+
+async function main() {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    const ctx = liff.getContext() || {};
+    bar('LINE枠テスト｜開いた場所: ' + (ctx.type || '不明') + '｜送信はしないでください');
+  } catch (e) {
+    bar('liff.init 失敗: ' + e);
+  }
+  document.getElementById('frame').src = FORM_URL;
+}
+
+// あとで使う：フォームから「送信しました」を受け取る口（今は表示だけ）
+window.addEventListener('message', ev => {
+  if (!/\.googleusercontent\.com$/.test(new URL(ev.origin).hostname)) return;
+  if (ev.data && ev.data.type === 'demen-sent') bar('フォームから受け取りました: ' + (ev.data.text || '').slice(0, 30));
+});
+
+main();
+</script>
+</body>
+</html>
