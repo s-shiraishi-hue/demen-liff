@@ -17,6 +17,8 @@
 <h1>出面 LIFFテスト1</h1>
 <div class="box" id="state">準備中…</div>
 <button id="btn" disabled onclick="sendTest()">このトークにテスト送信（文＋写真1枚）</button>
+<button class="multi" disabled onclick="sendPhotos(4)">文＋写真4枚（1回で送る）</button>
+<button class="multi" disabled onclick="sendPhotos(10)">文＋写真10枚（3回に分けて送る）</button>
 <div class="box" id="log"></div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -43,8 +45,33 @@ async function main() {
     '開いた場所: <b>' + (ctx.type || '不明') + '</b>（group=グループ / utou=1対1）<br>' +
     'あなた: <b>' + name + '</b><br>' +
     'shareTargetPicker: ' + (can ? '使える' : '使えない');
-  $('btn').disabled = !(inClient && ['group', 'room', 'utou'].includes(ctx.type));
-  if ($('btn').disabled) log('グループのトーク画面に貼ったリンクから開いてください');
+  const ok = inClient && ['group', 'room', 'utou'].includes(ctx.type);
+  $('btn').disabled = !ok;
+  document.querySelectorAll('.multi').forEach(b => b.disabled = !ok);
+  if (!ok) log('グループのトーク画面に貼ったリンクから開いてください');
+}
+
+// 文1つ＋写真n枚。1回の送信は5つまでなので、文＋4枚 → 5枚ずつ に分けて送る
+async function sendPhotos(n) {
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  const imgs = [];
+  for (let i = 1; i <= n; i++) {
+    const u = here + 'photo' + String(i).padStart(2, '0') + '.jpg';
+    imgs.push({ type: 'image', originalContentUrl: u, previewImageUrl: u });
+  }
+  const text = { type: 'text', text: '【出面テスト】写真' + n + '枚 ' + new Date().toLocaleString('ja-JP') };
+  const batches = [[text, ...imgs.slice(0, 4)]];
+  for (let i = 4; i < imgs.length; i += 5) batches.push(imgs.slice(i, i + 5));
+  try {
+    for (let i = 0; i < batches.length; i++) {
+      await liff.sendMessages(batches[i]);
+      log((i + 1) + '/' + batches.length + '回目 送信OK');
+    }
+    log('全部送りました。トークを見てください');
+  } catch (e) {
+    log('送信失敗: ' + (e.code || '') + ' ' + (e.message || e));
+  }
+  document.querySelectorAll('button').forEach(b => b.disabled = false);
 }
 
 async function sendTest() {
