@@ -7,36 +7,118 @@
 <style>
   html,body{margin:0;height:100%;background:#f7f6f3;font-family:sans-serif}
   #bar{position:fixed;top:0;left:0;right:0;height:28px;line-height:28px;padding:0 10px;font-size:12px;color:#fff;background:#1E7B45;z-index:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #bar.err{background:#B42318}
   #frame{position:fixed;top:28px;left:0;width:100%;height:calc(100% - 28px);border:0}
 </style>
 </head>
 <body>
-<div id="bar">LINE枠テスト：準備中…</div>
+<div id="bar">準備中…</div>
 <iframe id="frame" allow="camera; microphone; clipboard-write"></iframe>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
 const LIFF_ID = '2011897591-HBBipfnN';
-// 針崎さんの最新版（出面アプリ_針崎テスト用）のウェブアプリURL
+// 出面アプリ（Copy of 出面アプリ_針崎テスト用・k-hirakawa所有）のウェブアプリURL
+// 書き込み先：出面_日報データ_針崎テスト用 のコピー（1JB62YR0…）
+// 旧（針崎さんの版）：https://script.google.com/macros/s/AKfycbzqiWQbCs0Pf7I3lraH5aGjGlGDcKIhVm-gXVxWv8mkdvd3X--ZxAh-7hkscPLRpSWS/exec
 const FORM_URL = 'https://script.google.com/macros/s/AKfycbyoejtg_sfJ0Os7trEo4L5N7HhKjiXAtPvnivP-cd2aa7MsOuJUa4TGqAVzmeheWrpWhA/exec';
 
-const bar = t => { document.getElementById('bar').textContent = t; };
+const bar = (t, err) => { const b = document.getElementById('bar'); b.textContent = t; b.className = err ? 'err' : ''; };
+let canSend = false;
 
 async function main() {
   try {
     await liff.init({ liffId: LIFF_ID });
     const ctx = liff.getContext() || {};
-    bar('LINE枠テスト｜開いた場所: ' + (ctx.type || '不明') + '｜送信はしないでください');
+    canSend = liff.isInClient() && ['group', 'room', 'utou'].includes(ctx.type);
+    bar(canSend ? '送信するとこのトークに報告カードが出ます' : 'このトークには送れません（グループのリンクから開いてください）');
   } catch (e) {
-    bar('liff.init 失敗: ' + e);
+    bar('liff.init 失敗: ' + e, true);
   }
   document.getElementById('frame').src = FORM_URL;
 }
 
-// あとで使う：フォームから「送信しました」を受け取る口（今は表示だけ）
-window.addEventListener('message', ev => {
-  if (!/\.googleusercontent\.com$/.test(new URL(ev.origin).hostname)) return;
-  if (ev.data && ev.data.type === 'demen-sent') bar('フォームから受け取りました: ' + (ev.data.text || '').slice(0, 30));
+// ===== 報告カード（card5.html と同じ形）2026-10-09 =====
+// 写真は「LINE用写真（30日で削除）」のコピー（リンクを知っている全員が閲覧可）を表示する
+const photoUrl = (id, w) => 'https://lh3.googleusercontent.com/d/' + id + '=w' + (w || 1280);
+
+function colsFor(n) { return n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4; }
+
+function buildCard(r, photos) {
+  const n = photos.length, COLS = colsFor(n);
+  const gencho = r.kubun !== '施工';
+  const t = (s, o) => Object.assign({ type: 'text', text: String(s), size: 'sm', color: '#1F2429', wrap: true }, o || {});
+  const tile = u => ({ type: 'image', url: u, size: 'full', aspectRatio: COLS === 1 ? '4:3' : '1:1', aspectMode: 'cover', flex: 1,
+    action: { type: 'uri', uri: u } });
+  const grid = list => {
+    const rows = [];
+    for (let i = 0; i < list.length; i += COLS) {
+      const row = list.slice(i, i + COLS).map(tile);
+      while (row.length < COLS) row.push({ type: 'filler' });
+      rows.push({ type: 'box', layout: 'horizontal', spacing: 'xs', contents: row });
+    }
+    return { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: rows };
+  };
+  const members = r.members || [];
+  const selfNinku = members.length * r.kinmu;
+  // 送信した内容は全部出す（入れていない項目は「なし」）
+  const lines = [
+    t('▼区分：' + r.kubun),
+    t('▼会社：' + r.company),
+    t('▼現場：' + r.genba),
+    t('▼報告者：' + r.reporter),
+    t('▼勤務区分：' + (r.kinmu === 0.5 ? '0.5 半日' : '1.0 一日')),
+    t('▼自社（' + selfNinku + '人工）'),
+    t('　' + (members.join('・') || 'なし')),
+    t('　残業 ' + (members.map((m, i) => m + ((r.zangyo || [])[i] || 0)).join('・') || 'なし') + '（分）'),
+    t('▼協力：' + (r.partners || 'なし')),
+    t('▼車両：車' + r.cars + '台・ユニック' + r.unic + '台'),
+    t('▼MEMO：' + (r.memo || 'なし'))
+  ];
+  const pages = [photos.slice(0, 12)];
+  for (let i = 12; i < n; i += 12) pages.push(photos.slice(i, i + 12));
+  let from = 1;
+  const bubbles = pages.map((list, p) => {
+    let contents;
+    if (p === 0) {
+      contents = [
+        t('【業務報告】' + r.date, { size: 'md', weight: 'bold' }),
+        r.end === '完了'
+          ? { type: 'box', layout: 'vertical', backgroundColor: '#E6F4EC', cornerRadius: '10px', paddingAll: '8px', margin: 'md', contents: [
+              t('🎉 施工完了', { weight: 'bold', align: 'center', color: '#1E7B45' }),
+              t('お疲れさまでした！', { size: 'xs', align: 'center', color: '#2E7D4F' }) ] }
+          : t(gencho ? '📝 現調・打合せ' : '本日の作業終了', { size: 'xs', color: gencho ? '#185FA5' : '#5F5E5A', margin: 'sm' }),
+        { type: 'separator', margin: 'md' },
+        { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: lines },
+        { type: 'separator', margin: 'md' },
+        t('合計：' + (selfNinku + (r.partnerNinku || 0)) + '人工' + (n ? '　📷 写真' + n + '枚' : ''), { margin: 'md' })
+      ];
+      if (list.length) contents.push(grid(list));
+    } else {
+      contents = [t('📷 写真 ' + from + '〜' + (from + list.length - 1) + ' / ' + n + '枚', { size: 'xs', color: '#5F5E5A' }), grid(list)];
+    }
+    from += list.length;
+    return { type: 'bubble', size: 'mega', body: { type: 'box', layout: 'vertical', paddingAll: '14px', contents: contents } };
+  });
+  return { type: 'flex', altText: '【業務報告】' + r.date + ' ' + r.genba + '（' + r.reporter + '）',
+    contents: bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles } };
+}
+
+// フォーム（出面アプリの index.html）から「送信しました」を受け取ったら、カードにしてこのトークへ送る
+window.addEventListener('message', async ev => {
+  let host = '';
+  try { host = new URL(ev.origin).hostname; } catch (e) { return; }
+  if (!/\.googleusercontent\.com$/.test(host)) return;
+  const d = ev.data || {};
+  if (d.type !== 'demen-sent' || !d.report) return;
+  if (!canSend) { bar('報告は保存しました（このトークには送れません）'); return; }
+  const photos = (d.photoIds || []).map(id => photoUrl(id));
+  try {
+    await liff.sendMessages([buildCard(d.report, photos)]);
+    bar('LINEに報告カードを送りました');
+  } catch (e) {
+    bar('LINEへの送信に失敗: ' + (e.code || '') + ' ' + (e.message || e) + '（報告は保存済み）', true);
+  }
 });
 
 main();
