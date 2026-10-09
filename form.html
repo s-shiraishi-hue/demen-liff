@@ -31,7 +31,7 @@ async function main() {
     await liff.init({ liffId: LIFF_ID });
     const ctx = liff.getContext() || {};
     canSend = liff.isInClient() && ['group', 'room', 'utou'].includes(ctx.type);
-    bar(canSend ? '送信するとこのトークに報告カードが出ます' : 'このトークには送れません（グループのリンクから開いてください）');
+    bar(canSend ? '送信するとこのトークに報告カードが出ます（出るまで閉じないでください）' : 'このトークには送れません（グループのリンクから開いてください）');
   } catch (e) {
     bar('liff.init 失敗: ' + e, true);
   }
@@ -113,9 +113,10 @@ window.addEventListener('message', async ev => {
   if (d.type !== 'demen-sent' || !d.report) return;
   if (!canSend) { bar('報告は保存しました（このトークには送れません）'); return; }
   const photos = (d.photoIds || []).map(id => photoUrl(id));
+  bar('グループに送信中…（閉じないでください）');
   try {
     await liff.sendMessages([buildCard(d.report, photos)]);
-    bar('LINEに報告カードを送りました');
+    bar('グループに送りました。閉じて大丈夫です');
   } catch (e) {
     bar('LINEへの送信に失敗: ' + (e.code || '') + ' ' + (e.message || e) + '（報告は保存済み）', true);
   }
