@@ -45,14 +45,14 @@ const S = 2, W = 640;  // 2倍で描く
 
 function count(s) { return s.m.reduce((k, p) => k + (p.n || 1), 0); }
 
-function chipsFor(s, co) {
-  const show = s.kakou ? s.m : s.m.filter(p => p.co === co);
-  const others = s.m.filter(p => !show.includes(p)).reduce((k, p) => k + (p.n || 1), 0);
-  const c = show.map(p => ({ t: p.co === 'gk' ? p.name + (p.n > 1 ? ' ×' + p.n : '') : p.name, col: COL[p.co] || COL.gk }));
-  if (others) c.push({ t: 'ほか' + others + '名', col: COL.kk });
+// 1枚に3社分：社員は名前（会社の色）、協力会社はA列の会社名と人数「望 ×3」
+const CO_LABEL = { sh: '白石工業', nk: '中嶋板金', ym: '山下板金' };
+function chipsFor(s) {
+  const c = [];
+  ['sh', 'nk', 'ym'].forEach(x => s.m.filter(p => p.co === x).forEach(p => c.push({ t: p.name, col: COL[x] })));
+  s.m.filter(p => p.co === 'gk').forEach(p => c.push({ t: p.name + ' ×' + (p.n || 1), col: COL.gk }));
   return c;
 }
-
 function layoutChips(ctx, chips, maxW) {
   ctx.font = '17px ' + FONT;
   const rows = []; let row = [], x = 0;
@@ -66,7 +66,6 @@ function layoutChips(ctx, chips, maxW) {
 }
 
 // 送る日から見て「明日の配置です」「今日の配置です」「月曜日の配置です」
-const BAND = { sh: '#1f4f8a', nk: '#1f6b3c', ym: '#8f3329' };
 function relLabel(dateStr) {
   const now = new Date(Date.now() + 9 * 3600 * 1000);                     // 日本時間
   const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
@@ -81,53 +80,53 @@ function relLabel(dateStr) {
 
 function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 
-function drawCard(day, co) {
+function drawCard(day) {
   const cv = document.createElement('canvas');
   const ctx = cv.getContext('2d');
-  const info = day.companies[co];
-  const sites = day.sites.filter(s => info.siteNames.includes(s.name));
-  // スマホのトークで大きく見えるよう、縦に1列で並べる（横長だと小さく表示される）
-  const NC = 1, PAD = 24, GAP = 12, BW = (W - PAD * 2 - GAP * (NC - 1)) / NC, IN = 16;
-  // 箱の高さを先に計る
-  const boxes = sites.map(s => { const rows = layoutChips(ctx, chipsFor(s, co), BW - IN * 2); return { s, rows, h: 14 + 26 + 12 + Math.max(1, rows.length) * 36 + 6 }; });
-  const rowsH = []; for (let i = 0; i < boxes.length; i += NC) rowsH.push(Math.max(...boxes.slice(i, i + NC).map(b => b.h)));
-  const TOP = 104;  // 色の帯の高さ
-  const H = TOP + 20 + 40 + 14 + rowsH.reduce((a, b) => a + b + GAP, 0) + 30;
+  const sites = day.sites;
+  const PAD = 24, GAP = 12, BW = W - PAD * 2, IN = 16;
+  const boxes = sites.map(s => { const rows = layoutChips(ctx, chipsFor(s), BW - IN * 2); return { s, rows, h: 14 + 26 + 12 + Math.max(1, rows.length) * 36 + 6 }; });
+  const TOP = 104, SUM = 64;
+  const off = [];
+  ['sh', 'nk', 'ym'].forEach(x => (day.companies[x].off || []).forEach(n => off.push(n + '（' + CO_LABEL[x].slice(0, 2) + '）')));
+  const H = TOP + SUM + 16 + boxes.reduce((a, b) => a + b.h + GAP, 0) + (off.length ? 40 : 24);
   cv.width = W * S; cv.height = H * S; ctx.scale(S, S);
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
-  // 色の帯：「明日の配置です」＋日付を大きく
-  ctx.fillStyle = BAND[co] || '#1d2830'; ctx.fillRect(0, 0, W, TOP);
+  // 帯：日付を大きく
+  ctx.fillStyle = '#273246'; ctx.fillRect(0, 0, W, TOP);
   ctx.fillStyle = '#ffffff'; ctx.font = 'bold 36px ' + FONT; ctx.fillText(day.label + 'の配置です', PAD, 54);
   ctx.font = 'bold 18px ' + FONT; ctx.fillText(relLabel(day.date), PAD, 88);
-  ctx.textAlign = 'right'; ctx.font = 'bold 18px ' + FONT; ctx.fillText(info.name, W - PAD, 88); ctx.textAlign = 'left';
-  // 人数
-  const mine = sites.filter(s => !s.kakou).reduce((k, s) => k + s.m.filter(p => p.co === co).length, 0);
-  ctx.fillStyle = '#1d2830'; ctx.font = 'bold 18px ' + FONT;
-  ctx.fillText(info.name + ' ' + mine + '名　／　' + sites.filter(s => !s.kakou).length + '現場＋加工', PAD, TOP + 34);
-  ctx.strokeStyle = '#e1e6e9'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD, TOP + 48); ctx.lineTo(W - PAD, TOP + 48); ctx.stroke();
-  // 箱
-  let y = TOP + 62;
-  for (let i = 0; i < boxes.length; i += NC) {
-    for (let j = 0; j < NC && boxes[i + j]; j++) {
-      const b = boxes[i + j], x = PAD + j * (BW + GAP);
-      rr(ctx, x, y, BW, rowsH[i / NC], 10); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#dfe5e8'; ctx.stroke();
-      ctx.fillStyle = '#1d2830'; ctx.font = 'bold 20px ' + FONT; ctx.fillText(b.s.name, x + IN, y + 34);
-      ctx.fillStyle = '#5f6c73'; ctx.font = '16px ' + FONT; ctx.textAlign = 'right'; ctx.fillText(count(b.s) + '名', x + BW - IN, y + 34); ctx.textAlign = 'left';
-      let cy = y + 50;
-      for (const row of b.rows) {
-        let cx = x + IN;
-        for (const c of row) { rr(ctx, cx, cy, c.w, 30, 15); ctx.fillStyle = c.col[0]; ctx.fill(); ctx.fillStyle = c.col[1]; ctx.font = '17px ' + FONT; ctx.fillText(c.t, cx + 13, cy + 21); cx += c.w + 7; }
-        cy += 36;
-      }
+  ctx.textAlign = 'right'; ctx.fillText('白石グループ', W - PAD, 88); ctx.textAlign = 'left';
+  // 会社ごとの人数（加工も含む）
+  const n = x => sites.reduce((k, s) => k + s.m.filter(p => p.co === x).reduce((a, p) => a + (p.n || 1), 0), 0);
+  const items = [['白石工業', n('sh'), COL.sh], ['中嶋板金', n('nk'), COL.nk], ['山下板金', n('ym'), COL.ym], ['協力会社', n('gk'), COL.gk]];
+  let x = PAD; const y0 = TOP + 18;
+  ctx.font = 'bold 17px ' + FONT;
+  for (const [nm, cnt, col] of items) {
+    const tx = nm + ' ' + cnt + '名', w = ctx.measureText(tx).width + 28;
+    rr(ctx, x, y0, w, 32, 16); ctx.fillStyle = col[0]; ctx.fill(); ctx.fillStyle = col[1]; ctx.fillText(tx, x + 14, y0 + 22);
+    x += w + 8;
+  }
+  ctx.strokeStyle = '#e1e6e9'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD, TOP + SUM); ctx.lineTo(W - PAD, TOP + SUM); ctx.stroke();
+  // 現場の箱
+  let y = TOP + SUM + 16;
+  for (const b of boxes) {
+    rr(ctx, PAD, y, BW, b.h, 10); ctx.fillStyle = b.s.kakou ? '#f6f5f2' : '#fff'; ctx.fill(); ctx.strokeStyle = '#dfe5e8'; ctx.stroke();
+    ctx.fillStyle = '#1d2830'; ctx.font = 'bold 20px ' + FONT; ctx.fillText(b.s.name, PAD + IN, y + 34);
+    ctx.fillStyle = '#5f6c73'; ctx.font = '16px ' + FONT; ctx.textAlign = 'right'; ctx.fillText(count(b.s) + '名', PAD + BW - IN, y + 34); ctx.textAlign = 'left';
+    let cy = y + 50;
+    for (const row of b.rows) {
+      let cx = PAD + IN;
+      for (const c of row) { rr(ctx, cx, cy, c.w, 30, 15); ctx.fillStyle = c.col[0]; ctx.fill(); ctx.fillStyle = c.col[1]; ctx.font = '17px ' + FONT; ctx.fillText(c.t, cx + 13, cy + 21); cx += c.w + 7; }
+      cy += 36;
     }
-    y += rowsH[i / NC] + GAP;
+    y += b.h + GAP;
   }
   ctx.fillStyle = '#5f6c73'; ctx.font = '15px ' + FONT;
-  if (info.off.length) ctx.fillText('休み：' + info.off.join('、'), PAD, y + 10);
-  ctx.textAlign = 'right'; ctx.fillText('出典：人員配置表', W - PAD, y + 10);
+  if (off.length) ctx.fillText('休み：' + off.join('、'), PAD, y + 12);
+  ctx.textAlign = 'right'; ctx.fillText('出典：人員配置表', W - PAD, y + (off.length ? 12 : 4));
   return cv;
 }
-
 // ===== 送る =====
 async function upload(cv, co) {
   const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ k: K, d: D, co, png: cv.toDataURL('image/png') }) });
@@ -179,27 +178,23 @@ async function main() {
 
   document.getElementById('ttl').textContent = day.label + ' の現場配置をLINEに送る';
   labelShort = day.label;
-  bar('会社ごとに［このグループに送る］を押して、LINEのグループを選んでください。');
+  bar('［送る］を押して、LINEで送り先のグループ（白石・中嶋・山下）を選んでください。まとめて選べます。');
+  const text = day.sites.filter(s => !s.kakou).map(s => '■' + s.name + '\n' + (s.map || '（住所未登録）')).join('\n\n');
   const list = document.getElementById('list');
-  for (const co of ['sh', 'nk', 'ym']) {
-    const info = day.companies[co];
-    const sec = document.createElement('section');
-    const h = document.createElement('h2'); h.textContent = info.name + 'のグループ'; h.style.margin = '0';
-    const two = document.createElement('div'); two.className = 'two';
-    const cv = drawCard(day, co);
-    const right = document.createElement('div'); right.style.display = 'grid'; right.style.gap = '10px';
-    const pre = document.createElement('pre'); pre.textContent = info.text || '（地図リンクなし）';
-    const btn = document.createElement('button'); btn.textContent = 'このグループに送る（画像＋地図リンク）';
-    const st = document.createElement('div'); st.className = 'st';
-    const ready = prepare(cv, co, btn, st);
-    btn.onclick = () => send(ready, info.text, btn, st);
-    right.append(pre, btn, st);
-    two.append(cv, right);
-    sec.append(h, two);
-    list.appendChild(sec);
-  }
-}
-main();
+  const sec = document.createElement('section');
+  const two = document.createElement('div'); two.className = 'two';
+  const cv = drawCard(day);
+  const right = document.createElement('div'); right.style.display = 'grid'; right.style.gap = '10px'; right.style.alignContent = 'start';
+  const pre = document.createElement('pre'); pre.textContent = '【' + labelShort + ' 現場の場所】\n\n' + (text || '（地図リンクなし）');
+  const btn = document.createElement('button'); btn.textContent = '送る（画像＋地図リンク）';
+  const st = document.createElement('div'); st.className = 'st';
+  const ready = prepare(cv, 'all', btn, st);
+  btn.onclick = () => send(ready, text, btn, st);
+  right.append(btn, st, pre);
+  two.append(cv, right);
+  sec.append(two);
+  list.appendChild(sec);
+}main();
 </script>
 </body>
 </html>
