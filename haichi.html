@@ -34,13 +34,14 @@ const LIFF_ID = '2011897591-HBBipfnN';
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwJlG0jp4hniVnIjGjMm2P1VhoPQNwPXFLWn5SxK15cjDer11ZreMdaxzr7tcIOqZFa/exec';
 
 const q = new URLSearchParams(location.search);
-const D = q.get('d'), K = q.get('k');
+// d がないとき（スマホのLINEから開いたとき）は画面で日付を選ぶ
+let D = q.get('d'); const K = q.get('k');
 let labelShort = '';
 const bar = (t, err) => { const b = document.getElementById('bar'); b.textContent = t; b.className = err ? 'err' : ''; };
 
 // ===== 画像を描く（今まで見本で決めた形：現場ごとの箱を2列、会社ごとの色） =====
 const COL = { sh: ['#e3edfa', '#1f4f8a'], nk: ['#e1f3e7', '#1f6b3c'], ym: ['#fbe5e3', '#8f3329'], gk: ['#fdf0d9', '#7d5410'], kk: ['#eceae6', '#555049'] };
-const FONT = '"BIZ UDPGothic","Yu Gothic","Meiryo",sans-serif';
+const FONT = '"BIZ UDPGothic","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo","Noto Sans JP",sans-serif';
 const S = 2, W = 640;  // 2倍で描く
 
 function count(s) { return s.m.reduce((k, p) => k + (p.n || 1), 0); }
@@ -160,14 +161,32 @@ async function send(ready, text, btn, st) {
   }
 }
 
+// 日付を選ぶ（初期値＝明日、日曜なら月曜）
+function askDate() {
+  return new Promise(resolve => {
+    const t = new Date(Date.now() + 9 * 3600 * 1000 + 86400000);
+    if (t.getUTCDay() === 0) t.setTime(t.getTime() + 86400000);
+    const def = t.toISOString().slice(0, 10);
+    const box = document.createElement('section');
+    const lab = document.createElement('div'); lab.textContent = '送る日の配置を選んでください';
+    const inp = document.createElement('input'); inp.type = 'date'; inp.id = 'pick-date'; inp.value = def; inp.style.cssText = 'font-size:18px;padding:6px;max-width:220px';
+    const go = document.createElement('button'); go.textContent = 'この日の配置を出す'; go.id = 'pick-go';
+    go.onclick = () => { box.remove(); resolve(inp.value); };
+    box.append(lab, inp, go);
+    document.getElementById('list').appendChild(box);
+    bar('日付を選んで［この日の配置を出す］を押してください。');
+  });
+}
+
 async function main() {
-  if (!D || !K) { bar('リンクが正しくありません（人員配置表のメニューから開いてください）', true); return; }
+  if (!K) { bar('リンクが正しくありません（人員配置表のメニューか、保存したリンクから開いてください）', true); return; }
   try {
     await liff.init({ liffId: LIFF_ID });
     if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
     if (!liff.isApiAvailable('shareTargetPicker')) { bar('この画面ではグループを選んで送れません（LIFFの設定でシェアターゲットピッカーをオンにしてください）', true); }
   } catch (e) { bar('LINEの準備に失敗: ' + e, true); return; }
 
+  if (!D) D = await askDate();
   bar('配置を読み込んでいます…');
   let day;
   try {
