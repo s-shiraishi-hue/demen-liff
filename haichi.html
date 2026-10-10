@@ -35,6 +35,7 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbwJlG0jp4hniVnIjGjMm2P1
 
 const q = new URLSearchParams(location.search);
 const D = q.get('d'), K = q.get('k');
+let labelShort = '';
 const bar = (t, err) => { const b = document.getElementById('bar'); b.textContent = t; b.className = err ? 'err' : ''; };
 
 // ===== 画像を描く（今まで見本で決めた形：現場ごとの箱を2列、会社ごとの色） =====
@@ -53,12 +54,12 @@ function chipsFor(s, co) {
 }
 
 function layoutChips(ctx, chips, maxW) {
-  ctx.font = '13px ' + FONT;
+  ctx.font = '17px ' + FONT;
   const rows = []; let row = [], x = 0;
   for (const c of chips) {
-    const w = ctx.measureText(c.t).width + 24;
+    const w = ctx.measureText(c.t).width + 26;
     if (row.length && x + w > maxW) { rows.push(row); row = []; x = 0; }
-    row.push({ ...c, w }); x += w + 6;
+    row.push({ ...c, w }); x += w + 7;
   }
   if (row.length) rows.push(row);
   return rows;
@@ -85,42 +86,43 @@ function drawCard(day, co) {
   const ctx = cv.getContext('2d');
   const info = day.companies[co];
   const sites = day.sites.filter(s => info.siteNames.includes(s.name));
-  const PAD = 24, GAP = 12, BW = (W - PAD * 2 - GAP) / 2, IN = 14;
+  // スマホのトークで大きく見えるよう、縦に1列で並べる（横長だと小さく表示される）
+  const NC = 1, PAD = 24, GAP = 12, BW = (W - PAD * 2 - GAP * (NC - 1)) / NC, IN = 16;
   // 箱の高さを先に計る
-  const boxes = sites.map(s => { const rows = layoutChips(ctx, chipsFor(s, co), BW - IN * 2); return { s, rows, h: 12 + 22 + 10 + Math.max(1, rows.length) * 30 + 6 }; });
-  const rowsH = []; for (let i = 0; i < boxes.length; i += 2) rowsH.push(Math.max(boxes[i].h, (boxes[i + 1] || { h: 0 }).h));
-  const TOP = 92;  // 色の帯の高さ
+  const boxes = sites.map(s => { const rows = layoutChips(ctx, chipsFor(s, co), BW - IN * 2); return { s, rows, h: 14 + 26 + 12 + Math.max(1, rows.length) * 36 + 6 }; });
+  const rowsH = []; for (let i = 0; i < boxes.length; i += NC) rowsH.push(Math.max(...boxes.slice(i, i + NC).map(b => b.h)));
+  const TOP = 104;  // 色の帯の高さ
   const H = TOP + 20 + 40 + 14 + rowsH.reduce((a, b) => a + b + GAP, 0) + 30;
   cv.width = W * S; cv.height = H * S; ctx.scale(S, S);
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
   // 色の帯：「明日の配置です」＋日付を大きく
   ctx.fillStyle = BAND[co] || '#1d2830'; ctx.fillRect(0, 0, W, TOP);
-  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 30px ' + FONT; ctx.fillText(day.label + 'の配置です', PAD, 48);
-  ctx.font = '15px ' + FONT; ctx.fillText(relLabel(day.date), PAD, 76);
-  ctx.textAlign = 'right'; ctx.font = 'bold 15px ' + FONT; ctx.fillText(info.name, W - PAD, 44); ctx.textAlign = 'left';
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 36px ' + FONT; ctx.fillText(day.label + 'の配置です', PAD, 54);
+  ctx.font = 'bold 18px ' + FONT; ctx.fillText(relLabel(day.date), PAD, 88);
+  ctx.textAlign = 'right'; ctx.font = 'bold 18px ' + FONT; ctx.fillText(info.name, W - PAD, 88); ctx.textAlign = 'left';
   // 人数
   const mine = sites.filter(s => !s.kakou).reduce((k, s) => k + s.m.filter(p => p.co === co).length, 0);
-  ctx.fillStyle = '#1d2830'; ctx.font = 'bold 15px ' + FONT;
+  ctx.fillStyle = '#1d2830'; ctx.font = 'bold 18px ' + FONT;
   ctx.fillText(info.name + ' ' + mine + '名　／　' + sites.filter(s => !s.kakou).length + '現場＋加工', PAD, TOP + 34);
   ctx.strokeStyle = '#e1e6e9'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD, TOP + 48); ctx.lineTo(W - PAD, TOP + 48); ctx.stroke();
   // 箱
   let y = TOP + 62;
-  for (let i = 0; i < boxes.length; i += 2) {
-    for (let j = 0; j < 2 && boxes[i + j]; j++) {
+  for (let i = 0; i < boxes.length; i += NC) {
+    for (let j = 0; j < NC && boxes[i + j]; j++) {
       const b = boxes[i + j], x = PAD + j * (BW + GAP);
-      rr(ctx, x, y, BW, rowsH[i / 2], 10); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#dfe5e8'; ctx.stroke();
-      ctx.fillStyle = '#1d2830'; ctx.font = 'bold 16px ' + FONT; ctx.fillText(b.s.name, x + IN, y + 30);
-      ctx.fillStyle = '#5f6c73'; ctx.font = '13px ' + FONT; ctx.textAlign = 'right'; ctx.fillText(count(b.s) + '名', x + BW - IN, y + 30); ctx.textAlign = 'left';
-      let cy = y + 44;
+      rr(ctx, x, y, BW, rowsH[i / NC], 10); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#dfe5e8'; ctx.stroke();
+      ctx.fillStyle = '#1d2830'; ctx.font = 'bold 20px ' + FONT; ctx.fillText(b.s.name, x + IN, y + 34);
+      ctx.fillStyle = '#5f6c73'; ctx.font = '16px ' + FONT; ctx.textAlign = 'right'; ctx.fillText(count(b.s) + '名', x + BW - IN, y + 34); ctx.textAlign = 'left';
+      let cy = y + 50;
       for (const row of b.rows) {
         let cx = x + IN;
-        for (const c of row) { rr(ctx, cx, cy, c.w, 24, 12); ctx.fillStyle = c.col[0]; ctx.fill(); ctx.fillStyle = c.col[1]; ctx.font = '13px ' + FONT; ctx.fillText(c.t, cx + 12, cy + 17); cx += c.w + 6; }
-        cy += 30;
+        for (const c of row) { rr(ctx, cx, cy, c.w, 30, 15); ctx.fillStyle = c.col[0]; ctx.fill(); ctx.fillStyle = c.col[1]; ctx.font = '17px ' + FONT; ctx.fillText(c.t, cx + 13, cy + 21); cx += c.w + 7; }
+        cy += 36;
       }
     }
-    y += rowsH[i / 2] + GAP;
+    y += rowsH[i / NC] + GAP;
   }
-  ctx.fillStyle = '#8a959c'; ctx.font = '11.5px ' + FONT;
+  ctx.fillStyle = '#5f6c73'; ctx.font = '15px ' + FONT;
   if (info.off.length) ctx.fillText('休み：' + info.off.join('、'), PAD, y + 10);
   ctx.textAlign = 'right'; ctx.fillText('出典：人員配置表', W - PAD, y + 10);
   return cv;
@@ -134,19 +136,29 @@ async function upload(cv, co) {
   return j;
 }
 
-async function send(cv, co, text, btn, st) {
-  btn.disabled = true; st.textContent = '画像を保存しています…';
+// 画像の保存は画面を開いたときに先に済ませる。
+// ボタンを押してから保存すると時間がかかり、ブラウザが「グループを選ぶ窓」を止めてしまう（EXCEPTION_IN_SUBWINDOW）
+function prepare(cv, co, btn, st) {
+  btn.disabled = true; st.textContent = '画像を準備しています…';
+  const p = upload(cv, co);
+  p.then(() => { btn.disabled = false; st.textContent = '準備できました'; })
+   .catch(e => { st.textContent = '画像の準備に失敗：' + (e.message || e) + '（画面を読み込み直してください）'; });
+  return p;
+}
+
+async function send(ready, text, btn, st) {
+  let img;
+  try { img = await ready; } catch (e) { return; }
+  const msgs = [{ type: 'image', originalContentUrl: img.url, previewImageUrl: img.preview }];
+  if (text) msgs.push({ type: 'text', text: '【' + labelShort + ' 現場の場所】\n\n' + text });
   try {
-    const img = await upload(cv, co);
     st.textContent = '送り先のグループを選んでください';
-    const msgs = [{ type: 'image', originalContentUrl: img.url, previewImageUrl: img.preview }];
-    if (text) msgs.push({ type: 'text', text });
     const r = await liff.shareTargetPicker(msgs, { isMultiple: true });
     st.textContent = r ? '送りました（' + new Date().toLocaleTimeString('ja-JP') + '）' : '送るのをやめました';
   } catch (e) {
-    st.textContent = '失敗しました：' + (e.code || '') + ' ' + (e.message || e);
+    st.textContent = '失敗しました：' + (e.code || '') + ' ' + (e.message || e) +
+      (e.code === 'EXCEPTION_IN_SUBWINDOW' ? '（もう一度押してください。続くときはポップアップを許可）' : '');
   }
-  btn.disabled = false;
 }
 
 async function main() {
@@ -166,6 +178,7 @@ async function main() {
   } catch (e) { bar('配置を読めませんでした: ' + (e.message || e), true); return; }
 
   document.getElementById('ttl').textContent = day.label + ' の現場配置をLINEに送る';
+  labelShort = day.label;
   bar('会社ごとに［このグループに送る］を押して、LINEのグループを選んでください。');
   const list = document.getElementById('list');
   for (const co of ['sh', 'nk', 'ym']) {
@@ -178,7 +191,8 @@ async function main() {
     const pre = document.createElement('pre'); pre.textContent = info.text || '（地図リンクなし）';
     const btn = document.createElement('button'); btn.textContent = 'このグループに送る（画像＋地図リンク）';
     const st = document.createElement('div'); st.className = 'st';
-    btn.onclick = () => send(cv, co, info.text, btn, st);
+    const ready = prepare(cv, co, btn, st);
+    btn.onclick = () => send(ready, info.text, btn, st);
     right.append(pre, btn, st);
     two.append(cv, right);
     sec.append(h, two);
