@@ -50,7 +50,7 @@ function count(s) { return s.m.reduce((k, p) => k + (p.n || 1), 0); }
 const CO_LABEL = { sh: '白石工業', nk: '中嶋板金', ym: '山下板金' };
 function chipsFor(s) {
   const c = [];
-  ['sh', 'nk', 'ym'].forEach(x => s.m.filter(p => p.co === x).forEach(p => c.push({ t: p.name, col: COL[x] })));
+  ['sh', 'nk', 'ym'].forEach(x => s.m.filter(p => p.co === x).forEach(p => c.push({ t: p.name + (p.half ? '（' + p.half + '）' : ''), col: COL[x] })));
   s.m.filter(p => p.co === 'gk').forEach(p => c.push({ t: p.name + ' ×' + (p.n || 1), col: COL.gk }));
   return c;
 }
@@ -101,9 +101,11 @@ function drawCard(day) {
   ctx.fillStyle = '#273246'; ctx.fillRect(0, 0, W, TOP);
   ctx.fillStyle = '#ffffff'; ctx.font = 'bold 36px ' + FONT; ctx.fillText(day.label + 'の配置です', PAD, 54);
   ctx.font = 'bold 18px ' + FONT; ctx.fillText(relLabel(day.date), PAD, 88);
-  ctx.textAlign = 'right'; ctx.fillText('白石グループ', W - PAD, 88); ctx.textAlign = 'left';
   // 会社ごとの人数
-  const n = x => day.sites.reduce((k, s) => k + s.m.filter(p => p.co === x).reduce((a, p) => a + (p.n || 1), 0), 0);
+  // 社員は午前・午後で2つの現場に出ても1人と数える
+  const n = x => x === 'gk'
+    ? day.sites.reduce((k, s) => k + s.m.filter(p => p.co === 'gk').reduce((a, p) => a + (p.n || 1), 0), 0)
+    : new Set(day.sites.flatMap(s => s.m.filter(p => p.co === x).map(p => p.name))).size;
   let x = PAD; ctx.font = 'bold 17px ' + FONT;
   for (const [nm, co] of [['白石工業', 'sh'], ['中嶋板金', 'nk'], ['山下板金', 'ym'], ['協力会社', 'gk']]) {
     const tx = nm + ' ' + n(co) + '名', w = ctx.measureText(tx).width + 28;
