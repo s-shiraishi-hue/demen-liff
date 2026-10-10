@@ -64,6 +64,20 @@ function layoutChips(ctx, chips, maxW) {
   return rows;
 }
 
+// 送る日から見て「明日の配置です」「今日の配置です」「月曜日の配置です」
+const BAND = { sh: '#1f4f8a', nk: '#1f6b3c', ym: '#8f3329' };
+function relLabel(dateStr) {
+  const now = new Date(Date.now() + 9 * 3600 * 1000);                     // 日本時間
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const target = Date.UTC(y, m - 1, d);
+  const diff = Math.round((target - today) / 86400000);
+  if (diff === 0) return '今日の分です';
+  if (diff === 1) return '明日の分です';
+  if (diff > 1 && diff < 7) return '次の' + '日月火水木金土'[new Date(target).getUTCDay()] + '曜日の分です';
+  return '';
+}
+
 function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 
 function drawCard(day, co) {
@@ -75,19 +89,22 @@ function drawCard(day, co) {
   // 箱の高さを先に計る
   const boxes = sites.map(s => { const rows = layoutChips(ctx, chipsFor(s, co), BW - IN * 2); return { s, rows, h: 12 + 22 + 10 + Math.max(1, rows.length) * 30 + 6 }; });
   const rowsH = []; for (let i = 0; i < boxes.length; i += 2) rowsH.push(Math.max(boxes[i].h, (boxes[i + 1] || { h: 0 }).h));
-  const H = 22 + 60 + 14 + 16 + rowsH.reduce((a, b) => a + b + GAP, 0) + 30;
+  const TOP = 92;  // 色の帯の高さ
+  const H = TOP + 20 + 40 + 14 + rowsH.reduce((a, b) => a + b + GAP, 0) + 30;
   cv.width = W * S; cv.height = H * S; ctx.scale(S, S);
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
-  // 見出し
+  // 色の帯：「明日の配置です」＋日付を大きく
+  ctx.fillStyle = BAND[co] || '#1d2830'; ctx.fillRect(0, 0, W, TOP);
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 30px ' + FONT; ctx.fillText(day.label + 'の配置です', PAD, 48);
+  ctx.font = '15px ' + FONT; ctx.fillText(relLabel(day.date), PAD, 76);
+  ctx.textAlign = 'right'; ctx.font = 'bold 15px ' + FONT; ctx.fillText(info.name, W - PAD, 44); ctx.textAlign = 'left';
+  // 人数
   const mine = sites.filter(s => !s.kakou).reduce((k, s) => k + s.m.filter(p => p.co === co).length, 0);
-  ctx.fillStyle = '#5f6c73'; ctx.font = '13px ' + FONT; ctx.fillText(info.name + '　現場配置', PAD, 40);
-  ctx.fillStyle = '#1d2830'; ctx.font = 'bold 24px ' + FONT; ctx.fillText(day.label, PAD, 72);
-  ctx.textAlign = 'right'; ctx.font = 'bold 13px ' + FONT;
-  ctx.fillText(info.name + ' ' + mine + '名／' + sites.filter(s => !s.kakou).length + '現場＋加工', W - PAD, 72);
-  ctx.textAlign = 'left';
-  ctx.strokeStyle = '#e1e6e9'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD, 86); ctx.lineTo(W - PAD, 86); ctx.stroke();
+  ctx.fillStyle = '#1d2830'; ctx.font = 'bold 15px ' + FONT;
+  ctx.fillText(info.name + ' ' + mine + '名　／　' + sites.filter(s => !s.kakou).length + '現場＋加工', PAD, TOP + 34);
+  ctx.strokeStyle = '#e1e6e9'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD, TOP + 48); ctx.lineTo(W - PAD, TOP + 48); ctx.stroke();
   // 箱
-  let y = 102;
+  let y = TOP + 62;
   for (let i = 0; i < boxes.length; i += 2) {
     for (let j = 0; j < 2 && boxes[i + j]; j++) {
       const b = boxes[i + j], x = PAD + j * (BW + GAP);
