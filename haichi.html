@@ -81,16 +81,20 @@ function relLabel(dateStr) {
 
 function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 
+// B案（10/10 決定）：会社の色の見出し帯の下に、その会社の現場を並べる。現場の箱の左に会社の色の線
+const GROUP_NAME = { sh: '白石工業の現場', nk: '中嶋板金の現場', ym: '山下板金の現場', other: 'その他の現場', kakou: '加工（工場）' };
+const GROUP_COL = { sh: '#1f4f8a', nk: '#1f6b3c', ym: '#8f3329', other: '#5f6c73', kakou: '#555049' };
 function drawCard(day) {
   const cv = document.createElement('canvas');
   const ctx = cv.getContext('2d');
-  const sites = day.sites;
-  const PAD = 24, GAP = 12, BW = W - PAD * 2, IN = 16;
-  const boxes = sites.map(s => { const rows = layoutChips(ctx, chipsFor(s), BW - IN * 2); return { s, rows, h: 14 + 26 + 12 + Math.max(1, rows.length) * 36 + 6 }; });
+  const PAD = 22, CH = 30, IN = 14;
+  const groups = ['sh', 'nk', 'ym', 'other', 'kakou'].map(g => ({ g, ss: day.sites.filter(s => (s.own || (s.kakou ? 'kakou' : 'other')) === g) })).filter(x => x.ss.length);
+  const L = groups.map(x => ({ ...x, cards: x.ss.map(s => ({ s, rows: layoutChips(ctx, chipsFor(s), W - PAD * 2 - IN * 2) })) }));
+  const cardH = r => 42 + Math.max(1, r.rows.length) * (CH + 6) + 8;
   const TOP = 104, SUM = 64;
   const off = [];
   ['sh', 'nk', 'ym'].forEach(x => (day.companies[x].off || []).forEach(n => off.push(n + '（' + CO_LABEL[x].slice(0, 2) + '）')));
-  const H = TOP + SUM + 16 + boxes.reduce((a, b) => a + b.h + GAP, 0) + (off.length ? 40 : 24);
+  const H = TOP + SUM + 8 + L.reduce((a, x) => a + 42 + x.cards.reduce((b, r) => b + cardH(r) + 8, 0) + 12, 0) + (off.length ? 34 : 22);
   cv.width = W * S; cv.height = H * S; ctx.scale(S, S);
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
   // 帯：日付を大きく
@@ -98,34 +102,40 @@ function drawCard(day) {
   ctx.fillStyle = '#ffffff'; ctx.font = 'bold 36px ' + FONT; ctx.fillText(day.label + 'の配置です', PAD, 54);
   ctx.font = 'bold 18px ' + FONT; ctx.fillText(relLabel(day.date), PAD, 88);
   ctx.textAlign = 'right'; ctx.fillText('白石グループ', W - PAD, 88); ctx.textAlign = 'left';
-  // 会社ごとの人数（加工も含む）
-  const n = x => sites.reduce((k, s) => k + s.m.filter(p => p.co === x).reduce((a, p) => a + (p.n || 1), 0), 0);
-  const items = [['白石工業', n('sh'), COL.sh], ['中嶋板金', n('nk'), COL.nk], ['山下板金', n('ym'), COL.ym], ['協力会社', n('gk'), COL.gk]];
-  let x = PAD; const y0 = TOP + 18;
-  ctx.font = 'bold 17px ' + FONT;
-  for (const [nm, cnt, col] of items) {
-    const tx = nm + ' ' + cnt + '名', w = ctx.measureText(tx).width + 28;
-    rr(ctx, x, y0, w, 32, 16); ctx.fillStyle = col[0]; ctx.fill(); ctx.fillStyle = col[1]; ctx.fillText(tx, x + 14, y0 + 22);
+  // 会社ごとの人数
+  const n = x => day.sites.reduce((k, s) => k + s.m.filter(p => p.co === x).reduce((a, p) => a + (p.n || 1), 0), 0);
+  let x = PAD; ctx.font = 'bold 17px ' + FONT;
+  for (const [nm, co] of [['白石工業', 'sh'], ['中嶋板金', 'nk'], ['山下板金', 'ym'], ['協力会社', 'gk']]) {
+    const tx = nm + ' ' + n(co) + '名', w = ctx.measureText(tx).width + 28;
+    rr(ctx, x, TOP + 18, w, 32, 16); ctx.fillStyle = COL[co][0]; ctx.fill(); ctx.fillStyle = COL[co][1]; ctx.fillText(tx, x + 14, TOP + 40);
     x += w + 8;
   }
-  ctx.strokeStyle = '#e1e6e9'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD, TOP + SUM); ctx.lineTo(W - PAD, TOP + SUM); ctx.stroke();
-  // 現場の箱
-  let y = TOP + SUM + 16;
-  for (const b of boxes) {
-    rr(ctx, PAD, y, BW, b.h, 10); ctx.fillStyle = b.s.kakou ? '#f6f5f2' : '#fff'; ctx.fill(); ctx.strokeStyle = '#dfe5e8'; ctx.stroke();
-    ctx.fillStyle = '#1d2830'; ctx.font = 'bold 20px ' + FONT; ctx.fillText(b.s.name, PAD + IN, y + 34);
-    ctx.fillStyle = '#5f6c73'; ctx.font = '16px ' + FONT; ctx.textAlign = 'right'; ctx.fillText(count(b.s) + '名', PAD + BW - IN, y + 34); ctx.textAlign = 'left';
-    let cy = y + 50;
-    for (const row of b.rows) {
-      let cx = PAD + IN;
-      for (const c of row) { rr(ctx, cx, cy, c.w, 30, 15); ctx.fillStyle = c.col[0]; ctx.fill(); ctx.fillStyle = c.col[1]; ctx.font = '17px ' + FONT; ctx.fillText(c.t, cx + 13, cy + 21); cx += c.w + 7; }
-      cy += 36;
+  // 会社ごとのまとまり
+  let y = TOP + SUM + 8;
+  for (const { g, cards } of L) {
+    rr(ctx, PAD, y, W - PAD * 2, 34, 8); ctx.fillStyle = GROUP_COL[g]; ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 19px ' + FONT; ctx.fillText(GROUP_NAME[g], PAD + 14, y + 24);
+    ctx.textAlign = 'right'; ctx.font = '15px ' + FONT; ctx.fillText(cards.length + '現場', W - PAD - 14, y + 23); ctx.textAlign = 'left';
+    let yy = y + 42;
+    for (const r of cards) {
+      const ch = cardH(r);
+      rr(ctx, PAD, yy, W - PAD * 2, ch, 8); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = '#dfe5e8'; ctx.stroke();
+      ctx.fillStyle = GROUP_COL[g]; ctx.fillRect(PAD, yy + 8, 4, ch - 16);
+      ctx.fillStyle = '#1d2830'; ctx.font = 'bold 19px ' + FONT; ctx.fillText(r.s.name, PAD + 16, yy + 29);
+      ctx.fillStyle = '#5f6c73'; ctx.font = '16px ' + FONT; ctx.textAlign = 'right'; ctx.fillText(count(r.s) + '名', W - PAD - 14, yy + 29); ctx.textAlign = 'left';
+      let cy = yy + 40;
+      for (const row of r.rows) {
+        let cx = PAD + IN;
+        for (const c of row) { rr(ctx, cx, cy, c.w, CH, CH / 2); ctx.fillStyle = c.col[0]; ctx.fill(); ctx.fillStyle = c.col[1]; ctx.font = '17px ' + FONT; ctx.fillText(c.t, cx + 13, cy + 21); cx += c.w + 7; }
+        cy += CH + 6;
+      }
+      yy += ch + 8;
     }
-    y += b.h + GAP;
+    y = yy + 12;
   }
   ctx.fillStyle = '#5f6c73'; ctx.font = '15px ' + FONT;
-  if (off.length) ctx.fillText('休み：' + off.join('、'), PAD, y + 12);
-  ctx.textAlign = 'right'; ctx.fillText('出典：人員配置表', W - PAD, y + (off.length ? 12 : 4));
+  if (off.length) ctx.fillText('休み：' + off.join('、'), PAD, y + 6);
+  ctx.textAlign = 'right'; ctx.fillText('出典：人員配置表', W - PAD, y + (off.length ? 6 : 0));
   return cv;
 }
 // ===== 送る =====
@@ -198,7 +208,8 @@ async function main() {
   document.getElementById('ttl').textContent = day.label + ' の現場配置をLINEに送る';
   labelShort = day.label;
   bar('［送る］を押して、LINEで送り先のグループ（白石・中嶋・山下）を選んでください。まとめて選べます。');
-  const text = day.sites.filter(s => !s.kakou).map(s => '■' + s.name + '\n' + (s.map || '（住所未登録）')).join('\n\n');
+  const ORDER = { sh: 0, nk: 1, ym: 2, other: 3 };
+  const text = day.sites.filter(s => !s.kakou).slice().sort((p, q) => (ORDER[p.own] ?? 3) - (ORDER[q.own] ?? 3)).map(s => '■' + s.name + '\n' + (s.map || '（住所未登録）')).join('\n\n');
   const list = document.getElementById('list');
   const sec = document.createElement('section');
   const two = document.createElement('div'); two.className = 'two';
