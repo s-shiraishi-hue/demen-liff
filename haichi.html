@@ -92,9 +92,8 @@ function drawCard(day) {
   const L = groups.map(x => ({ ...x, cards: x.ss.map(s => ({ s, rows: layoutChips(ctx, chipsFor(s), W - PAD * 2 - IN * 2) })) }));
   const cardH = r => 42 + Math.max(1, r.rows.length) * (CH + 6) + 8;
   const TOP = 104, SUM = 64;
-  const off = [];
-  ['sh', 'nk', 'ym'].forEach(x => (day.companies[x].off || []).forEach(n => off.push(n + '（' + CO_LABEL[x].slice(0, 2) + '）')));
-  const H = TOP + SUM + 8 + L.reduce((a, x) => a + 42 + x.cards.reduce((b, r) => b + cardH(r) + 8, 0) + 12, 0) + (off.length ? 34 : 22);
+  const off = [];   // 休みは画像に出さない（2026-10-10 白石さん）
+  const H = TOP + SUM + 8 + L.reduce((a, x) => a + 42 + x.cards.reduce((b, r) => b + cardH(r) + 8, 0) + 12, 0) + 22;
   cv.width = W * S; cv.height = H * S; ctx.scale(S, S);
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
   // 帯：日付を大きく
