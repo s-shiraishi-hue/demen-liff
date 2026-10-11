@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>空からカフェ紹介動画</title>
+<style>
+  body{margin:0;padding:24px 16px;font-family:sans-serif;background:#f7f6f3;color:#1a1a18}
+  h1{font-size:22px;margin:0 0 6px}
+  .sub{font-size:13px;color:#6b6860;margin:0 0 16px}
+  .box{background:#fff;border:1.5px solid #e0ddd6;border-radius:12px;padding:14px;margin-bottom:14px;font-size:14px;line-height:1.7}
+  label{display:block;font-size:13px;font-weight:bold;margin:10px 0 4px}
+  label:first-child{margin-top:0}
+  input[type=text],input[type=number],textarea,select{width:100%;box-sizing:border-box;padding:10px;border:1.5px solid #e0ddd6;border-radius:8px;font-size:15px;font-family:inherit;background:#fff}
+  textarea{min-height:64px}
+  .row{display:flex;gap:8px}
+  .row>*{flex:1}
+  .hint{font-size:12px;color:#6b6860}
+  button{width:100%;padding:16px;border:none;border-radius:12px;background:#1E7B45;color:#fff;font-size:16px;margin-bottom:10px}
+  button.sub2{background:#fff;color:#1E7B45;border:1.5px solid #1E7B45;padding:12px}
+  button:disabled{opacity:.5}
+  .stage{background:#111;border-radius:12px;padding:8px;margin-bottom:14px;text-align:center}
+  canvas,video{max-width:100%;max-height:70vh;border-radius:6px;display:block;margin:0 auto}
+  #bar{height:6px;background:#e0ddd6;border-radius:3px;overflow:hidden;margin-top:8px}
+  #bar>div{height:100%;width:0;background:#1E7B45;transition:width .2s}
+  #msg{white-space:pre-wrap;font-size:13px;margin-top:6px}
+  #out{display:none}
+  #out a{display:block;text-align:center;padding:14px;border-radius:12px;background:#1E7B45;color:#fff;text-decoration:none;margin-top:10px}
+</style>
+</head>
+<body>
+<h1>空からカフェ紹介動画</h1>
+<p class="sub">国土地理院の航空写真で、空からお店までグーッと寄っていく動画をつくります。</p>
+
+<div class="box">
+  <label>お店の名前</label>
+  <input type="text" id="name" value="カフェ しらいし">
+  <label>キャッチコピー（最初に出る文字）</label>
+  <input type="text" id="catch" value="空から、ちょっと寄り道。">
+  <label>場所（住所で検索、または「緯度, 経度」・Googleマップのリンクを貼り付け）</label>
+  <div class="row">
+    <input type="text" id="q" placeholder="例）東京都千代田区丸の内1丁目">
+    <button class="sub2" style="flex:0 0 84px;margin:0" onclick="searchPlace()">検索</button>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <input type="number" id="lat" step="0.000001" value="35.681236">
+    <input type="number" id="lng" step="0.000001" value="139.767125">
+  </div>
+  <div class="hint" id="placeHint">緯度・経度（左：緯度　右：経度）</div>
+  <label>写真（お店・メニューなど。何枚でも）</label>
+  <input type="file" id="photos" accept="image/*" multiple>
+  <label>写真の説明（1行に1枚ずつ。写真の順番どおり）</label>
+  <textarea id="captions" placeholder="自家焙煎のコーヒー&#10;季節のタルト&#10;窓ぎわの席"></textarea>
+  <label>最後に出す情報（住所・営業時間など。改行OK）</label>
+  <textarea id="info">東京都千代田区丸の内1丁目
+営業 9:00〜18:00　水曜定休</textarea>
+  <div class="row">
+    <div>
+      <label>画面の形</label>
+      <select id="shape">
+        <option value="v">縦（リール・ストーリー）</option>
+        <option value="h">横（YouTube）</option>
+        <option value="s">正方形</option>
+      </select>
+    </div>
+    <div>
+      <label>降りる時間（秒）</label>
+      <input type="number" id="dur" value="8" min="3" max="20">
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label>スタートの高さ</label>
+      <select id="zs">
+        <option value="5">日本全体</option>
+        <option value="8" selected>地方</option>
+        <option value="11">市町村</option>
+      </select>
+    </div>
+    <div>
+      <label>最後の寄り具合</label>
+      <select id="ze">
+        <option value="17">建物まわり</option>
+        <option value="18" selected>建物アップ</option>
+        <option value="18.7">もっとアップ</option>
+      </select>
+    </div>
+  </div>
+  <label><input type="checkbox" id="spin" checked> 降りながら少し回転する（ドローンっぽく）</label>
+</div>
+
+<button class="sub2" onclick="checkPlace()">① 位置を確認（ピンの位置を見る）</button>
+<button class="sub2" onclick="run(false)">② プレビュー再生</button>
+<button id="recBtn" onclick="run(true)">③ 動画を作って保存</button>
+
+<div class="stage">
+  <canvas id="cv"></canvas>
+  <div id="bar"><div></div></div>
+  <div id="msg" style="color:#ddd"></div>
+</div>
+
+<div class="box" id="out">
+  <video id="vid" controls playsinline></video>
+  <a id="dl" download>動画をダウンロード</a>
+  <a id="shareBtn" href="#" style="background:#06C755">LINEなどで共有</a>
+</div>
+
+<div class="box hint">
+  地図・航空写真：国土地理院（シームレス空中写真）。動画内にも「出典：国土地理院」を自動で入れています。<br>
+  録画中は画面を消したり、別のアプリに切り替えたりしないでください（動画がカクつきます）。
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const TILE = 256, MAXZ = 18;
+const TILE_URL = (z, x, y) => `https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/${z}/${x}/${y}.jpg`;
+const FONT = '"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",Meiryo,sans-serif';
+const XF = 0.6;                 // 場面の切り替え（クロスフェード）秒数
+const PHOTO_SEC = 3, END_SEC = 3.5, FPS = 30;
+
+const msg = t => { $('msg').textContent = t; };
+const bar = r => { document.querySelector('#bar>div').style.width = Math.round(r * 100) + '%'; };
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const easeIO = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+
+// ---------- 場所 ----------
+function parseLatLng(s) {
+  const m = s.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) || s.match(/[?&](?:q|ll|query)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/)
+    || s.match(/^\s*(-?\d+\.\d+)\s*[,，\s]\s*(-?\d+\.\d+)\s*$/);
+  return m ? [parseFloat(m[1]), parseFloat(m[2])] : null;
+}
+async function searchPlace() {
+  const q = $('q').value.trim();
+  if (!q) return;
+  const ll = parseLatLng(q);
+  if (ll) { setPlace(ll[0], ll[1], '座標を読み取りました'); return; }
+  $('placeHint').textContent = '検索中…';
+  try {
+    const r = await fetch('https://msearch.gsi.go.jp/address-search/AddressSearch?q=' + encodeURIComponent(q));
+    const list = await r.json();
+    if (!list.length) { $('placeHint').textContent = '見つかりませんでした。住所を変えるか、緯度・経度を直接入れてください'; return; }
+    const [lng, lat] = list[0].geometry.coordinates;
+    setPlace(lat, lng, '見つかりました：' + list[0].properties.title + '（ずれていたら①で確認して数字を調整）');
+  } catch (e) {
+    $('placeHint').textContent = '検索できませんでした。Googleマップのリンクか「緯度, 経度」を貼り付けてください';
+  }
+}
+function setPlace(lat, lng, note) {
+  $('lat').value = lat.toFixed(6); $('lng').value = lng.toFixed(6);
+  $('placeHint').textContent = note;
+}
+
+// ---------- 地図タイル ----------
+const tiles = new Map();   // "z/x/y" -> Image | null(失敗)
+function worldPx(lat, lng, z) {
+  const n = TILE * Math.pow(2, z), r = lat * Math.PI / 180;
+  return [(lng + 180) / 360 * n, (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n];
+}
+function tilesFor(zf, lat, lng, out) {
+  const L = Math.min(MAXZ, Math.floor(zf)), s = Math.pow(2, zf - L);
+  const [cx, cy] = worldPx(lat, lng, L);
+  const R = Math.hypot(cv.width, cv.height) / 2 / s + 2, n = 1 << L;
+  for (let ty = Math.floor((cy - R) / TILE); ty <= Math.floor((cy + R) / TILE); ty++) {
+    if (ty < 0 || ty >= n) continue;
+    for (let tx = Math.floor((cx - R) / TILE); tx <= Math.floor((cx + R) / TILE); tx++) {
+      out.add(`${L}/${((tx % n) + n) % n}/${ty}`);
+    }
+  }
+  return { L, s, cx, cy, R };
+}
+function loadTile(key) {
+  return new Promise(res => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    const done = ok => { clearTimeout(tm); tiles.set(key, ok ? img : null); res(); };
+    const tm = setTimeout(() => done(false), 15000);
+    img.onload = () => done(true);
+    img.onerror = () => done(false);
+    const [z, x, y] = key.split('/');
+    img.src = TILE_URL(z, x, y);
+  });
+}
+async function loadTiles(keys, label) {
+  const todo = [...keys].filter(k => !tiles.has(k));
+  let i = 0, done = 0;
+  const worker = async () => {
+    while (i < todo.length) {
+      await loadTile(todo[i++]);
+      done++;
+      if (done % 5 === 0 || done === todo.length) { bar(done / todo.length); msg(`${label}（${done}/${todo.length}）`); }
+    }
+  };
+  await Promise.all(Array.from({ length: 12 }, worker));
+  const bad = todo.filter(k => tiles.get(k) === null).length;
+  if (todo.length && bad === todo.length) throw new Error('航空写真を読み込めませんでした。通信状態を確認してください');
+}
+// 読めなかったタイルは、ひとつ上の階層の写真を拡大して埋める
+function tileImg(z, x, y) {
+  for (let k = 0; k <= 5 && z - k >= 0; k++) {
+    const img = tiles.get(`${z - k}/${x >> k}/${y >> k}`);
+    if (img) {
+      const size = TILE >> k;
+      return [img, (x - ((x >> k) << k)) * size, (y - ((y >> k) << k)) * size, size];
+    }
+  }
+  return null;
+}
+function drawMap(zf, rot, lat, lng) {
+  const { L, s, cx, cy, R } = tilesFor(zf, lat, lng, new Set());
+  const n = 1 << L;
+  ctx.fillStyle = '#1d3b53';
+  ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.save();
+  ctx.translate(cv.width / 2, cv.height / 2);
+  ctx.rotate(rot);
+  ctx.scale(s, s);
+  for (let ty = Math.floor((cy - R) / TILE); ty <= Math.floor((cy + R) / TILE); ty++) {
+    if (ty < 0 || ty >= n) continue;
+    for (let tx = Math.floor((cx - R) / TILE); tx <= Math.floor((cx + R) / TILE); tx++) {
+      const t = tileImg(L, ((tx % n) + n) % n, ty);
+      if (t) ctx.drawImage(t[0], t[1], t[2], t[3], t[3], tx * TILE - cx, ty * TILE - cy, TILE + 1, TILE + 1);
+    }
+  }
+  ctx.restore();
+}
+
+// ---------- 文字・飾り ----------
+const U = () => Math.min(cv.width, cv.height) / 720;   // 画面サイズに合わせた単位
+function text(str, x, y, size, opt = {}) {
+  ctx.save();
+  ctx.globalAlpha *= opt.alpha ?? 1;
+  let sz = size;
+  ctx.font = `${opt.weight || 'bold'} ${sz}px ${FONT}`;
+  const maxW = opt.maxW || cv.width * 0.88;
+  while (ctx.measureText(str).width > maxW && sz > 10) { sz -= 2; ctx.font = `${opt.weight || 'bold'} ${sz}px ${FONT}`; }
+  ctx.textAlign = opt.align || 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,.55)';
+  ctx.shadowBlur = sz * 0.35;
+  ctx.fillStyle = opt.color || '#fff';
+  ctx.fillText(str, x, y);
+  ctx.restore();
+}
+function credit() {
+  text('出典：国土地理院', cv.width - 14 * U(), cv.height - 16 * U(), 16 * U(), { align: 'right', weight: 'normal', alpha: .9 });
+}
+function pin(x, y, u, alpha) {
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  ctx.translate(x, y);
+  ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 10 * u;
+  ctx.fillStyle = '#E8423F';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(-6 * u, -14 * u, -22 * u, -26 * u, -22 * u, -44 * u);
+  ctx.arc(0, -44 * u, 22 * u, Math.PI, 0);
+  ctx.bezierCurveTo(22 * u, -26 * u, 6 * u, -14 * u, 0, 0);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(0, -44 * u, 9 * u, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function drawCover(img, zoom, panX, panY) {
+  const W = cv.width, H = cv.height;
+  const s = Math.max(W / img.width, H / img.height) * zoom;
+  const w = img.width * s, h = img.height * s;
+  ctx.drawImage(img, (W - w) / 2 + panX * (w - W) / 2, (H - h) / 2 + panY * (h - H) / 2, w, h);
+}
+
+// ---------- 場面づくり ----------
+function settings() {
+  const shape = $('shape').value;
+  return {
+    name: $('name').value.trim() || 'カフェ',
+    catch: $('catch').value.trim(),
+    info: $('info').value.split('\n').map(s => s.trim()).filter(Boolean),
+    captions: $('captions').value.split('\n').map(s => s.trim()),
+    lat: parseFloat($('lat').value), lng: parseFloat($('lng').value),
+    zs: parseFloat($('zs').value), ze: parseFloat($('ze').value),
+    dur: clamp(parseFloat($('dur').value) || 8, 3, 20),
+    spin: $('spin').checked,
+    size: shape === 'h' ? [1280, 720] : shape === 's' ? [960, 960] : [720, 1280],
+  };
+}
+function mapScene(o) {
+  const HOLD0 = 1, D = o.dur, PIN = 0.9, HOLD1 = 2.8;
+  const rot0 = o.spin ? -0.5 : 0;
+  const zoomAt = lt => o.zs + (o.ze - o.zs) * easeIO(clamp((lt - HOLD0) / D));
+  const rotAt = lt => rot0 * (1 - easeIO(clamp((lt - HOLD0) / D)));
+  return {
+    dur: HOLD0 + D + HOLD1,
+    tiles(set) {
+      for (let lt = 0; lt <= HOLD0 + D + 1 / FPS; lt += 1 / FPS) tilesFor(zoomAt(lt), o.lat, o.lng, set);
+    },
+    draw(lt) {
+      const u = U(), W = cv.width, H = cv.height;
+      drawMap(zoomAt(lt), rotAt(lt), o.lat, o.lng);
+      // 最初のキャッチコピー
+      if (o.catch) {
+        const a = clamp(lt / 0.6) * (1 - clamp((lt - HOLD0 - D * 0.35) / 0.6));
+        text(o.catch, W / 2, H * 0.42, 52 * u, { alpha: a });
+      }
+      // 降りている途中で店名をちらっと
+      const mid = HOLD0 + D * 0.45;
+      const am = clamp((lt - mid) / 0.5) * (1 - clamp((lt - mid - D * 0.3) / 0.5));
+      if (am > 0) text(`${o.name} へ`, W / 2, H * 0.3, 40 * u, { alpha: am, weight: 'normal' });
+      // 着地：ピンが落ちる＋波紋
+      const pt = lt - HOLD0 - D;
+      if (pt > -0.3) {
+        const p = clamp((pt + 0.3) / PIN);
+        const bounce = p < .6 ? -(1 - p / .6) * H * 0.35 : -Math.abs(Math.sin((p - .6) / .4 * Math.PI)) * 18 * u * (1 - p);
+        if (pt > 0) {
+          for (let k = 0; k < 2; k++) {
+            const r = ((pt * 0.8 + k * 0.5) % 1);
+            ctx.save();
+            ctx.strokeStyle = `rgba(255,255,255,${(1 - r) * .8})`;
+            ctx.lineWidth = 3 * u;
+            ctx.beginPath(); ctx.ellipse(W / 2, H / 2, 70 * u * r, 26 * u * r, 0, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+          }
+        }
+        pin(W / 2, H / 2 + bounce, u * 1.3, clamp(p * 4));
+        // 店名カード
+        const ac = easeOut(clamp((pt - 0.5) / 0.6));
+        if (ac > 0) {
+          const cw = Math.min(W * 0.86, 620 * u), ch = 130 * u, cx = (W - cw) / 2, cy = H * 0.68 + (1 - ac) * 40 * u;
+          ctx.save();
+          ctx.globalAlpha = ac;
+          ctx.fillStyle = 'rgba(255,255,255,.93)';
+          roundRect(cx, cy, cw, ch, 18 * u); ctx.fill();
+          ctx.restore();
+          text(o.name, W / 2, cy + ch * 0.42, 50 * u, { alpha: ac, color: '#1a1a18', maxW: cw * 0.9 });
+          text('ここにあります', W / 2, cy + ch * 0.78, 20 * u, { alpha: ac, color: '#1E7B45', weight: 'normal' });
+        }
+      }
+      credit();
+    },
+  };
+}
+function photoScene(img, caption, i) {
+  const pans = [[-.6, -.3], [.6, .3], [.4, -.5], [-.4, .5]];
+  const [px, py] = pans[i % pans.length];
+  return {
+    dur: PHOTO_SEC,
+    draw(lt) {
+      const p = clamp(lt / (PHOTO_SEC + XF));
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cv.width, cv.height);
+      drawCover(img, 1.08 + 0.1 * p, px * (p - .5), py * (p - .5));
+      if (caption) {
+        const u = U(), H = cv.height;
+        const g = ctx.createLinearGradient(0, H * .7, 0, H);
+        g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.6)');
+        ctx.fillStyle = g; ctx.fillRect(0, H * .7, cv.width, H * .3);
+        text(caption, cv.width / 2, H * 0.87, 40 * u, { alpha: clamp((lt - .3) / .5) });
+      }
+    },
+  };
+}
+function endScene(o, bg) {
+  return {
+    dur: END_SEC,
+    draw(lt) {
+      const W = cv.width, H = cv.height, u = U();
+      if (bg) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); drawCover(bg, 1.15, 0, 0); }
+      else drawMap(Math.min(o.ze, MAXZ), 0, o.lat, o.lng);
+      ctx.fillStyle = 'rgba(20,24,20,.62)'; ctx.fillRect(0, 0, W, H);
+      const a = clamp((lt - .2) / .5);
+      const lines = o.info, gap = 38 * u;
+      const top = H / 2 - (70 * u + lines.length * gap) / 2;
+      text(o.name, W / 2, top, 60 * u, { alpha: a });
+      ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = '#fff';
+      ctx.fillRect(W / 2 - 40 * u, top + 44 * u, 80 * u, 3 * u); ctx.restore();
+      lines.forEach((l, k) => text(l, W / 2, top + 90 * u + k * gap, 26 * u, { alpha: clamp((lt - .5 - k * .15) / .5), weight: 'normal' }));
+      if (!bg) credit();
+    },
+  };
+}
+async function loadPhotos() {
+  const files = [...$('photos').files];
+  return Promise.all(files.map(f => new Promise(res => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = () => res(null);
+    img.src = URL.createObjectURL(f);
+  }))).then(list => list.filter(Boolean));
+}
+async function build() {
+  const o = settings();
+  if (!isFinite(o.lat) || !isFinite(o.lng)) throw new Error('緯度・経度を入れてください');
+  [cv.width, cv.height] = o.size;
+  const photos = await loadPhotos();
+  const scenes = [mapScene(o), ...photos.map((img, i) => photoScene(img, o.captions[i], i)), endScene(o, photos[0])];
+  let t = 0;
+  for (const s of scenes) { s.start = t; t += s.dur; }
+  const set = new Set();
+  scenes[0].tiles(set);
+  tilesFor(Math.min(o.ze, MAXZ), o.lat, o.lng, set);
+  await loadTiles(set, '航空写真を読み込み中');
+  return { scenes, total: t };
+}
+function drawFrame(scenes, t) {
+  for (let k = 0; k < scenes.length; k++) {
+    const s = scenes[k], lt = t - s.start;
+    const last = k === scenes.length - 1;
+    if (lt < 0 || (!last && lt >= s.dur + XF)) continue;
+    ctx.save();
+    ctx.globalAlpha = k === 0 ? 1 : clamp(lt / XF);
+    s.draw(lt);
+    ctx.restore();
+  }
+}
+
+// ---------- 実行 ----------
+let busy = false;
+function lock(on) {
+  busy = on;
+  document.querySelectorAll('button').forEach(b => b.disabled = on);
+}
+async function checkPlace() {
+  if (busy) return;
+  lock(true);
+  try {
+    const o = settings();
+    [cv.width, cv.height] = o.size;
+    const set = new Set();
+    tilesFor(Math.min(o.ze, MAXZ), o.lat, o.lng, set);
+    await loadTiles(set, '航空写真を読み込み中');
+    drawMap(o.ze, 0, o.lat, o.lng);
+    pin(cv.width / 2, cv.height / 2, U() * 1.3, 1);
+    credit();
+    msg('ピンの先がお店の位置です。ずれていたら緯度・経度の数字を少しずつ変えてください。\n（緯度を増やす→北へ、経度を増やす→東へ）');
+  } catch (e) { msg(e.message); }
+  lock(false);
+}
+function pickMime() {
+  const list = ['video/mp4;codecs=avc1.42E01F', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+  return list.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+}
+async function run(record) {
+  if (busy) return;
+  lock(true);
+  $('out').style.display = 'none';
+  try {
+    const { scenes, total } = await build();
+    let rec, chunks = [], mime = '';
+    if (record) {
+      if (!window.MediaRecorder || !cv.captureStream) throw new Error('このブラウザは録画に対応していません。Chrome か Safari で開いてください');
+      mime = pickMime();
+      rec = new MediaRecorder(cv.captureStream(FPS), mime ? { mimeType: mime, videoBitsPerSecond: 8e6 } : { videoBitsPerSecond: 8e6 });
+      rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+      drawFrame(scenes, 0);
+      rec.start(500);
+    }
+    msg(record ? '録画中…（画面を消さないでください）' : 'プレビュー中…');
+    const t0 = performance.now();
+    await new Promise(res => {
+      const loop = () => {
+        const t = (performance.now() - t0) / 1000;
+        drawFrame(scenes, Math.min(t, total));
+        bar(t / total);
+        if (t < total + 0.2) requestAnimationFrame(loop); else res();
+      };
+      requestAnimationFrame(loop);
+    });
+    if (record) {
+      await new Promise(res => { rec.onstop = res; rec.stop(); });
+      const type = (mime || chunks[0]?.type || 'video/webm').split(';')[0];
+      const ext = type.includes('mp4') ? 'mp4' : 'webm';
+      const blob = new Blob(chunks, { type });
+      const url = URL.createObjectURL(blob);
+      const fname = `${settings().name}_空から.${ext}`;
+      $('vid').src = url;
+      $('dl').href = url;
+      $('dl').download = fname;
+      $('shareBtn').style.display = navigator.canShare && navigator.canShare({ files: [new File([blob], fname, { type })] }) ? 'block' : 'none';
+      $('shareBtn').onclick = e => { e.preventDefault(); navigator.share({ files: [new File([blob], fname, { type })] }).catch(() => {}); };
+      $('out').style.display = 'block';
+      msg(`できました！（${total.toFixed(1)}秒・${ext.toUpperCase()}）` + (ext === 'webm' ? '\n※WEBM形式です。LINEやInstagramに上げる場合は iPhone の Safari か最新の Chrome で作るとMP4になります' : ''));
+    } else {
+      msg('プレビュー終わり');
+    }
+  } catch (e) { msg(e.message); }
+  lock(false);
+}
+
+// 最初に1コマ目を表示しておく
+[cv.width, cv.height] = settings().size;
+ctx.fillStyle = '#1d3b53'; ctx.fillRect(0, 0, cv.width, cv.height);
+text('①〜③のボタンを押してください', cv.width / 2, cv.height / 2, 30 * U(), { weight: 'normal' });
+</script>
+</body>
+</html>
