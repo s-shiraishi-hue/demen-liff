@@ -92,8 +92,12 @@ function drawCard(day) {
   const L = groups.map(x => ({ ...x, cards: x.ss.map(s => ({ s, rows: layoutChips(ctx, chipsFor(s), W - PAD * 2 - IN * 2) })) }));
   const cardH = r => 42 + Math.max(1, r.rows.length) * (CH + 6) + 8;
   const TOP = 104, SUM = 64;
-  const off = [];   // 休みは画像に出さない（2026-10-10 白石さん）
-  const H = TOP + SUM + 8 + L.reduce((a, x) => a + 42 + x.cards.reduce((b, r) => b + cardH(r) + 8, 0) + 12, 0) + 22;
+  // 休みも出す（2026-10-14 専務）。赤いセル・有給・休・欠勤の人を、会社の色で一番下に並べる
+  const offChips = [];
+  ['sh', 'nk', 'ym'].forEach(c => [...new Set(((day.companies || {})[c] || {}).off || [])].forEach(nm => offChips.push({ t: nm, col: COL[c] })));
+  const offRows = offChips.length ? layoutChips(ctx, offChips, W - PAD * 2 - IN * 2) : [];
+  const OFF_H = offRows.length ? 42 + offRows.length * (CH + 6) + 12 : 0;
+  const H = TOP + SUM + 8 + L.reduce((a, x) => a + 42 + x.cards.reduce((b, r) => b + cardH(r) + 8, 0) + 12, 0) + OFF_H + 22;
   cv.width = W * S; cv.height = H * S; ctx.scale(S, S);
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
   // 帯：日付を大きく
@@ -134,9 +138,20 @@ function drawCard(day) {
     }
     y = yy + 12;
   }
+  if (offRows.length) {
+    rr(ctx, PAD, y, W - PAD * 2, 34, 8); ctx.fillStyle = '#8a9298'; ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 19px ' + FONT; ctx.fillText('休み', PAD + 14, y + 24);
+    ctx.textAlign = 'right'; ctx.font = '15px ' + FONT; ctx.fillText(offChips.length + '名', W - PAD - 14, y + 23); ctx.textAlign = 'left';
+    let cy = y + 42;
+    for (const row of offRows) {
+      let cx = PAD + IN;
+      for (const c of row) { rr(ctx, cx, cy, c.w, CH, CH / 2); ctx.fillStyle = c.col[0]; ctx.fill(); ctx.fillStyle = c.col[1]; ctx.font = '17px ' + FONT; ctx.fillText(c.t, cx + 13, cy + 21); cx += c.w + 7; }
+      cy += CH + 6;
+    }
+    y = cy + 12;
+  }
   ctx.fillStyle = '#5f6c73'; ctx.font = '15px ' + FONT;
-  if (off.length) ctx.fillText('休み：' + off.join('、'), PAD, y + 6);
-  ctx.textAlign = 'right'; ctx.fillText('出典：人員配置表', W - PAD, y + (off.length ? 6 : 0));
+  ctx.textAlign = 'right'; ctx.fillText('出典：人員配置表', W - PAD, y);
   return cv;
 }
 // ===== 送る =====
