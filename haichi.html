@@ -62,7 +62,7 @@ const CO_LABEL = { sh: '白石工業', nk: '中嶋板金', ym: '山下板金' };
 // 職長（2026-10-19）：初めは現場の先頭の人。画像の右上の［職長 ▾］で選び直せる。その場だけ（スプシには書き戻さない）
 const CHIEF = {};            // 現場名 → チップの key
 const CHIEF_MARK = '職';     // 名前の前の印。'★' にすると星になる
-// 現場ごとのメモ（2026-10-19）：送る前に［✎メモ］で入れる。画像の現場の箱の下と、地図リンクの文に入る。その場だけ
+// 現場ごとのメモ（2026-10-19）：送る前に［✎メモ］で入れる。画像の現場の箱の下に入る（地図リンクの文には入れない）。その場だけ
 const MEMO = {};             // 現場名 → 文字
 // メモを箱の幅で折り返す（改行もそのまま）
 function wrapText(ctx, text, maxW) {
@@ -244,7 +244,7 @@ async function send(ready, text, btn, st) {
 // 現場のメモを入れる窓。［決定］で画像と文を作り直す
 function openMemo(site, done) {
   const bg = document.createElement('div'); bg.className = 'mdl';
-  bg.innerHTML = '<div class="box"><b></b><div class="st">画像のこの現場の下と、地図リンクの文に入ります。空にすると消えます。</div><textarea rows="3" placeholder="例：8:45入場。朝礼あり。ヘルメット白"></textarea><div class="row"><button type="button" class="no">やめる</button><button type="button" class="ok">決定</button></div></div>';
+  bg.innerHTML = '<div class="box"><b></b><div class="st">画像のこの現場の下に入ります。空にすると消えます。</div><textarea rows="3" placeholder="例：8:45入場。朝礼あり。ヘルメット白"></textarea><div class="row"><button type="button" class="no">やめる</button><button type="button" class="ok">決定</button></div></div>';
   bg.querySelector('b').textContent = site + ' のメモ';
   const ta = bg.querySelector('textarea'); ta.value = MEMO[site] || '';
   const close = () => bg.remove();
@@ -292,8 +292,8 @@ async function main() {
   labelShort = day.label;
   bar('［送る］を押して、LINEで送り先のグループ（白石・中嶋・山下）を選んでください。まとめて選べます。');
   const ORDER = { sh: 0, nk: 1, ym: 2, other: 3 };
-  // 地図リンクの文。メモがあれば現場の下に「※ 〜」（メモを変えるたびに作り直す）
-  const makeText = () => day.sites.filter(s => !s.kakou).slice().sort((p, q) => (ORDER[p.own] ?? 3) - (ORDER[q.own] ?? 3)).map(s => '■' + s.name + '\n' + (s.map || '（住所未登録）') + ((MEMO[s.name] || '').trim() ? '\n※ ' + MEMO[s.name].trim() : '')).join('\n\n');
+  // 地図リンクの文（メモは画像だけに入れる。文には入れない：2026-10-19 平川さん）
+  const makeText = () => day.sites.filter(s => !s.kakou).slice().sort((p, q) => (ORDER[p.own] ?? 3) - (ORDER[q.own] ?? 3)).map(s => '■' + s.name + '\n' + (s.map || '（住所未登録）')).join('\n\n');
   let text = makeText();
   const list = document.getElementById('list');
   const sec = document.createElement('section');
