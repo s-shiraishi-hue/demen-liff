@@ -13,7 +13,10 @@
   section { background: #fff; border: 1px solid #d6dddb; border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; }
   .two { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
   @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
-  canvas { width: 100%; max-width: 560px; border: 1px solid #d6dddb; border-radius: 10px; }
+  .cvwrap { position: relative; width: 100%; max-width: 560px; }
+  canvas { display: block; width: 100%; border: 1px solid #d6dddb; border-radius: 10px; }
+  /* 各現場の右上に重ねる［職長 ▾］。画像には写らない */
+  select.chief { position: absolute; right: 13%; max-width: 46%; font: inherit; font-size: 12px; font-weight: 700; color: #7a5b00; background: #fff8e1; border: 1px solid #d99a00; border-radius: 999px; padding: 2px 6px; cursor: pointer; }
   pre { margin: 0; background: #f4f6f5; border-radius: 8px; padding: 10px 12px; font-family: inherit; font-size: .9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
   button { font: inherit; font-weight: 700; background: #06a24a; color: #fff; border: 0; border-radius: 8px; padding: 10px 16px; cursor: pointer; }
   button:disabled { opacity: .5; cursor: default; }
@@ -48,17 +51,35 @@ function count(s) { return s.m.reduce((k, p) => k + (p.n || 1), 0); }
 
 // 1枚に3社分：社員は名前（会社の色）、協力会社はA列の会社名と人数「望 ×3」
 const CO_LABEL = { sh: '白石工業', nk: '中嶋板金', ym: '山下板金' };
+// 職長（2026-10-19）：初めは現場の先頭の人。画像の右上の［職長 ▾］で選び直せる。その場だけ（スプシには書き戻さない）
+const CHIEF = {};            // 現場名 → チップの key
+const CHIEF_MARK = '職';     // 名前の前の印。'★' にすると星になる
 function chipsFor(s) {
   const c = [];
-  ['sh', 'nk', 'ym'].forEach(x => s.m.filter(p => p.co === x).forEach(p => c.push({ t: p.name + (p.half ? '（' + p.half + '）' : ''), col: COL[x] })));
-  s.m.filter(p => p.co === 'gk').forEach(p => c.push({ t: p.name + ' ×' + (p.n || 1), col: COL.gk }));
+  ['sh', 'nk', 'ym'].forEach(x => s.m.filter(p => p.co === x).forEach(p => c.push({ k: 'p:' + p.name, label: p.name, t: p.name + (p.half ? '（' + p.half + '）' : ''), col: COL[x] })));
+  s.m.filter(p => p.co === 'gk').forEach(p => c.push({ k: 'g:' + p.name, label: p.name + '（協力）', t: p.name + ' ×' + (p.n || 1), col: COL.gk }));
+  if (!s.kakou) c.forEach(x => { x.chief = x.k === CHIEF[s.name]; });
+  c.sort((a, b) => (b.chief ? 1 : 0) - (a.chief ? 1 : 0));   // 職長を先頭に
   return c;
+}
+function chipW(ctx, c) { return ctx.measureText(c.t).width + 26 + (c.chief ? 26 : 0); }
+// チップを描く。職長は金色の枠と、名前の前に丸い印
+function drawChip(ctx, c, cx, cy, CH) {
+  rr(ctx, cx, cy, c.w, CH, CH / 2); ctx.fillStyle = c.col[0]; ctx.fill();
+  let tx = cx + 13;
+  if (c.chief) {
+    ctx.lineWidth = 2.5; ctx.strokeStyle = '#d99a00'; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx + 17, cy + CH / 2, 10, 0, Math.PI * 2); ctx.fillStyle = '#d99a00'; ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(CHIEF_MARK, cx + 17, cy + CH / 2 + 5); ctx.textAlign = 'left';
+    tx += 26;
+  }
+  ctx.fillStyle = c.col[1]; ctx.font = (c.chief ? 'bold ' : '') + '17px ' + FONT; ctx.fillText(c.t, tx, cy + 21);
 }
 function layoutChips(ctx, chips, maxW) {
   ctx.font = '17px ' + FONT;
   const rows = []; let row = [], x = 0;
   for (const c of chips) {
-    const w = ctx.measureText(c.t).width + 26;
+    const w = chipW(ctx, c);
     if (row.length && x + w > maxW) { rows.push(row); row = []; x = 0; }
     row.push({ ...c, w }); x += w + 7;
   }
@@ -99,6 +120,7 @@ function drawCard(day) {
   const OFF_H = offRows.length ? 42 + offRows.length * (CH + 6) + 12 : 0;
   const H = TOP + SUM + 8 + L.reduce((a, x) => a + 42 + x.cards.reduce((b, r) => b + cardH(r) + 8, 0) + 12, 0) + OFF_H + 22;
   cv.width = W * S; cv.height = H * S; ctx.scale(S, S);
+  cv._H = H; cv._cards = [];
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
   // 帯：日付を大きく
   ctx.fillStyle = '#273246'; ctx.fillRect(0, 0, W, TOP);
@@ -131,9 +153,10 @@ function drawCard(day) {
       let cy = yy + 40;
       for (const row of r.rows) {
         let cx = PAD + IN;
-        for (const c of row) { rr(ctx, cx, cy, c.w, CH, CH / 2); ctx.fillStyle = c.col[0]; ctx.fill(); ctx.fillStyle = c.col[1]; ctx.font = '17px ' + FONT; ctx.fillText(c.t, cx + 13, cy + 21); cx += c.w + 7; }
+        for (const c of row) { drawChip(ctx, c, cx, cy, CH); cx += c.w + 7; }
         cy += CH + 6;
       }
+      if (!r.s.kakou) cv._cards.push({ s: r.s, y: yy });   // ［職長 ▾］を重ねる場所
       yy += ch + 8;
     }
     y = yy + 12;
@@ -229,15 +252,33 @@ async function main() {
   const list = document.getElementById('list');
   const sec = document.createElement('section');
   const two = document.createElement('div'); two.className = 'two';
-  const cv = drawCard(day);
+  // 職長の初めの値＝その現場の先頭の人
+  day.sites.filter(s => !s.kakou).forEach(s => { const c = chipsFor(s); if (c.length) CHIEF[s.name] = c[0].k; });
+  const wrapCv = document.createElement('div'); wrapCv.className = 'cvwrap';
   const right = document.createElement('div'); right.style.display = 'grid'; right.style.gap = '10px'; right.style.alignContent = 'start';
   const pre = document.createElement('pre'); pre.textContent = '【' + labelShort + ' 現場の場所】\n\n' + (text || '（地図リンクなし）');
   const btn = document.createElement('button'); btn.textContent = '送る（画像＋地図リンク）';
   const st = document.createElement('div'); st.className = 'st';
-  const ready = prepare(cv, 'all', btn, st);
+  let ready;
+  // 画像を描いて、各現場の右上に［職長 ▾］を重ねる。職長を変えたら描き直して保存し直す
+  const render = () => {
+    const cv = drawCard(day);
+    wrapCv.innerHTML = ''; wrapCv.appendChild(cv);
+    cv._cards.forEach(({ s, y }) => {
+      const chips = chipsFor(s); if (!chips.length) return;
+      const sel = document.createElement('select'); sel.className = 'chief';
+      sel.title = s.name + 'の職長を変える';
+      sel.style.top = (y + 11) / cv._H * 100 + '%';
+      chips.forEach(c => { const o = document.createElement('option'); o.value = c.k; o.textContent = '職長：' + c.label; o.selected = c.chief; sel.appendChild(o); });
+      sel.onchange = () => { CHIEF[s.name] = sel.value; render(); };
+      wrapCv.appendChild(sel);
+    });
+    ready = prepare(cv, 'all', btn, st);
+  };
+  render();
   btn.onclick = () => send(ready, text, btn, st);
   right.append(btn, st, pre);
-  two.append(cv, right);
+  two.append(wrapCv, right);
   sec.append(two);
   list.appendChild(sec);
 }main();
