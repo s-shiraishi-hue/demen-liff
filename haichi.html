@@ -16,7 +16,15 @@
   .cvwrap { position: relative; width: 100%; max-width: 560px; }
   canvas { display: block; width: 100%; border: 1px solid #d6dddb; border-radius: 10px; }
   /* 各現場の右上に重ねる［職長 ▾］。画像には写らない */
-  select.chief { position: absolute; right: 13%; max-width: 46%; font: inherit; font-size: 12px; font-weight: 700; color: #7a5b00; background: #fff8e1; border: 1px solid #d99a00; border-radius: 999px; padding: 2px 6px; cursor: pointer; }
+  .tools { position: absolute; right: 13%; max-width: 62%; display: flex; gap: 4px; align-items: center; }
+  select.chief { min-width: 0; max-width: 100%; font: inherit; font-size: 12px; font-weight: 700; color: #7a5b00; background: #fff8e1; border: 1px solid #d99a00; border-radius: 999px; padding: 2px 6px; cursor: pointer; }
+  button.memo { flex: none; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #fff; color: #5f6c73; border: 1px solid #c4cdd0; }
+  button.memo.on { background: #fff4cc; color: #7a4a00; border-color: #d99a00; }
+  .mdl { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .mdl .box { background: #fff; border-radius: 12px; padding: 14px 16px; width: 100%; max-width: 420px; display: grid; gap: 8px; }
+  .mdl textarea { font: inherit; font-size: 16px; padding: 8px; border: 1px solid #c4cdd0; border-radius: 8px; resize: vertical; }
+  .mdl .row { display: flex; justify-content: flex-end; gap: 8px; }
+  .mdl .no { background: #eef1f0; color: #1d2830; }
   pre { margin: 0; background: #f4f6f5; border-radius: 8px; padding: 10px 12px; font-family: inherit; font-size: .9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
   button { font: inherit; font-weight: 700; background: #06a24a; color: #fff; border: 0; border-radius: 8px; padding: 10px 16px; cursor: pointer; }
   button:disabled { opacity: .5; cursor: default; }
@@ -54,6 +62,18 @@ const CO_LABEL = { sh: '白石工業', nk: '中嶋板金', ym: '山下板金' };
 // 職長（2026-10-19）：初めは現場の先頭の人。画像の右上の［職長 ▾］で選び直せる。その場だけ（スプシには書き戻さない）
 const CHIEF = {};            // 現場名 → チップの key
 const CHIEF_MARK = '職';     // 名前の前の印。'★' にすると星になる
+// 現場ごとのメモ（2026-10-19）：送る前に［✎メモ］で入れる。画像の現場の箱の下と、地図リンクの文に入る。その場だけ
+const MEMO = {};             // 現場名 → 文字
+// メモを箱の幅で折り返す（改行もそのまま）
+function wrapText(ctx, text, maxW) {
+  const out = [];
+  String(text).split('\n').forEach(line => {
+    let cur = '';
+    for (const ch of line) { if (cur && ctx.measureText(cur + ch).width > maxW) { out.push(cur); cur = ch; } else cur += ch; }
+    out.push(cur);
+  });
+  return out;
+}
 function chipsFor(s) {
   const c = [];
   ['sh', 'nk', 'ym'].forEach(x => s.m.filter(p => p.co === x).forEach(p => c.push({ k: 'p:' + p.name, label: p.name, t: p.name + (p.half ? '（' + p.half + '）' : ''), col: COL[x] })));
@@ -110,8 +130,14 @@ function drawCard(day) {
   const ctx = cv.getContext('2d');
   const PAD = 22, CH = 30, IN = 14;
   const groups = ['sh', 'nk', 'ym', 'other', 'kakou'].map(g => ({ g, ss: day.sites.filter(s => (s.own || (s.kakou ? 'kakou' : 'other')) === g) })).filter(x => x.ss.length);
-  const L = groups.map(x => ({ ...x, cards: x.ss.map(s => ({ s, rows: layoutChips(ctx, chipsFor(s), W - PAD * 2 - IN * 2) })) }));
-  const cardH = r => 42 + Math.max(1, r.rows.length) * (CH + 6) + 8;
+  const MEMO_FONT = 'bold 16px ' + FONT, ML = 22;   // メモの字と1行の高さ
+  const L = groups.map(x => ({ ...x, cards: x.ss.map(s => {
+    ctx.font = MEMO_FONT;
+    const memo = (MEMO[s.name] || '').trim();
+    return { s, rows: layoutChips(ctx, chipsFor(s), W - PAD * 2 - IN * 2), memo: memo ? wrapText(ctx, '※ ' + memo, W - PAD * 2 - IN * 2 - 20) : [] };
+  }) }));
+  const memoH = r => r.memo.length ? r.memo.length * ML + 14 : 0;
+  const cardH = r => 42 + Math.max(1, r.rows.length) * (CH + 6) + memoH(r) + 8;
   const TOP = 104, SUM = 64;
   // 休みも出す（2026-10-14 専務）。赤いセル・有給・休・欠勤の人を、会社の色で一番下に並べる
   const offChips = [];
@@ -155,6 +181,11 @@ function drawCard(day) {
         let cx = PAD + IN;
         for (const c of row) { drawChip(ctx, c, cx, cy, CH); cx += c.w + 7; }
         cy += CH + 6;
+      }
+      if (r.memo.length) {   // メモ：黄色い帯に「※ 〜」
+        rr(ctx, PAD + IN, cy, W - PAD * 2 - IN * 2, memoH(r) - 6, 6); ctx.fillStyle = '#fff4cc'; ctx.fill();
+        ctx.fillStyle = '#7a4a00'; ctx.font = MEMO_FONT;
+        r.memo.forEach((ln, i) => ctx.fillText(ln, PAD + IN + 10, cy + 20 + i * ML));
       }
       if (!r.s.kakou) cv._cards.push({ s: r.s, y: yy });   // ［職長 ▾］を重ねる場所
       yy += ch + 8;
@@ -210,6 +241,19 @@ async function send(ready, text, btn, st) {
   }
 }
 
+// 現場のメモを入れる窓。［決定］で画像と文を作り直す
+function openMemo(site, done) {
+  const bg = document.createElement('div'); bg.className = 'mdl';
+  bg.innerHTML = '<div class="box"><b></b><div class="st">画像のこの現場の下と、地図リンクの文に入ります。空にすると消えます。</div><textarea rows="3" placeholder="例：8:45入場。朝礼あり。ヘルメット白"></textarea><div class="row"><button type="button" class="no">やめる</button><button type="button" class="ok">決定</button></div></div>';
+  bg.querySelector('b').textContent = site + ' のメモ';
+  const ta = bg.querySelector('textarea'); ta.value = MEMO[site] || '';
+  const close = () => bg.remove();
+  bg.querySelector('.no').onclick = close;
+  bg.onclick = e => { if (e.target === bg) close(); };
+  bg.querySelector('.ok').onclick = () => { MEMO[site] = ta.value.trim(); close(); done(); };
+  document.body.appendChild(bg); ta.focus();
+}
+
 // 日付を選ぶ（初期値＝明日、日曜なら月曜）
 function askDate() {
   return new Promise(resolve => {
@@ -248,7 +292,9 @@ async function main() {
   labelShort = day.label;
   bar('［送る］を押して、LINEで送り先のグループ（白石・中嶋・山下）を選んでください。まとめて選べます。');
   const ORDER = { sh: 0, nk: 1, ym: 2, other: 3 };
-  const text = day.sites.filter(s => !s.kakou).slice().sort((p, q) => (ORDER[p.own] ?? 3) - (ORDER[q.own] ?? 3)).map(s => '■' + s.name + '\n' + (s.map || '（住所未登録）')).join('\n\n');
+  // 地図リンクの文。メモがあれば現場の下に「※ 〜」（メモを変えるたびに作り直す）
+  const makeText = () => day.sites.filter(s => !s.kakou).slice().sort((p, q) => (ORDER[p.own] ?? 3) - (ORDER[q.own] ?? 3)).map(s => '■' + s.name + '\n' + (s.map || '（住所未登録）') + ((MEMO[s.name] || '').trim() ? '\n※ ' + MEMO[s.name].trim() : '')).join('\n\n');
+  let text = makeText();
   const list = document.getElementById('list');
   const sec = document.createElement('section');
   const two = document.createElement('div'); two.className = 'two';
@@ -265,14 +311,24 @@ async function main() {
     const cv = drawCard(day);
     wrapCv.innerHTML = ''; wrapCv.appendChild(cv);
     cv._cards.forEach(({ s, y }) => {
-      const chips = chipsFor(s); if (!chips.length) return;
-      const sel = document.createElement('select'); sel.className = 'chief';
-      sel.title = s.name + 'の職長を変える';
-      sel.style.top = (y + 11) / cv._H * 100 + '%';
-      chips.forEach(c => { const o = document.createElement('option'); o.value = c.k; o.textContent = '職長：' + c.label; o.selected = c.chief; sel.appendChild(o); });
-      sel.onchange = () => { CHIEF[s.name] = sel.value; render(); };
-      wrapCv.appendChild(sel);
+      const tools = document.createElement('div'); tools.className = 'tools';
+      tools.style.top = (y + 11) / cv._H * 100 + '%';
+      const mb = document.createElement('button'); mb.type = 'button'; mb.className = 'memo' + ((MEMO[s.name] || '').trim() ? ' on' : '');
+      mb.textContent = (MEMO[s.name] || '').trim() ? '✎メモあり' : '✎メモ';
+      mb.onclick = () => openMemo(s.name, () => render());
+      tools.appendChild(mb);
+      const chips = chipsFor(s);
+      if (chips.length) {
+        const sel = document.createElement('select'); sel.className = 'chief';
+        sel.title = s.name + 'の職長を変える';
+        chips.forEach(c => { const o = document.createElement('option'); o.value = c.k; o.textContent = '職長：' + c.label; o.selected = c.chief; sel.appendChild(o); });
+        sel.onchange = () => { CHIEF[s.name] = sel.value; render(); };
+        tools.appendChild(sel);
+      }
+      wrapCv.appendChild(tools);
     });
+    text = makeText();
+    pre.textContent = '【' + labelShort + ' 現場の場所】\n\n' + (text || '（地図リンクなし）');
     ready = prepare(cv, 'all', btn, st);
   };
   render();
