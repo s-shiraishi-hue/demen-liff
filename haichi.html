@@ -142,6 +142,8 @@ function drawCard(day) {
   // 休みも出す（2026-10-14 専務）。赤いセル・有給・休・欠勤の人を、会社の色で一番下に並べる
   const offChips = [];
   ['sh', 'nk', 'ym'].forEach(c => [...new Set(((day.companies || {})[c] || {}).off || [])].forEach(nm => offChips.push({ t: nm, col: COL[c] })));
+  (day.offGk || []).forEach(g => offChips.push({ t: g.name + ' ×' + (g.n || 1), col: COL.gk, n: g.n || 1 }));   // 協力会社の休み（2026-10-20）
+  const offN = offChips.reduce((k, c) => k + (c.n || 1), 0);
   const offRows = offChips.length ? layoutChips(ctx, offChips, W - PAD * 2 - IN * 2) : [];
   const OFF_H = offRows.length ? 42 + offRows.length * (CH + 6) + 12 : 0;
   const H = TOP + SUM + 8 + L.reduce((a, x) => a + 42 + x.cards.reduce((b, r) => b + cardH(r) + 8, 0) + 12, 0) + OFF_H + 22;
@@ -195,7 +197,7 @@ function drawCard(day) {
   if (offRows.length) {
     rr(ctx, PAD, y, W - PAD * 2, 34, 8); ctx.fillStyle = '#8a9298'; ctx.fill();
     ctx.fillStyle = '#fff'; ctx.font = 'bold 19px ' + FONT; ctx.fillText('休み', PAD + 14, y + 24);
-    ctx.textAlign = 'right'; ctx.font = '15px ' + FONT; ctx.fillText(offChips.length + '名', W - PAD - 14, y + 23); ctx.textAlign = 'left';
+    ctx.textAlign = 'right'; ctx.font = '15px ' + FONT; ctx.fillText(offN + '名', W - PAD - 14, y + 23); ctx.textAlign = 'left';
     let cy = y + 42;
     for (const row of offRows) {
       let cx = PAD + IN;
