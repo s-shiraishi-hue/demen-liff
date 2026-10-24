@@ -22,8 +22,6 @@
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-b); line-height: 1.7; }
   .wrap { max-width: 560px; margin: 0 auto; padding: 18px 16px 40px; display: grid; gap: 14px; }
   h1 { margin: 0; font-family: var(--font-d); font-weight: 900; font-size: 22px; color: var(--accent); }
-  .who { margin: 0; font-size: 12.5px; color: var(--muted); }
-  .who b { color: var(--ink); }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 15px; display: grid; gap: 15px; }
   .f { display: grid; gap: 6px; min-width: 0; }
   .f > label { font-family: var(--font-d); font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
@@ -37,16 +35,15 @@
   .seg.two { grid-template-columns: repeat(2, 1fr); }
   .seg button { font: inherit; font-family: var(--font-d); font-weight: 700; font-size: 14.5px; padding: 12px 4px; border-radius: 9px; cursor: pointer; border: 1.5px solid var(--line); background: var(--field); color: var(--ink); }
   .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .seg button:disabled { opacity: .4; cursor: default; }
-  .pair { display: grid; grid-template-columns: 104px minmax(0,1fr); gap: 8px; }
+  .pair { display: grid; grid-template-columns: 116px minmax(0,1fr); gap: 8px; }
   .chips { display: flex; flex-wrap: wrap; gap: 7px; }
   .chips label { position: relative; font-family: var(--font-d); font-weight: 700; font-size: 14px; padding: 9px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--field); cursor: pointer; }
   .chips input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
   .chips label:has(input:checked) { background: var(--accent); border-color: var(--accent); color: #fff; }
   .newc { display: grid; gap: 12px; border-left: 3px solid var(--accent-2); padding-left: 12px; }
   #existc { display: grid; gap: 6px; }
-  .submit { font: inherit; font-family: var(--font-d); font-weight: 900; font-size: 17px; padding: 15px; border-radius: 11px; cursor: pointer; background: var(--accent); color: #fff; border: 0; width: 100%; }
-  .submit:disabled { opacity: .55; cursor: default; }
+  .notice { margin: 0; font-size: 12px; color: var(--accent-2); background: #eaf1f9; border-radius: 8px; padding: 8px 11px; line-height: 1.55; }
+  .submit, .again { font: inherit; font-family: var(--font-d); font-weight: 900; font-size: 17px; padding: 15px; border-radius: 11px; cursor: pointer; background: var(--accent); color: #fff; border: 0; width: 100%; }
   .note { margin: 0; font-size: 12px; color: var(--muted); }
   .steps { display: grid; gap: 9px; }
   .step { display: flex; align-items: center; gap: 10px; font-size: 14px; }
@@ -58,16 +55,12 @@
   .kname { margin: 0; font-size: 15px; font-weight: 700; }
   .made { background: var(--ok-bg); border-radius: 9px; padding: 11px 13px; font-size: 13px; }
   .made p { margin: 0; }
-  .again { font: inherit; font-family: var(--font-d); font-weight: 900; font-size: 17px; padding: 15px; border-radius: 11px; cursor: pointer; background: var(--accent); color: #fff; border: 0; width: 100%; }
   .fail { background: var(--warn-bg); border-radius: 9px; padding: 11px 13px; font-size: 13px; color: var(--warn); font-weight: 700; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>工事台帳 新規登録</h1>
-    <p class="who">登録する人：<b id="user">読み込み中…</b></p>
-  </header>
+  <header><h1>工事台帳 新規登録</h1></header>
 
   <form class="card" id="screen-form" novalidate>
     <div class="f">
@@ -77,7 +70,6 @@
         <button type="button" data-co="中嶋" aria-pressed="false">中嶋</button>
         <button type="button" data-co="山下" aria-pressed="false">山下</button>
       </div>
-      <p class="hint">中嶋・山下は台帳側の準備ができてから使えるようになります。</p>
     </div>
 
     <div class="f">
@@ -86,12 +78,13 @@
         <button type="button" id="kc-exist" data-kc="exist" aria-pressed="true">既存の顧客</button>
         <button type="button" id="kc-new" data-kc="new" aria-pressed="false">新しい顧客</button>
       </div>
+      <p class="notice" id="no-cust" hidden>この会社の顧客リストはまだ空です。「新しい顧客」で登録してください。</p>
       <div id="existc">
         <div class="pair">
           <select id="kana" aria-label="索引かな"><option value="">索引</option></select>
           <select id="kokyaku" aria-label="顧客名" disabled><option value="">先に索引を選ぶ</option></select>
         </div>
-        <p class="hint">リストに無いときは「新しい顧客」へ。名前は台帳の顧客リストと同じでないと登録できません。</p>
+        <p class="hint">リストに無いときは「新しい顧客」へ。会社を変えると顧客リストも変わります。</p>
       </div>
       <p class="err" id="err-kokyaku" hidden>顧客を選んでください</p>
     </div>
@@ -161,7 +154,7 @@
       <p class="kid" id="done-id">—</p>
       <p class="kname" id="done-name">—</p>
     </div>
-    <div class="made"><p id="done-note">台帳に1行つくり、案件フォルダと個別シートも用意しました。</p></div>
+    <div class="made"><p>台帳に1行つくり、案件フォルダと個別シートも用意しました。</p></div>
     <button type="button" class="again" id="again">続けて別の現場を登録する</button>
   </section>
 
@@ -174,15 +167,17 @@
 
 <script>
 (function () {
-  // ======== 設定 ========
   var TOKEN = 'shiraishi-daicho-2026-7Qp3';
+
   var EXEC = {
     '白石': 'https://script.google.com/macros/s/AKfycbxPnfp9I3xgo_lBTbr8-QZZuBQW5XLXz9A3bcQvanXElK7_xJnKQDI6gs9zfCA0aMc/exec',
     '中嶋': 'https://script.google.com/macros/s/AKfycbxdiyMxhzMGgoaIVed_xRnaMcHRsOeDlM9wbI93DmE_1EEKkF7kuedPz3kvm-4fh4LX/exec',
     '山下': 'https://script.google.com/macros/s/AKfycbygE_QrjJv73NnFUtBq7Muop5amA_D0cXPSnoA4XXYHPNW1H5q8I6Qub7xyn-k5ku8q/exec'
   };
 
-  var CUST = {
+  // 顧客は会社ごとに別。白石は「よく使う」も持っている
+  var CUST_CO = {
+    '白石': {
     'あ': ['アルテック', '青山ルーフ 株式会社', 'アサヒ鐵鋼販売', 'アクアライン', 'アートビルド', 'アリ・ユアーズ', '青井管材', '秋重板金', '淺原淨士建築', '旭鐵鋼販売', '安全工業', 'アルカナデザイン', 'アキモト', 'あゆみ工務店', 'あつお建設'],
     'い': ['池田興業 株式会社', '株式会社 石蔵商店', '伊原金属 株式会社', '伊藤健次', '今村組', '稲益造船 株式会社', '池田', 'イシダ組', '飯沼設備', 'イノクリート', '井上ルーフテック', '石橋医院', '犬丸', '池田冷熱', '到津の森', '入江製菓', '井上板金加工所', 'インテリア多村', 'イマサ', 'IRIE'],
     'う': ['ウォーリスト', '株式会社占部建築板金'],
@@ -209,44 +204,107 @@
     'で': ['ディーエステック', 'Decorate Company'],
     'と': ['株式会社 トモテック', '株式会社 東祥', '徳永建設', '東昇', 'トーヨー化成', '遠見建材', '東洋緑地建設', '東洋不動産', '東洋ビルド', '旧東洋ルーフ大森　ハルディンルーフ', 'トーケン設計'],
     'な': ['株式会社 中嶋板金工業', '株式会社 那智商会 夕原工場', '株式会社 中川工業']
+  },
+    '中嶋': {
+      'う': ['有限会社嬉野板金'],
+      'こ': ['鋼和ルーフ 株式会社'],
+      'さ': ['株式会社三新建設', '有限会社坂田工務店'],
+      'し': ['下関福永鉄工所'],
+      'せ': ['西部システム・エンジニアリング 株式会社', '有限会社千成興産'],
+      'た': ['株式会社大洋建設', '太平運輸 株式会社'],
+      'つ': ['津上産業 株式会社'],
+      'て': ['株式会社テイル'],
+      'と': ['株式会社友田組', 'トータルスタッフ'],
+      'な': ['仲建設株式会社', '株式会社ナンリ', '株式会社中川工業'],
+      'に': ['日鉄テックスエンジ 株式会社'],
+      'び': ['ビルドサポート・N'],
+      'ふ': ['藤高組', 'フクナガ'],
+      'ま': ['株式会社松本建築工房'],
+      'め': ['株式会社メタルテック'],
+      'も': ['門司福永鉄工'],
+      'や': ['株式会社山口総合建設'],
+      'よ': ['吉田建設'],
+      'る': ['Roofers craft']
+    },
+    '山下': {}
   };
-  var FREQ = ['三協工業 株式会社', '三光ハウス 株式会社', '田代建設 株式会社', 'ONグループ', 'PROTECQS', 'SASAKEN 株式会社', 'アサヒ鐵鋼販売', 'オーエヌグループ', 'カネタケ', 'カフェ四稀', 'グローバル･ソリューション', 'ジョウセイ 株式会社', 'シラザワ技建工業 株式会社', 'スカイルーフ', 'セキノ興産', 'ダイムワカイ', 'ディーエステック', 'デンヒチ', 'ニナキ板金', 'ファーバン都市開発', 'フォレスト・ブルー', 'マスタックエフ 株式会社', 'マツゲン', 'マルヨ', 'ライムイシモト', 'ワイズアイデア 有限会社', '井上板金加工所', '稲益造船 株式会社', '岡田宮', '下上津役幼稚園', '株式会社 Joy Creator', '株式会社 SHIMIZU', '株式会社 シノダ建工', '株式会社 トモテック', '株式会社 ハウテックス 北九州営業所', '株式会社 安成工務店 福岡支店 福岡建築事業部', '株式会社 金城工業', '株式会社 古川板金工業', '株式会社 石蔵商店', '株式会社 中嶋板金工業', '株式会社 田中商店(ニューテック)', '株式会社 渡辺藤吉本店', '株式会社 那智商会 夕原工場', '株式会社 明建', '株式会社ミリオンテック', '株式会社三吉', '機設', '宮川産業', '協和', '九州米油', '熊手商店街', '建築板金サポート', '元旦', '功建工業株式会社', '江田建設', '甲斐鈑金', '三晃金属工業 株式会社', '山岡建工'];
+
+  var FREQ_CO = {
+    '白石': ['三協工業 株式会社', '三光ハウス 株式会社', '田代建設 株式会社', 'ONグループ', 'PROTECQS', 'SASAKEN 株式会社', 'アサヒ鐵鋼販売', 'オーエヌグループ', 'カネタケ', 'カフェ四稀', 'グローバル･ソリューション', 'ジョウセイ 株式会社', 'シラザワ技建工業 株式会社', 'スカイルーフ', 'セキノ興産', 'ダイムワカイ', 'ディーエステック', 'デンヒチ', 'ニナキ板金', 'ファーバン都市開発', 'フォレスト・ブルー', 'マスタックエフ 株式会社', 'マツゲン', 'マルヨ', 'ライムイシモト', 'ワイズアイデア 有限会社', '井上板金加工所', '稲益造船 株式会社', '岡田宮', '下上津役幼稚園', '株式会社 Joy Creator', '株式会社 SHIMIZU', '株式会社 シノダ建工', '株式会社 トモテック', '株式会社 ハウテックス 北九州営業所', '株式会社 安成工務店 福岡支店 福岡建築事業部', '株式会社 金城工業', '株式会社 古川板金工業', '株式会社 石蔵商店', '株式会社 中嶋板金工業', '株式会社 田中商店(ニューテック)', '株式会社 渡辺藤吉本店', '株式会社 那智商会 夕原工場', '株式会社 明建', '株式会社ミリオンテック', '株式会社三吉', '機設', '宮川産業', '協和', '九州米油', '熊手商店街', '建築板金サポート', '元旦', '功建工業株式会社', '江田建設', '甲斐鈑金', '三晃金属工業 株式会社', '山岡建工'],
+    '中嶋': [],
+    '山下': []
+  };
 
   var $ = function (id) { return document.getElementById(id); };
   var co = '白石', kcMode = 'exist', genbaTouched = false;
-
-  // 会社
-  Array.prototype.slice.call(document.querySelectorAll('.seg button[data-co]')).forEach(function (b) {
-    b.addEventListener('click', function () {
-      document.querySelectorAll('.seg button[data-co]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
-      co = b.dataset.co;
-    });
-  });
-
-  // 顧客
   var kanaSel = $('kana'), kokSel = $('kokyaku');
-  kanaSel.appendChild(new Option('よく使う（' + FREQ.length + '）', '*'));
-  Object.keys(CUST).forEach(function (k) { kanaSel.appendChild(new Option(k + '（' + CUST[k].length + '）', k)); });
+
+  function allOf(c) {
+    var m = CUST_CO[c] || {}, out = [];
+    Object.keys(m).forEach(function (k) { out = out.concat(m[k]); });
+    return out;
+  }
+
   function fillKokyaku(k) {
-    var list = k === '*' ? FREQ : (CUST[k] || []);
+    var list;
+    if (k === '*') { list = FREQ_CO[co].length ? FREQ_CO[co] : allOf(co); }
+    else { list = (CUST_CO[co] || {})[k] || []; }
     kokSel.textContent = '';
     kokSel.appendChild(new Option(list.length ? '選んでください' : '先に索引を選ぶ', ''));
     list.forEach(function (n) { kokSel.appendChild(new Option(n, n)); });
     kokSel.disabled = !list.length;
   }
-  kanaSel.addEventListener('change', function () { fillKokyaku(this.value); $('err-kokyaku').hidden = true; });
-  kanaSel.value = '*'; fillKokyaku('*');
 
-  [$('kc-exist'), $('kc-new')].forEach(function (b) {
+  function rebuildKana() {
+    var map = CUST_CO[co] || {}, keys = Object.keys(map);
+    var total = allOf(co).length;
+    kanaSel.textContent = '';
+    if (total === 0) {
+      kanaSel.appendChild(new Option('顧客なし', ''));
+      kanaSel.disabled = true;
+      $('no-cust').hidden = false;
+      setKc('new');
+      $('kc-exist').disabled = true;
+      fillKokyaku('');
+      return;
+    }
+    kanaSel.disabled = false;
+    $('no-cust').hidden = true;
+    $('kc-exist').disabled = false;
+    var top = FREQ_CO[co].length
+      ? new Option('よく使う（' + FREQ_CO[co].length + '）', '*')
+      : new Option('すべて（' + total + '）', '*');
+    kanaSel.appendChild(top);
+    keys.forEach(function (k) { kanaSel.appendChild(new Option(k + '（' + map[k].length + '）', k)); });
+    kanaSel.value = '*';
+    fillKokyaku('*');
+  }
+
+  function setKc(mode) {
+    kcMode = mode;
+    $('kc-exist').setAttribute('aria-pressed', String(mode === 'exist'));
+    $('kc-new').setAttribute('aria-pressed', String(mode === 'new'));
+    $('existc').hidden = mode === 'new';
+    $('newc').hidden = mode !== 'new';
+  }
+
+  Array.prototype.slice.call(document.querySelectorAll('.seg button[data-co]')).forEach(function (b) {
     b.addEventListener('click', function () {
-      [$('kc-exist'), $('kc-new')].forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
-      kcMode = b.dataset.kc;
-      $('existc').hidden = kcMode === 'new';
-      $('newc').hidden = kcMode !== 'new';
+      document.querySelectorAll('.seg button[data-co]').forEach(function (x) {
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      co = b.dataset.co;
+      setKc('exist');
+      rebuildKana();
     });
   });
 
-  // 案件名 → 現場名
+  [$('kc-exist'), $('kc-new')].forEach(function (b) {
+    b.addEventListener('click', function () { if (!b.disabled) setKc(b.dataset.kc); });
+  });
+
+  kanaSel.addEventListener('change', function () { fillKokyaku(this.value); $('err-kokyaku').hidden = true; });
+
   $('genba').addEventListener('input', function () { genbaTouched = this.value.length > 0; });
   $('ankenmei').addEventListener('input', function () {
     if (genbaTouched) return;
@@ -319,11 +377,8 @@
 
   function reset() {
     ['ankenmei', 'genba', 'jusho', 'newname', 'newkana', 'kigen'].forEach(function (id) { $(id).value = ''; });
-    kanaSel.value = '*'; fillKokyaku('*');
-    kcMode = 'exist';
-    $('kc-exist').setAttribute('aria-pressed', 'true');
-    $('kc-new').setAttribute('aria-pressed', 'false');
-    $('existc').hidden = false; $('newc').hidden = true;
+    setKc('exist');
+    rebuildKana();
     genbaTouched = false;
     document.querySelectorAll('.f.bad').forEach(function (el) { el.classList.remove('bad'); });
     document.querySelectorAll('.err').forEach(function (el) { el.hidden = true; });
@@ -333,6 +388,8 @@
   }
   $('again').addEventListener('click', reset);
   $('back').addEventListener('click', reset);
+
+  rebuildKana();
 })();
 </script>
 </body>
