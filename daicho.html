@@ -171,11 +171,9 @@
   </section>
 </div>
 
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
 (function () {
   // ======== 設定 ========
-  var LIFF_ID = '2011897591-HBBipfnN';
   var TOKEN = 'shiraishi-daicho-2026-7Qp3';
   var EXEC = {
     '白石': 'https://script.google.com/macros/s/AKfycbxPnfp9I3xgo_lBTbr8-QZZuBQW5XLXz9A3bcQvanXElK7_xJnKQDI6gs9zfCA0aMc/exec',
@@ -215,16 +213,6 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var co = '白石', kcMode = 'exist', genbaTouched = false;
-
-  // LINEログイン
-  if (window.liff) {
-    liff.init({ liffId: LIFF_ID }).then(function () {
-      if (!liff.isLoggedIn()) { liff.login(); return; }
-      return liff.getProfile().then(function (p) { $('user').textContent = p.displayName; });
-    }).catch(function () { $('user').textContent = '（名前を取得できません）'; });
-  } else {
-    $('user').textContent = '（LINEの外で開いています）';
-  }
 
   // 会社
   Array.prototype.slice.call(document.querySelectorAll('.seg button[data-co]')).forEach(function (b) {
