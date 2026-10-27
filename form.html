@@ -26,6 +26,7 @@ const LIFF_ID = '2011897591-HBBipfnN';
 // 書き込み先：出面_日報データ_針崎テスト用 のコピー（1JB62YR0…）
 // 旧（針崎さんの版）：https://script.google.com/macros/s/AKfycbzqiWQbCs0Pf7I3lraH5aGjGlGDcKIhVm-gXVxWv8mkdvd3X--ZxAh-7hkscPLRpSWS/exec
 const FORM_URL = 'https://script.google.com/macros/s/AKfycbzS0LkDlpHur61DE6u0-YX8VWyx6nYil4AOB5Y0veMitmHYgq09uglN3jUaUlaTjQX_mQ/exec';
+
 const bar = (t, err) => { const b = document.getElementById('bar'); b.textContent = t; b.className = err ? 'err' : ''; };
 let canSend = false;
 
@@ -63,14 +64,17 @@ function buildCard(r, photos) {
     return { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: rows };
   };
   const members = r.members || [];
-  const selfNinku = members.length * r.kinmu;
+  // 勤務区分は一人ずつ（r.kinmus）。無い古い報告は全員 r.kinmu
+  const kinmus = members.map((m, i) => (r.kinmus || [])[i] || r.kinmu || 1);
+  const selfNinku = kinmus.reduce((s, k) => s + k, 0);
+  const halfs = members.filter((m, i) => kinmus[i] === 0.5);
   // 送信した内容は全部出す（入れていない項目は「なし」）
   const lines = [
     t('▼区分：' + r.kubun),
     t('▼会社：' + r.company),
     t('▼現場：' + r.genba),
     t('▼報告者：' + r.reporter),
-    t('▼勤務区分：' + (r.kinmu === 0.5 ? '0.5 半日' : '1.0 一日')),
+    t('▼勤務区分：' + (!halfs.length ? '全員 1.0 一日' : halfs.length === members.length ? '全員 0.5 半日' : '半日 ' + halfs.join('・') + '／他は一日')),
     t('▼自社（' + selfNinku + '人工）'),
     t('　' + (members.join('・') || 'なし')),
     t('　残業 ' + (members.map((m, i) => m + ((r.zangyo || [])[i] || 0)).join('・') || 'なし') + '（分）'),
