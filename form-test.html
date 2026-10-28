@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>業務報告</title>
+<meta name="description" content="今日の出面（人工・車両・写真）を報告するフォームです。送るとこのグループに報告カードが出ます。">
+<meta property="og:title" content="業務報告（出面）">
+<meta property="og:description" content="タップして今日の出面と写真を報告">
+<meta property="og:type" content="website">
+<style>
+  html,body{margin:0;height:100%;background:#f7f6f3;font-family:sans-serif}
+  #bar{position:fixed;top:0;left:0;right:0;height:28px;line-height:28px;padding:0 10px;font-size:12px;color:#fff;background:#1E7B45;z-index:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #bar.err{background:#B42318}
+  #bar.tap{background:#B54708;cursor:pointer;text-decoration:underline}
+  #fail{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:5;padding:18px;font-family:sans-serif}
+  #fail .card{background:#fff;border-radius:16px;padding:20px 18px 16px;max-width:360px;width:100%;font-size:14px;line-height:1.7;color:#1a1a18}
+  #fail textarea{width:100%;height:230px;margin:10px 0;padding:10px;border:1.5px solid #e0ddd6;border-radius:10px;font-size:13px;box-sizing:border-box}
+  #fail button{flex:1;padding:13px;border-radius:12px;font-size:15px;border:1px solid #d6d3cc;background:#fff}
+  #fail button.go{background:#1a1a18;color:#fff;border:none}
+  #frame{position:fixed;top:28px;left:0;width:100%;height:calc(100% - 28px);border:0}
+</style>
+</head>
+<body>
+<div id="bar">準備中…</div>
+<iframe id="frame" allow="camera; microphone; clipboard-write"></iframe>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+const LIFF_ID = '2011897591-HBBipfnN';
+// 出面アプリ（Copy of 出面アプリ_針崎テスト用・k-hirakawa所有）のウェブアプリURL
+// 書き込み先：出面_日報データ_針崎テスト用 のコピー（1JB62YR0…）
+// 旧（針崎さんの版）：https://script.google.com/macros/s/AKfycbzqiWQbCs0Pf7I3lraH5aGjGlGDcKIhVm-gXVxWv8mkdvd3X--ZxAh-7hkscPLRpSWS/exec
+// テスト用（職長テスト 2026-10-28）。本番に切り替えるときは AKfycbzS0LkD… に戻す
+const FORM_URL = 'https://script.google.com/macros/s/AKfycby5DE-iJFHo5kEZ2CwTsCrjUCQYP46rT_1JsopWO_t8VMoh9Gqw3NAzkLkcxBjJXVY0-g/exec';
+
+const bar = (t, err) => { const b = document.getElementById('bar'); b.textContent = t; b.className = err ? 'err' : ''; };
+let canSend = false;
+
+async function main() {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    const ctx = liff.getContext() || {};
+    canSend = liff.isInClient() && ['group', 'room', 'utou'].includes(ctx.type);
+    bar(canSend ? '送信するとこのトークに報告カードが出ます（出るまで閉じないでください）' : 'このトークには送れません（グループのリンクから開いてください）');
+  } catch (e) {
+    bar('liff.init 失敗: ' + e, true);
+  }
+  document.getElementById('frame').src = FORM_URL;
+}
+
+// ===== 報告カード（card5.html と同じ形）2026-10-09 =====
+// 写真は「LINE用写真（30日で削除）」のコピー（リンクを知っている全員が閲覧可）を表示する
+const photoUrl = (id, w) => 'https://lh3.googleusercontent.com/d/' + id + '=w' + (w || 1280);
+
+function colsFor(n) { return n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4; }
+
+function buildCard(r, photos) {
+  const n = photos.length, COLS = colsFor(n);
+  const gencho = r.kubun !== '施工';
+  const t = (s, o) => Object.assign({ type: 'text', text: String(s), size: 'sm', color: '#1F2429', wrap: true }, o || {});
+  const tile = u => ({ type: 'image', url: u, size: 'full', aspectRatio: COLS === 1 ? '4:3' : '1:1', aspectMode: 'cover', flex: 1,
+    action: { type: 'uri', uri: u } });
+  const grid = list => {
+    const rows = [];
+    for (let i = 0; i < list.length; i += COLS) {
+      const row = list.slice(i, i + COLS).map(tile);
+      while (row.length < COLS) row.push({ type: 'filler' });
+      rows.push({ type: 'box', layout: 'horizontal', spacing: 'xs', contents: row });
+    }
+    return { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: rows };
+  };
+  const members = r.members || [];
+  // 勤務区分は一人ずつ（r.kinmus）。無い古い報告は全員 r.kinmu
+  const kinmus = members.map((m, i) => (r.kinmus || [])[i] || r.kinmu || 1);
+  const selfNinku = kinmus.reduce((s, k) => s + k, 0);
+  const halfs = members.filter((m, i) => kinmus[i] === 0.5);
+  // 送信した内容は全部出す（入れていない項目は「なし」）
+  const lines = [
+    t('▼区分：' + r.kubun),
+    t('▼会社：' + r.company),
+    t('▼現場：' + r.genba),
+    t('▼報告者：' + r.reporter),
+    t('▼職長：' + (r.shokucho || r.reporter)),
+    t('▼勤務区分：' + (!halfs.length ? '全員 1.0 一日' : halfs.length === members.length ? '全員 0.5 半日' : '半日 ' + halfs.join('・') + '／他は一日')),
+    t('▼自社（' + selfNinku + '人工）'),
+    t('　' + (members.join('・') || 'なし')),
+    t('　残業 ' + (members.map((m, i) => m + ((r.zangyo || [])[i] || 0)).join('・') || 'なし') + '（分）'),
+    t('▼協力：' + (r.partners || 'なし')),
+    t('▼車両：車' + r.cars + '台・ユニック' + r.unic + '台'),
+    t('▼MEMO：' + (r.memo || 'なし'))
+  ];
+  const pages = [photos.slice(0, 12)];
+  for (let i = 12; i < n; i += 12) pages.push(photos.slice(i, i + 12));
+  let from = 1;
+  const bubbles = pages.map((list, p) => {
+    let contents;
+    if (p === 0) {
+      contents = [
+        t('【業務報告】' + r.date, { size: 'md', weight: 'bold' }),
+        r.end === '完了'
+          ? { type: 'box', layout: 'vertical', backgroundColor: '#E6F4EC', cornerRadius: '10px', paddingAll: '8px', margin: 'md', contents: [
+              t('🎉 施工完了', { weight: 'bold', align: 'center', color: '#1E7B45' }),
+              t('お疲れさまでした！', { size: 'xs', align: 'center', color: '#2E7D4F' }) ] }
+          : t(gencho ? '📝 現調・打合せ' : '本日の作業終了', { size: 'xs', color: gencho ? '#185FA5' : '#5F5E5A', margin: 'sm' }),
+        { type: 'separator', margin: 'md' },
+        { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: lines },
+        { type: 'separator', margin: 'md' },
+        t('合計：' + (selfNinku + (r.partnerNinku || 0)) + '人工' + (n ? '　📷 写真' + n + '枚' : ''), { margin: 'md' })
+      ];
+      if (list.length) contents.push(grid(list));
+    } else {
+      contents = [t('📷 写真 ' + from + '〜' + (from + list.length - 1) + ' / ' + n + '枚', { size: 'xs', color: '#5F5E5A' }), grid(list)];
+    }
+    from += list.length;
+    return { type: 'bubble', size: 'mega', body: { type: 'box', layout: 'vertical', paddingAll: '14px', contents: contents } };
+  });
+  return { type: 'flex', altText: '【業務報告】' + r.date + ' ' + r.genba + '（' + r.reporter + '）',
+    contents: bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles } };
+}
+
+// フォーム（出面アプリの index.html）から「送信しました」を受け取ったら、カードにしてこのトークへ送る
+window.addEventListener('message', async ev => {
+  let host = '';
+  try { host = new URL(ev.origin).hostname; } catch (e) { return; }
+  if (!/\.googleusercontent\.com$/.test(host)) return;
+  const d = ev.data || {};
+  if (d.type === 'demen-failed' && d.text) { showFail(d.text, d.saved ? 'photo' : 'save', d); return; }
+  if (d.type !== 'demen-sent' || !d.report) return;
+  if (!canSend) { bar('報告は保存しました（このトークには送れません）'); return; }
+  const photos = (d.photoIds || []).map(id => photoUrl(id));
+  lastCard = buildCard(d.report, photos);
+  sendCard();
+});
+
+// ===== 送れなかったとき（2026-10-28 追加）=====
+// D：保存はできたがLINEに送れなかった → 帯をタップするともう一度送る
+let lastCard = null;
+async function sendCard() {
+  if (!lastCard) return;
+  bar('グループに送信中…（閉じないでください）');
+  try {
+    await liff.sendMessages([lastCard]);
+    bar('グループに送りました。閉じて大丈夫です');
+    lastCard = null;
+  } catch (e) {
+    bar('LINEに送れませんでした。ここをタップしてもう一度送る（報告は保存済み）', true);
+    document.getElementById('bar').className = 'tap';
+    document.getElementById('bar').onclick = () => { document.getElementById('bar').onclick = null; sendCard(); };
+  }
+}
+
+// B・C：日報データに保存できなかった → 入力した内容を、赤い帯つきの報告カードでグループに返す
+// （フォームが開かないときはこの枠も開かないので、手入力用のテンプレートは前もってグループのノートに置いておく）
+const FAIL_TITLE = {
+  save:['転記できませんでした', '申し訳ありません。入力した内容をそのままグループに送れます。写真はそのあとグループに貼ってください。'],
+  photo: ['写真が途中で止まりました', '報告は保存されています。下の内容をグループに送って、残りの写真はグループに貼ってください。']
+};
+// 失敗したときも、いつもの報告カードの形でグループに返す。上に赤い「転記できなかった」の帯をつける（2026-10-28）
+function buildFailCard(d, kind) {
+  const card = buildCard(d.report, []);
+  const bubble = card.contents.type === 'carousel' ? card.contents.contents[0] : card.contents;
+  const warn = kind === 'photo'
+    ? ['⚠ 写真が途中で止まりました', '報告は保存済み（' + (d.reportId || '') + '）。写真 ' + d.photoSaved + '/' + d.photoTotal + '枚まで保存。残りはこのあとグループに貼ります']
+    : ['⚠ 転記できなかった報告', '事務で入力お願いします。写真はこのあとグループに貼ります'];
+  bubble.body.contents.unshift({ type: 'box', layout: 'vertical', backgroundColor: '#FDECEA', cornerRadius: '10px', paddingAll: '8px', margin: 'none', contents: [
+    { type: 'text', text: warn[0], weight: 'bold', color: '#B42318', size: 'sm', wrap: true },
+    { type: 'text', text: warn[1], color: '#7A271A', size: 'xs', wrap: true } ] });
+  card.altText = warn[0] + ' ' + d.report.date + ' ' + d.report.genba + '（' + d.report.reporter + '）';
+  return card;
+}
+function showFail(text, kind, d) {
+  const old = document.getElementById('fail'); if (old) old.remove();
+  const [title, sub] = FAIL_TITLE[kind] || FAIL_TITLE.save;
+  const ov = document.createElement('div'); ov.id = 'fail';
+  ov.innerHTML = '<div class="card"><div style="font-size:17px;font-weight:600"></div><div style="font-size:13px;color:#5F5E5A"></div>'
+    + '<textarea></textarea><div style="display:flex;gap:10px"><button class="go" type="button"></button><button type="button">閉じる</button></div></div>';
+  ov.querySelector('.card > div').textContent = title;
+  ov.querySelector('.card > div:nth-child(2)').textContent = sub;
+  const ta = ov.querySelector('textarea'); ta.value = text; ta.readOnly = true;
+  const go = ov.querySelector('button.go');
+  go.textContent = canSend ? 'グループに送る' : 'コピーする';
+  go.onclick = async () => {
+    if (!canSend) { try { await navigator.clipboard.writeText(ta.value); } catch (e) { ta.select(); document.execCommand('copy'); } go.textContent = 'コピーしました'; return; }
+    go.disabled = true; go.textContent = '送信中…';
+    try {
+      await liff.sendMessages([(d && d.report) ? buildFailCard(d, kind) : { type: 'text', text: ta.value.slice(0, 4900) }]);
+      ov.querySelector('.card').innerHTML = '<div style="font-size:17px;font-weight:600">グループに送りました</div><div style="font-size:13px;color:#5F5E5A">写真があれば、このあとグループに貼ってください。閉じて大丈夫です。</div>';
+    } catch (e) {
+      go.disabled = false; go.textContent = 'もう一度送る';
+      bar('LINEに送れませんでした: ' + (e.message || e), true);
+    }
+  };
+  ov.querySelectorAll('button')[1].onclick = () => ov.remove();
+  document.body.appendChild(ov);
+}
+
+main();
+</script>
+</body>
+</html>
