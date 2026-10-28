@@ -125,7 +125,13 @@ window.addEventListener('message', async ev => {
   try { host = new URL(ev.origin).hostname; } catch (e) { return; }
   if (!/\.googleusercontent\.com$/.test(host)) return;
   const d = ev.data || {};
-  if (d.type === 'demen-failed' && d.text) { showFail(d.text, d.saved ? 'photo' : 'save', d); return; }
+  if (d.type === 'demen-failed' && d.report) {
+    try { ev.source.postMessage({ type: 'demen-fail-ack' }, '*'); } catch (e) {}   // フォームはいつもの「送信完了」を出す
+    if (!canSend) { bar('報告は送れませんでした。事務に連絡してください', true); return; }
+    lastCard = buildFailCard(d, d.saved ? 'photo' : 'save');   // 職人にはいつもどおりに見せ、カードの赤い帯で事務に知らせる
+    sendCard();
+    return;
+  }
   if (d.type !== 'demen-sent' || !d.report) return;
   if (!canSend) { bar('報告は保存しました（このトークには送れません）'); return; }
   const photos = (d.photoIds || []).map(id => photoUrl(id));
@@ -150,49 +156,22 @@ async function sendCard() {
   }
 }
 
-// B・C：日報データに保存できなかった → 入力した内容を、赤い帯つきの報告カードでグループに返す
+// B・C：日報データに保存できなかった → いつもの報告カードを、事務向けの赤い帯つきで自動でグループに送る。
+// 職人には「エラーが出ました（報告はグループに送りました）」とだけ出す。押すボタンは増やさない（2026-10-28）
 // （フォームが開かないときはこの枠も開かないので、手入力用のテンプレートは前もってグループのノートに置いておく）
-const FAIL_TITLE = {
-  save:['転記できませんでした', '申し訳ありません。入力した内容をそのままグループに送れます。写真はそのあとグループに貼ってください。'],
-  photo: ['写真が途中で止まりました', '報告は保存されています。下の内容をグループに送って、残りの写真はグループに貼ってください。']
-};
-// 失敗したときも、いつもの報告カードの形でグループに返す。上に赤い「転記できなかった」の帯をつける（2026-10-28）
 function buildFailCard(d, kind) {
-  const card = buildCard(d.report, []);
+  const photos = (d.photoIds || []).map(id => photoUrl(id));
+  const card = buildCard(d.report, photos);
   const bubble = card.contents.type === 'carousel' ? card.contents.contents[0] : card.contents;
+  const got = photos.length + '/' + (d.photoTotal || 0) + '枚';
   const warn = kind === 'photo'
-    ? ['⚠ 写真が途中で止まりました', '報告は保存済み（' + (d.reportId || '') + '）。写真 ' + d.photoSaved + '/' + d.photoTotal + '枚まで保存。残りはこのあとグループに貼ります']
-    : ['⚠ 転記できなかった報告', '事務で入力お願いします。写真はこのあとグループに貼ります'];
+    ? ['⚠ 写真が途中までしか入っていません', '事務の方へ：報告はスプシに入っています（' + (d.reportId || '') + '）。写真は ' + got + ' まで保存。残りは職人に確認してください']
+    : ['⚠ スプシに入っていません', '事務の方へ：日報データへの転記をお願いします。' + (d.photoTotal ? '写真（' + got + '）は「写真未整理」フォルダにあります。案件フォルダへ移してください' : '写真はありません')];
   bubble.body.contents.unshift({ type: 'box', layout: 'vertical', backgroundColor: '#FDECEA', cornerRadius: '10px', paddingAll: '8px', margin: 'none', contents: [
     { type: 'text', text: warn[0], weight: 'bold', color: '#B42318', size: 'sm', wrap: true },
     { type: 'text', text: warn[1], color: '#7A271A', size: 'xs', wrap: true } ] });
   card.altText = warn[0] + ' ' + d.report.date + ' ' + d.report.genba + '（' + d.report.reporter + '）';
   return card;
-}
-function showFail(text, kind, d) {
-  const old = document.getElementById('fail'); if (old) old.remove();
-  const [title, sub] = FAIL_TITLE[kind] || FAIL_TITLE.save;
-  const ov = document.createElement('div'); ov.id = 'fail';
-  ov.innerHTML = '<div class="card"><div style="font-size:17px;font-weight:600"></div><div style="font-size:13px;color:#5F5E5A"></div>'
-    + '<textarea></textarea><div style="display:flex;gap:10px"><button class="go" type="button"></button><button type="button">閉じる</button></div></div>';
-  ov.querySelector('.card > div').textContent = title;
-  ov.querySelector('.card > div:nth-child(2)').textContent = sub;
-  const ta = ov.querySelector('textarea'); ta.value = text; ta.readOnly = true;
-  const go = ov.querySelector('button.go');
-  go.textContent = canSend ? 'グループに送る' : 'コピーする';
-  go.onclick = async () => {
-    if (!canSend) { try { await navigator.clipboard.writeText(ta.value); } catch (e) { ta.select(); document.execCommand('copy'); } go.textContent = 'コピーしました'; return; }
-    go.disabled = true; go.textContent = '送信中…';
-    try {
-      await liff.sendMessages([(d && d.report) ? buildFailCard(d, kind) : { type: 'text', text: ta.value.slice(0, 4900) }]);
-      ov.querySelector('.card').innerHTML = '<div style="font-size:17px;font-weight:600">グループに送りました</div><div style="font-size:13px;color:#5F5E5A">写真があれば、このあとグループに貼ってください。閉じて大丈夫です。</div>';
-    } catch (e) {
-      go.disabled = false; go.textContent = 'もう一度送る';
-      bar('LINEに送れませんでした: ' + (e.message || e), true);
-    }
-  };
-  ov.querySelectorAll('button')[1].onclick = () => ov.remove();
-  document.body.appendChild(ov);
 }
 
 main();
