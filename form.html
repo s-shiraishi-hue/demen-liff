@@ -12,6 +12,12 @@
   html,body{margin:0;height:100%;background:#f7f6f3;font-family:sans-serif}
   #bar{position:fixed;top:0;left:0;right:0;height:28px;line-height:28px;padding:0 10px;font-size:12px;color:#fff;background:#1E7B45;z-index:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #bar.err{background:#B42318}
+  #bar.tap{background:#B54708;cursor:pointer;text-decoration:underline}
+  #fail{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:5;padding:18px;font-family:sans-serif}
+  #fail .card{background:#fff;border-radius:16px;padding:20px 18px 16px;max-width:360px;width:100%;font-size:14px;line-height:1.7;color:#1a1a18}
+  #fail textarea{width:100%;height:230px;margin:10px 0;padding:10px;border:1.5px solid #e0ddd6;border-radius:10px;font-size:13px;box-sizing:border-box}
+  #fail button{flex:1;padding:13px;border-radius:12px;font-size:15px;border:1px solid #d6d3cc;background:#fff}
+  #fail button.go{background:#1a1a18;color:#fff;border:none}
   #frame{position:fixed;top:28px;left:0;width:100%;height:calc(100% - 28px);border:0}
 </style>
 </head>
@@ -25,6 +31,7 @@ const LIFF_ID = '2011897591-HBBipfnN';
 // 出面アプリ（Copy of 出面アプリ_針崎テスト用・k-hirakawa所有）のウェブアプリURL
 // 書き込み先：出面_日報データ_針崎テスト用 のコピー（1JB62YR0…）
 // 旧（針崎さんの版）：https://script.google.com/macros/s/AKfycbzqiWQbCs0Pf7I3lraH5aGjGlGDcKIhVm-gXVxWv8mkdvd3X--ZxAh-7hkscPLRpSWS/exec
+// 本番（2026-10-28 職長チェック・スプシに入らないときの赤帯カードを追加）
 const FORM_URL = 'https://script.google.com/macros/s/AKfycbzS0LkDlpHur61DE6u0-YX8VWyx6nYil4AOB5Y0veMitmHYgq09uglN3jUaUlaTjQX_mQ/exec';
 
 const bar = (t, err) => { const b = document.getElementById('bar'); b.textContent = t; b.className = err ? 'err' : ''; };
@@ -74,6 +81,7 @@ function buildCard(r, photos) {
     t('▼会社：' + r.company),
     t('▼現場：' + r.genba),
     t('▼報告者：' + r.reporter),
+    t('▼職長：' + (r.shokucho || r.reporter)),
     t('▼勤務区分：' + (!halfs.length ? '全員 1.0 一日' : halfs.length === members.length ? '全員 0.5 半日' : '半日 ' + halfs.join('・') + '／他は一日')),
     t('▼自社（' + selfNinku + '人工）'),
     t('　' + (members.join('・') || 'なし')),
@@ -117,17 +125,54 @@ window.addEventListener('message', async ev => {
   try { host = new URL(ev.origin).hostname; } catch (e) { return; }
   if (!/\.googleusercontent\.com$/.test(host)) return;
   const d = ev.data || {};
+  if (d.type === 'demen-failed' && d.report) {
+    try { ev.source.postMessage({ type: 'demen-fail-ack' }, '*'); } catch (e) {}   // フォームはいつもの「送信完了」を出す
+    if (!canSend) { bar('報告は送れませんでした。事務に連絡してください', true); return; }
+    lastCard = buildFailCard(d, d.saved ? 'photo' : 'save');   // 職人にはいつもどおりに見せ、カードの赤い帯で事務に知らせる
+    sendCard();
+    return;
+  }
   if (d.type !== 'demen-sent' || !d.report) return;
   if (!canSend) { bar('報告は保存しました（このトークには送れません）'); return; }
   const photos = (d.photoIds || []).map(id => photoUrl(id));
+  lastCard = buildCard(d.report, photos);
+  sendCard();
+});
+
+// ===== 送れなかったとき（2026-10-28 追加）=====
+// D：保存はできたがLINEに送れなかった → 帯をタップするともう一度送る
+let lastCard = null;
+async function sendCard() {
+  if (!lastCard) return;
   bar('グループに送信中…（閉じないでください）');
   try {
-    await liff.sendMessages([buildCard(d.report, photos)]);
+    await liff.sendMessages([lastCard]);
     bar('グループに送りました。閉じて大丈夫です');
+    lastCard = null;
   } catch (e) {
-    bar('LINEへの送信に失敗: ' + (e.code || '') + ' ' + (e.message || e) + '（報告は保存済み）', true);
+    bar('LINEに送れませんでした。ここをタップしてもう一度送る（報告は保存済み）', true);
+    document.getElementById('bar').className = 'tap';
+    document.getElementById('bar').onclick = () => { document.getElementById('bar').onclick = null; sendCard(); };
   }
-});
+}
+
+// B・C：日報データに保存できなかった → いつもの報告カードを、事務向けの赤い帯つきで自動でグループに送る。
+// 職人には「エラーが出ました（報告はグループに送りました）」とだけ出す。押すボタンは増やさない（2026-10-28）
+// （フォームが開かないときはこの枠も開かないので、手入力用のテンプレートは前もってグループのノートに置いておく）
+function buildFailCard(d, kind) {
+  const photos = (d.photoIds || []).map(id => photoUrl(id));
+  const card = buildCard(d.report, photos);
+  const bubble = card.contents.type === 'carousel' ? card.contents.contents[0] : card.contents;
+  const got = photos.length + '/' + (d.photoTotal || 0) + '枚';
+  const warn = kind === 'photo'
+    ? ['⚠ 写真が途中までしか入っていません', '事務の方へ：報告はスプシに入っています（' + (d.reportId || '') + '）。写真は ' + got + ' まで保存。残りは職人に確認してください']
+    : ['⚠ スプシに入っていません', '事務の方へ：日報データへの転記をお願いします。' + (d.photoTotal ? '写真（' + got + '）は「写真未整理」フォルダにあります。案件フォルダへ移してください' : '写真はありません')];
+  bubble.body.contents.unshift({ type: 'box', layout: 'vertical', backgroundColor: '#FDECEA', cornerRadius: '10px', paddingAll: '8px', margin: 'none', contents: [
+    { type: 'text', text: warn[0], weight: 'bold', color: '#B42318', size: 'sm', wrap: true },
+    { type: 'text', text: warn[1], color: '#7A271A', size: 'xs', wrap: true } ] });
+  card.altText = warn[0] + ' ' + d.report.date + ' ' + d.report.genba + '（' + d.report.reporter + '）';
+  return card;
+}
 
 main();
 </script>
