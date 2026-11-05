@@ -44,7 +44,7 @@
 </head>
 <body>
 <div id="bar">準備中…</div>
-<div id="wait"><svg id="wait-house" viewBox="0 0 220 170" aria-hidden="true"></svg><div class="g" id="wait-g"></div><div class="x">読み込み中<i id="wait-d"></i></div></div>
+<div id="wait"><svg id="wait-house" viewBox="0 0 220 170" aria-hidden="true"></svg><div class="g" id="wait-g"></div><div class="x"><span id="wait-text">読み込み中</span><i id="wait-d"></i></div></div>
 <iframe id="frame" allow="camera; microphone; clipboard-write"></iframe>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -186,9 +186,10 @@ function drawWait() {
   document.getElementById('wait-d').textContent = '...'.slice(0, Math.floor(Date.now() / 400) % 4);
 }
 // 実際の進みは測れないので、区切りごとの目標へ少しずつ近づける。準備ができたら最後まで進めて消す
-function showWait() {
+function showWait(text) {
   if (!waitParts.length) buildWait();
-  waitP = 0; waitTarget = .25; drawWait();
+  document.getElementById('wait-text').textContent = text || '読み込み中';
+  waitP = 0; waitTarget = text ? .9 : .25; drawWait();
   document.getElementById('wait').style.display = 'flex';
   clearInterval(waitTimer);
   waitTimer = setInterval(() => {
@@ -354,6 +355,11 @@ window.addEventListener('message', async ev => {
   if (!/\.googleusercontent\.com$/.test(host)) return;
   const d = ev.data || {};
   if (d.type === 'demen-ready') { waitTo(1); return; }
+  if (d.type === 'demen-busy') {   // 送信中に何度か届くので、進み具合を戻さない
+    if (document.getElementById('wait').style.display !== 'flex') showWait('送信中');
+    return;
+  }
+  if (d.type === 'demen-idle') { if (!cardSending) waitTo(1); return; }
   if (d.type === 'demen-hello') {
     let last = ''; try { last = localStorage.getItem('demen-last-reporter') || ''; } catch (e) {}
     try { ev.source.postMessage({ type: 'demen-user', userId: lineUserId, lastReporter: last }, '*'); } catch (e) {}
@@ -377,15 +383,19 @@ window.addEventListener('message', async ev => {
 
 // ===== 送れなかったとき（2026-10-28 追加）=====
 // D：保存はできたがLINEに送れなかった → 帯をタップするともう一度送る
-let lastCard = null;
+let lastCard = null, cardSending = false;
 async function sendCard() {
   if (!lastCard) return;
-  bar('グループに送信中…（閉じないでください）');
+  cardSending = true;
   try {
     await liff.sendMessages([lastCard]);
-    bar('グループに送りました。閉じて大丈夫です');
+    bar('');   // 送れたら帯は消す（送信完了の画面が出ている）
     lastCard = null;
+    cardSending = false;
+    waitTo(1);
   } catch (e) {
+    cardSending = false;
+    waitTo(1);
     bar('LINEに送れませんでした。ここをタップしてもう一度送る（報告は保存済み）', true);
     document.getElementById('bar').className = 'tap';
     document.getElementById('bar').onclick = () => { document.getElementById('bar').onclick = null; sendCard(); };
