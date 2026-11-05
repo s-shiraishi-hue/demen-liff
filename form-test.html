@@ -31,8 +31,9 @@ const LIFF_ID = '2011897591-HBBipfnN';
 // 出面アプリ（Copy of 出面アプリ_針崎テスト用・k-hirakawa所有）のウェブアプリURL
 // 書き込み先：出面_日報データ_針崎テスト用 のコピー（1JB62YR0…）
 // 旧（針崎さんの版）：https://script.google.com/macros/s/AKfycbzqiWQbCs0Pf7I3lraH5aGjGlGDcKIhVm-gXVxWv8mkdvd3X--ZxAh-7hkscPLRpSWS/exec
-// テスト用（職長テスト 2026-10-28）。本番に切り替えるときは AKfycbzS0LkD… に戻す
-const FORM_URL = 'https://script.google.com/macros/s/AKfycby5DE-iJFHo5kEZ2CwTsCrjUCQYP46rT_1JsopWO_t8VMoh9Gqw3NAzkLkcxBjJXVY0-g/exec';
+// 本番（2026-10-28 職長チェック・スプシに入らないときの赤帯カードを追加）
+// 2026-10-28 本番のデプロイ（平川さんが「デプロイを管理」で更新しているもの）
+const FORM_URL = 'https://script.google.com/macros/s/AKfycbxHXmVPXFaOFoXSl1YTDrj5j76jqKEekuTenaTsAc2do0xRjcWZILiU2Ovv9Y8bcBArVQ/exec';
 
 const bar = (t, err) => { const b = document.getElementById('bar'); b.textContent = t; b.className = err ? 'err' : ''; };
 let canSend = false;
@@ -46,7 +47,22 @@ async function main() {
   } catch (e) {
     bar('liff.init 失敗: ' + e, true);
   }
-  document.getElementById('frame').src = FORM_URL;
+  // 2026-11-05 ?edit=報告ID で編集、?photos=報告ID&i=番号 で写真スライド
+  const q = new URLSearchParams(location.search);
+  const okId = v => /^R\d{14}$/.test(v || '');
+  let src = FORM_URL;
+  if (okId(q.get('photos'))) {
+    document.getElementById('bar').style.display = 'none';
+    document.getElementById('frame').style.top = '0';
+    document.getElementById('frame').style.height = '100%';
+    src += '?photos=' + q.get('photos') + '&i=' + (parseInt(q.get('i'), 10) || 0);
+  } else if (okId(q.get('edit'))) {
+    let editor = '';
+    try { editor = (await liff.getProfile()).displayName || ''; } catch (e) {}
+    if (canSend) bar('修正して送ると、このトークに修正カードが出ます（出るまで閉じないでください）');
+    src += '?edit=' + q.get('edit') + '&editor=' + encodeURIComponent(editor);
+  }
+  document.getElementById('frame').src = src;
 }
 
 // ===== 報告カード（card5.html と同じ形）2026-10-09 =====
@@ -55,12 +71,18 @@ const photoUrl = (id, w) => 'https://lh3.googleusercontent.com/d/' + id + '=w' +
 
 function colsFor(n) { return n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4; }
 
-function buildCard(r, photos) {
+// 編集ボタン・写真スライドの行き先（今開いているファイルに戻す。テスト中はテスト用に戻る）
+const liffUrl = q => 'https://liff.line.me/' + LIFF_ID + '/' + (location.pathname.split('/').pop() || 'form.html') + '?' + q;
+const okReportId = v => /^R\d{14}$/.test(v || '');
+
+function buildCard(r, photos, reportId, edit) {
   const n = photos.length, COLS = colsFor(n);
   const gencho = r.kubun !== '施工';
   const t = (s, o) => Object.assign({ type: 'text', text: String(s), size: 'sm', color: '#1F2429', wrap: true }, o || {});
+  const hasId = okReportId(reportId);
+  // 写真を押すとスライド画面が開く（報告IDが無い赤帯カードは今までどおり1枚だけ開く）
   const tile = u => ({ type: 'image', url: u, size: 'full', aspectRatio: COLS === 1 ? '4:3' : '1:1', aspectMode: 'cover', flex: 1,
-    action: { type: 'uri', uri: u } });
+    action: { type: 'uri', uri: hasId ? liffUrl('photos=' + reportId + '&i=' + photos.indexOf(u)) : u } });
   const grid = list => {
     const rows = [];
     for (let i = 0; i < list.length; i += COLS) {
@@ -109,14 +131,29 @@ function buildCard(r, photos) {
         t('合計：' + (selfNinku + (r.partnerNinku || 0)) + '人工' + (n ? '　📷 写真' + n + '枚' : ''), { margin: 'md' })
       ];
       if (list.length) contents.push(grid(list));
+      if (edit) contents.unshift(editBand(edit));
     } else {
       contents = [t('📷 写真 ' + from + '〜' + (from + list.length - 1) + ' / ' + n + '枚', { size: 'xs', color: '#5F5E5A' }), grid(list)];
     }
     from += list.length;
-    return { type: 'bubble', size: 'mega', body: { type: 'box', layout: 'vertical', paddingAll: '14px', contents: contents } };
+    const bubble = { type: 'bubble', size: 'mega', body: { type: 'box', layout: 'vertical', paddingAll: '14px', contents: contents } };
+    if (p === 0 && hasId) bubble.footer = { type: 'box', layout: 'vertical', paddingAll: '8px', contents: [
+      { type: 'button', style: 'link', height: 'sm', color: '#1E7B45', action: { type: 'uri', label: '✏️ 編集', uri: liffUrl('edit=' + reportId) } } ] };
+    return bubble;
   });
-  return { type: 'flex', altText: '【業務報告】' + r.date + ' ' + r.genba + '（' + r.reporter + '）',
+  return { type: 'flex', altText: (edit ? '✏️ 修正 ' : '') + '【業務報告】' + r.date + ' ' + r.genba + '（' + r.reporter + '）',
     contents: bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles } };
+}
+
+// 修正カードの帯。古いカードは消せないので、修正だと分かるようにする
+function editBand(e) {
+  const parts = (e.changes || []).slice();
+  if (e.photoAdded) parts.push('写真' + e.photoAdded + '枚追加');
+  const rows = [
+    { type: 'text', text: '✏️ 修正（' + e.no + '回目）', weight: 'bold', color: '#8A5A00', size: 'sm', wrap: true },
+    { type: 'text', text: '直した項目：' + (parts.join('・') || 'なし') + '／前のカードは使いません', color: '#8A5A00', size: 'xs', wrap: true } ];
+  if (e.siteChanged && e.oldPhotos) rows.push({ type: 'text', text: '事務の方へ：前からある写真' + e.oldPhotos + '枚は前の現場のフォルダにあります。移してください', color: '#B42318', size: 'xs', wrap: true });
+  return { type: 'box', layout: 'vertical', backgroundColor: '#FFF4D6', cornerRadius: '10px', paddingAll: '8px', margin: 'none', contents: rows };
 }
 
 // フォーム（出面アプリの index.html）から「送信しました」を受け取ったら、カードにしてこのトークへ送る
@@ -125,6 +162,7 @@ window.addEventListener('message', async ev => {
   try { host = new URL(ev.origin).hostname; } catch (e) { return; }
   if (!/\.googleusercontent\.com$/.test(host)) return;
   const d = ev.data || {};
+  if (d.type === 'demen-close') { try { liff.closeWindow(); } catch (e) {} return; }
   if (d.type === 'demen-failed' && d.report) {
     try { ev.source.postMessage({ type: 'demen-fail-ack' }, '*'); } catch (e) {}   // フォームはいつもの「送信完了」を出す
     if (!canSend) { bar('報告は送れませんでした。事務に連絡してください', true); return; }
@@ -135,7 +173,7 @@ window.addEventListener('message', async ev => {
   if (d.type !== 'demen-sent' || !d.report) return;
   if (!canSend) { bar('報告は保存しました（このトークには送れません）'); return; }
   const photos = (d.photoIds || []).map(id => photoUrl(id));
-  lastCard = buildCard(d.report, photos);
+  lastCard = buildCard(d.report, photos, d.reportId, d.edit);
   sendCard();
 });
 
@@ -161,7 +199,7 @@ async function sendCard() {
 // （フォームが開かないときはこの枠も開かないので、手入力用のテンプレートは前もってグループのノートに置いておく）
 function buildFailCard(d, kind) {
   const photos = (d.photoIds || []).map(id => photoUrl(id));
-  const card = buildCard(d.report, photos);
+  const card = buildCard(d.report, photos, d.saved ? d.reportId : '');
   const bubble = card.contents.type === 'carousel' ? card.contents.contents[0] : card.contents;
   const got = photos.length + '/' + (d.photoTotal || 0) + '枚';
   const warn = kind === 'photo'
