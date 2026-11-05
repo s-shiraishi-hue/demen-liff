@@ -120,7 +120,7 @@ function renderViewer(v) {
 // 待機画面は 初回／編集／写真 で分ける（2026-11-05）
 const WAIT = {
   form: ['業務報告', 'フォームを開いています…', ['開くまで少しかかります。閉じずにお待ちください']],
-  edit: ['報告を編集', '報告を読み込んでいます…', ['直すところだけ変えて、送ってください', '写真は前のものをそのまま使います。追加するときだけ入れてください', '送ると、グループに修正カードが出ます']],
+  edit: ['報告を編集', '報告を読み込んでいます…', ['直すところだけ変えて、送ってください', '送ると、グループに修正カードが出ます']],
   photo: ['写真を見る', '写真を読み込んでいます…', []]
 };
 function showWait(mode) {
@@ -133,6 +133,7 @@ function showWait(mode) {
 }
 const hideWait = () => { document.getElementById('wait').style.display = 'none'; };
 
+let lineUserId = '';   // 写真を貼った人を見分けるために報告と一緒に残す（2026-11-05）
 async function main() {
   // LINEの準備中はURLがまだ包まれているので、中身をほどいて判断する
   let raw = location.search;
@@ -144,6 +145,8 @@ async function main() {
   try {
     await liff.init({ liffId: LIFF_ID });
     const ctx = liff.getContext() || {};
+    lineUserId = ctx.userId || '';
+    if (!lineUserId) { try { lineUserId = (await liff.getProfile()).userId || ''; } catch (e) {} }
     canSend = liff.isInClient() && ['group', 'room', 'utou'].includes(ctx.type);
     bar(canSend ? '送信するとこのトークに報告カードが出ます（出るまで閉じないでください）' : 'このトークには送れません（グループのリンクから開いてください）');
   } catch (e) {
@@ -181,92 +184,89 @@ function colsFor(n) { return n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4; }
 const liffUrl = q => 'https://liff.line.me/' + LIFF_ID + '/' + (location.pathname.split('/').pop() || 'form.html') + '?' + q;
 const okReportId = v => /^R\d{14}$/.test(v || '');
 
+// 報告カード（2026-11-05 作り直し）：文字だけ。項目名・名前・数字の縦を揃える。写真は普通にLINEへ貼る
 function buildCard(r, photos, reportId, edit) {
-  const n = photos.length, COLS = colsFor(n);
-  const gencho = r.kubun !== '施工';
-  const t = (s, o) => Object.assign({ type: 'text', text: String(s), size: 'sm', color: '#1F2429', wrap: true }, o || {});
-  const hasId = okReportId(reportId);
-  // 写真を押すとスライド画面が開く。写真のIDをURLに入れる（LINEのURLは1000字まで・カード全体は50KBまで）
-  const photoIds = photos.map(u => (u.match(/\/d\/([^=]+)=/) || [])[1] || '');
-  const maxLen = Math.max(1, ...photoIds.map(x => x.length));
-  const WINDOW = Math.min(n <= 30 ? 26 : 12, Math.floor(860 / (maxLen + 1)));
-  const viewerUrl = idx => {
-    const o = n <= WINDOW ? 0 : Math.max(0, Math.min(idx - Math.floor(WINDOW / 2), n - WINDOW));
-    return liffUrl('p=' + photoIds.slice(o, o + WINDOW).join('.') + '&i=' + (idx - o) + '&o=' + o + '&t=' + n);
+  const t = (s, o) => Object.assign({ type: 'text', text: String(s), size: '14px', color: '#1A1A1C', wrap: true }, o || {});
+  const SUB = '#626264';
+  const LABEL_W = '44px', NINKU_W = '36px', ZAN_W = '52px';
+  const fixed = (w, c) => ({ type: 'box', layout: 'vertical', width: w, flex: 0, contents: [c] });
+  const cell = (s, o) => t(s === '' ? ' ' : s, o);
+  // 表の1行：項目名／名前／人工／残業
+  const tableRow = (label, name, ninku, zan, o) => {
+    o = o || {};
+    return { type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
+      fixed(LABEL_W, cell(label, { color: o.head ? SUB : (o.bold ? '#1A1A1C' : SUB), size: o.head ? '12px' : '14px', weight: o.bold ? 'bold' : 'regular' })),
+      { type: 'box', layout: 'vertical', flex: 1, contents: [cell(name)] },
+      fixed(NINKU_W, cell(ninku, { align: 'end', color: o.head ? SUB : '#1A1A1C', size: o.head ? '12px' : '14px', weight: o.bold ? 'bold' : 'regular' })),
+      fixed(ZAN_W, cell(zan, { align: 'end', color: o.head ? SUB : '#1A1A1C', size: o.head ? '12px' : '14px', weight: o.bold ? 'bold' : 'regular' }))
+    ] };
   };
-  const tile = u => ({ type: 'image', url: u, size: 'full', aspectRatio: COLS === 1 ? '4:3' : '1:1', aspectMode: 'cover', flex: 1,
-    action: { type: 'uri', uri: viewerUrl(photos.indexOf(u)) } });
-  const grid = list => {
-    const rows = [];
-    for (let i = 0; i < list.length; i += COLS) {
-      const row = list.slice(i, i + COLS).map(tile);
-      while (row.length < COLS) row.push({ type: 'filler' });
-      rows.push({ type: 'box', layout: 'horizontal', spacing: 'xs', contents: row });
-    }
-    return { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: rows };
-  };
+  // 下の項目：項目名／内容
+  const item = (label, value) => ({ type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
+    fixed(LABEL_W, cell(label, { color: SUB })),
+    { type: 'box', layout: 'vertical', flex: 1, contents: [cell(value)] }
+  ] });
+  const num = n => Number(n || 0).toFixed(1);
   const members = r.members || [];
-  // 勤務区分は一人ずつ（r.kinmus）。無い古い報告は全員 r.kinmu
   const kinmus = members.map((m, i) => (r.kinmus || [])[i] || r.kinmu || 1);
-  const selfNinku = kinmus.reduce((s, k) => s + k, 0);
-  const halfs = members.filter((m, i) => kinmus[i] === 0.5);
-  // 送信した内容は全部出す（入れていない項目は「なし」）
-  const lines = [
-    t('▼区分：' + r.kubun),
-    t('▼会社：' + r.company),
-    t('▼現場：' + r.genba),
-    t('▼報告者：' + r.reporter),
-    t('▼職長：' + (r.shokucho || r.reporter)),
-    t('▼勤務区分：' + (!halfs.length ? '全員 1.0 一日' : halfs.length === members.length ? '全員 0.5 半日' : '半日 ' + halfs.join('・') + '／他は一日')),
-    t('▼自社（' + selfNinku + '人工）'),
-    t('　' + (members.join('・') || 'なし')),
-    t('　残業 ' + (members.map((m, i) => m + ((r.zangyo || [])[i] || 0)).join('・') || 'なし') + '（分）'),
-    t('▼協力：' + (r.partners || 'なし')),
-    t('▼車両：車' + r.cars + '台・ユニック' + r.unic + '台'),
-    t('▼MEMO：' + (r.memo || 'なし'))
-  ];
-  const pages = [photos.slice(0, 12)];
-  for (let i = 12; i < n; i += 12) pages.push(photos.slice(i, i + 12));
-  let from = 1;
-  const bubbles = pages.map((list, p) => {
-    let contents;
-    if (p === 0) {
-      contents = [
-        t('【業務報告】' + r.date, { size: 'md', weight: 'bold' }),
-        r.end === '完了'
-          ? { type: 'box', layout: 'vertical', backgroundColor: '#E6F4EC', cornerRadius: '10px', paddingAll: '8px', margin: 'md', contents: [
-              t('🎉 施工完了', { weight: 'bold', align: 'center', color: '#1E7B45' }),
-              t('お疲れさまでした！', { size: 'xs', align: 'center', color: '#2E7D4F' }) ] }
-          : t(gencho ? '📝 現調・打合せ' : '本日の作業終了', { size: 'xs', color: gencho ? '#185FA5' : '#5F5E5A', margin: 'sm' }),
-        { type: 'separator', margin: 'md' },
-        { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: lines },
-        { type: 'separator', margin: 'md' },
-        t('合計：' + (selfNinku + (r.partnerNinku || 0)) + '人工' + (n ? '　📷 写真' + n + '枚' : ''), { margin: 'md' })
-      ];
-      if (list.length) contents.push(grid(list));
-      if (edit) contents.unshift(editBand(edit));
-    } else {
-      contents = [t('📷 写真 ' + from + '〜' + (from + list.length - 1) + ' / ' + n + '枚', { size: 'xs', color: '#5F5E5A' }), grid(list)];
-    }
-    from += list.length;
-    const bubble = { type: 'bubble', size: 'mega', body: { type: 'box', layout: 'vertical', paddingAll: '14px', contents: contents } };
-    if (p === 0 && hasId) bubble.footer = { type: 'box', layout: 'vertical', paddingAll: '8px', contents: [
-      { type: 'button', style: 'link', height: 'sm', color: '#1E7B45', action: { type: 'uri', label: '✏️ 編集', uri: liffUrl('edit=' + reportId) } } ] };
-    return bubble;
-  });
-  return { type: 'flex', altText: (edit ? '✏️ 修正 ' : '') + '【業務報告】' + r.date + ' ' + r.genba + '（' + r.reporter + '）',
-    contents: bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles } };
+  const zans = members.map((m, i) => Number((r.zangyo || [])[i] || 0));
+  const plist = r.partnersList || [];
+  const rows = [tableRow('', '', '人工', '残業', { head: true })];
+  members.forEach((m, i) => rows.push(tableRow(i === 0 ? '自社' : '', m, num(kinmus[i]), zans[i] + '分')));
+  plist.forEach((p, i) => rows.push(tableRow(i === 0 ? '協力' : '', p.name, num(p.ninku), p.zan + '分')));
+  if (!plist.length && r.partners) rows.push(tableRow('協力', r.partners, num(r.partnerNinku), ''));
+  const sumNinku = kinmus.reduce((s, k) => s + k, 0) + Number(r.partnerNinku || 0);
+  const sumZan = zans.reduce((s, z) => s + z, 0) + plist.reduce((s, p) => s + Number(p.zan || 0), 0);
+  rows.push({ type: 'separator', margin: 'sm' });
+  rows.push(tableRow('合計', '', num(sumNinku), sumZan + '分', { bold: true }));
+
+  const shokucho = r.shokucho || r.reporter;
+  const items = shokucho === r.reporter
+    ? [item('報告', r.reporter + '（職長）')]
+    : [item('報告', r.reporter), item('職長', shokucho)];
+  const cars = [];
+  if (r.cars) cars.push('車 ' + r.cars + '台');
+  if (r.unic) cars.push('ユニック ' + r.unic + '台');
+  items.push(item('車両', cars.join('・') || 'なし'));
+  if (r.memo) items.push(item('MEMO', r.memo));
+
+  const gencho = r.kubun !== '施工';
+  const m = String(r.date || '').match(/^\d{4}\/0?(\d+)\/0?(\d+)(.*)$/);
+  const day = m ? m[1] + '/' + m[2] + m[3] : String(r.date || '');
+  const band = (text, bg, color, small) => ({ type: 'box', layout: 'vertical', backgroundColor: bg, paddingAll: '10px', paddingStart: '14px', paddingEnd: '14px', contents:
+    [t(text, { weight: 'bold', color: color })].concat(small ? [t(small, { size: '12px', color: color })] : []) });
+  const head = [];
+  if (r.end !== '完了' && !gencho) head.push(t('本日の作業終了', { size: '12px', color: SUB }));
+  head.push(t(r.genba, { size: '17px', weight: 'bold' }));
+  head.push(t(day + '・' + r.company, { size: '12px', color: SUB, margin: 'xs' }));
+
+  const inner = { type: 'box', layout: 'vertical', paddingAll: '14px', contents: [
+    { type: 'box', layout: 'vertical', contents: head },
+    { type: 'separator', margin: 'md' },
+    { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: rows },
+    { type: 'separator', margin: 'md' },
+    { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: items }
+  ] };
+  const body = [];
+  if (edit) body.push(editBand(edit));
+  if (r.end === '完了') body.push(band('施工完了', '#E6F5EC', '#197A4B', 'お疲れさまでした'));
+  else if (gencho) body.push(band('現調・打合せ', '#E8F1FE', '#0017C1'));
+  body.push(inner);
+
+  const bubble = { type: 'bubble', size: 'mega', body: { type: 'box', layout: 'vertical', paddingAll: '0px', contents: body } };
+  if (okReportId(reportId)) bubble.footer = { type: 'box', layout: 'vertical', paddingAll: '4px', contents: [
+    { type: 'button', style: 'link', height: 'sm', color: '#0017C1', action: { type: 'uri', label: '編集', uri: liffUrl('edit=' + reportId) } } ] };
+  return { type: 'flex', altText: (edit ? '修正 ' : '') + '【業務報告】' + r.date + ' ' + r.genba + '（' + r.reporter + '）', contents: bubble };
 }
 
 // 修正カードの帯。古いカードは消せないので、修正だと分かるようにする
 function editBand(e) {
   const parts = (e.changes || []).slice();
-  if (e.photoAdded) parts.push('写真' + e.photoAdded + '枚追加');
   const rows = [
-    { type: 'text', text: '✏️ 修正（' + e.no + '回目）', weight: 'bold', color: '#8A5A00', size: 'sm', wrap: true },
-    { type: 'text', text: '直した項目：' + (parts.join('・') || 'なし') + '／前のカードは使いません', color: '#8A5A00', size: 'xs', wrap: true } ];
-  if (e.siteChanged && e.oldPhotos) rows.push({ type: 'text', text: '事務の方へ：前からある写真' + e.oldPhotos + '枚は前の現場のフォルダにあります。移してください', color: '#B42318', size: 'xs', wrap: true });
-  return { type: 'box', layout: 'vertical', backgroundColor: '#FFF4D6', cornerRadius: '10px', paddingAll: '8px', margin: 'none', contents: rows };
+    { type: 'text', text: '修正（' + e.no + '回目）', weight: 'bold', color: '#7A5300', size: '14px', wrap: true },
+    { type: 'text', text: '直した項目：' + (parts.join('・') || 'なし') + '／前のカードは使いません', color: '#7A5300', size: '12px', wrap: true } ];
+  if (e.siteChanged) rows.push({ type: 'text', text: '事務の方へ：現場を変えました。前からある写真は前の現場のフォルダにあります。移してください', color: '#B3261E', size: '12px', wrap: true });
+  return { type: 'box', layout: 'vertical', backgroundColor: '#FFF4D6', paddingAll: '10px', paddingStart: '14px', paddingEnd: '14px', contents: rows };
 }
 
 // フォーム（出面アプリの index.html）から「送信しました」を受け取ったら、カードにしてこのトークへ送る
@@ -275,6 +275,7 @@ window.addEventListener('message', async ev => {
   try { host = new URL(ev.origin).hostname; } catch (e) { return; }
   if (!/\.googleusercontent\.com$/.test(host)) return;
   const d = ev.data || {};
+  if (d.type === 'demen-hello') { if (lineUserId) { try { ev.source.postMessage({ type: 'demen-user', userId: lineUserId }, '*'); } catch (e) {} } return; }
   if (d.type === 'demen-close') { try { liff.closeWindow(); } catch (e) {} return; }
   if (d.type === 'demen-failed' && d.report) {
     try { ev.source.postMessage({ type: 'demen-fail-ack' }, '*'); } catch (e) {}   // フォームはいつもの「送信完了」を出す
@@ -316,9 +317,9 @@ function buildFailCard(d, kind) {
   const bubble = card.contents.type === 'carousel' ? card.contents.contents[0] : card.contents;
   const got = photos.length + '/' + (d.photoTotal || 0) + '枚';
   const warn = kind === 'photo'
-    ? ['⚠ 写真が途中までしか入っていません', '事務の方へ：報告はスプシに入っています（' + (d.reportId || '') + '）。写真は ' + got + ' まで保存。残りは職人に確認してください']
-    : ['⚠ スプシに入っていません', '事務の方へ：日報データへの転記をお願いします。' + (d.photoTotal ? '写真（' + got + '）は「写真未整理」フォルダにあります。案件フォルダへ移してください' : '写真はありません')];
-  bubble.body.contents.unshift({ type: 'box', layout: 'vertical', backgroundColor: '#FDECEA', cornerRadius: '10px', paddingAll: '8px', margin: 'none', contents: [
+    ? ['写真が途中までしか入っていません', '事務の方へ：報告はスプシに入っています（' + (d.reportId || '') + '）。写真は ' + got + ' まで保存。残りは職人に確認してください']
+    : ['スプシに入っていません', '事務の方へ：日報データへの転記をお願いします。' + (d.photoTotal ? '写真（' + got + '）は「写真未整理」フォルダにあります。案件フォルダへ移してください' : '写真はありません')];
+  bubble.body.contents.unshift({ type: 'box', layout: 'vertical', backgroundColor: '#FDECEA', paddingAll: '10px', paddingStart: '14px', paddingEnd: '14px', contents: [
     { type: 'text', text: warn[0], weight: 'bold', color: '#B42318', size: 'sm', wrap: true },
     { type: 'text', text: warn[1], color: '#7A271A', size: 'xs', wrap: true } ] });
   card.altText = warn[0] + ' ' + d.report.date + ' ' + d.report.genba + '（' + d.report.reporter + '）';
