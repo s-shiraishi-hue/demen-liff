@@ -185,20 +185,27 @@ function drawWait() {
   Array.prototype.forEach.call(document.getElementById('wait-g').children, (c, n) => { c.className = p * GAUGE_N > n ? 'on' : ''; });
   document.getElementById('wait-d').textContent = '...'.slice(0, Math.floor(Date.now() / 400) % 4);
 }
-// 実際の進みは測れないので、区切りごとの目標へ少しずつ近づける。準備ができたら最後まで進めて消す
+// 本当の進みは測れないので、見せ方で作る（2026-11-05）
+// 目安の時間で85%まで一定の速さで進み、そこからは少しずつ。終わったら一気に加速して100%にする
+let waitDone = false, waitSpeed = 0, waitLast = 0;
 function showWait(text) {
   if (!waitParts.length) buildWait();
   document.getElementById('wait-text').textContent = text || '読み込み中';
-  waitP = 0; waitTarget = text ? .9 : .25; drawWait();
+  waitP = 0; waitDone = false; waitSpeed = .85 / (text ? 3 : 5); waitLast = Date.now(); drawWait();
   document.getElementById('wait').style.display = 'flex';
   clearInterval(waitTimer);
   waitTimer = setInterval(() => {
-    waitP += (waitTarget - waitP) * (waitTarget >= 1 ? .3 : .03);
+    const now = Date.now(), dt = (now - waitLast) / 1000;
+    waitLast = now;
+    if (waitDone) { waitSpeed *= 1.25; waitP += waitSpeed * dt; }
+    else if (waitP < .85) waitP += waitSpeed * dt;
+    else if (waitP < .96) waitP += .01 * dt;
+    waitP = Math.min(1, waitP);
     drawWait();
-    if (waitTarget >= 1 && waitP > .99) hideWait();
+    if (waitDone && waitP >= 1) setTimeout(hideWait, 120);
   }, 50);
 }
-const waitTo = v => { if (v > waitTarget) waitTarget = v; };
+const waitTo = v => { if (v >= 1 && !waitDone) { waitDone = true; waitSpeed = Math.max(waitSpeed, .8); } };
 const hideWait = () => { clearInterval(waitTimer); document.getElementById('wait').style.display = 'none'; };
 
 let lineUserId = '';   // 写真を貼った人を見分けるために報告と一緒に残す（2026-11-05）
