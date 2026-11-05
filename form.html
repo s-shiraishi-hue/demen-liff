@@ -384,7 +384,18 @@ window.addEventListener('message', async ev => {
     try { ev.source.postMessage({ type: 'demen-user', userId: lineUserId, lastReporter: last }, '*'); } catch (e) {}
     return;
   }
-  if (d.type === 'demen-close') { try { liff.closeWindow(); } catch (e) {} return; }
+  if (d.type === 'demen-close') {
+    // 開いていたトークへ戻る。LINEには特定のグループを指定して開く方法がないので、この画面を閉じて戻す
+    let err = '';
+    try { liff.closeWindow(); } catch (e) { err = String((e && e.message) || e); }
+    setTimeout(() => {
+      if (document.hidden) return;
+      try { window.close(); } catch (e) {}
+      let info = ''; try { info = (liff.isInClient() ? 'LINE内' : 'LINE外') + ' ' + ((liff.getContext() || {}).type || '') + ' ' + (liff.getLineVersion() || ''); } catch (e) {}
+      bar('閉じられませんでした。右上の×で閉じてください [' + info + (err ? ' ' + err : '') + ']', true);
+    }, 700);
+    return;
+  }
   if (d.type === 'demen-failed' && d.report) {
     try { ev.source.postMessage({ type: 'demen-fail-ack' }, '*'); } catch (e) {}   // フォームはいつもの「送信完了」を出す
     if (!canSend && !usePicker()) { bar('報告は送れませんでした。事務に連絡してください', true); return; }
