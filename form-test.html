@@ -18,11 +18,27 @@
   #fail textarea{width:100%;height:230px;margin:10px 0;padding:10px;border:1.5px solid #e0ddd6;border-radius:10px;font-size:13px;box-sizing:border-box}
   #fail button{flex:1;padding:13px;border-radius:12px;font-size:15px;border:1px solid #d6d3cc;background:#fff}
   #fail button.go{background:#1a1a18;color:#fff;border:none}
+  #wait{position:fixed;inset:0;background:#f7f6f3;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:4;padding:28px;color:#1a1a18}
+  #wait .t{font-size:26px;margin-bottom:14px}
+  #wait .s{font-size:14px;color:#888;margin-bottom:18px}
+  #wait .n{font-size:14px;line-height:1.9;color:#5F5E5A}
+  #pv{position:fixed;inset:0;background:#000;color:#fff;display:flex;flex-direction:column;z-index:6}
+  #pv .h{height:48px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px}
+  #pv .h button{border:0;background:none;color:#fff;font-size:15px;padding:10px 0 10px 16px}
+  #pv .s{flex:1;min-height:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  #pv .s::-webkit-scrollbar,#pv .t::-webkit-scrollbar{display:none}
+  #pv .i{flex:0 0 100%;min-width:0;scroll-snap-align:center;display:flex;align-items:center;justify-content:center}
+  #pv .i img{max-width:100%;max-height:100%;object-fit:contain}
+  #pv .t{flex:none;display:flex;gap:4px;overflow-x:auto;padding:8px;scrollbar-width:none}
+  #pv .t button{flex:none;width:56px;height:56px;padding:0;border:2px solid transparent;border-radius:6px;background:#222;overflow:hidden}
+  #pv .t button.on{border-color:#fff}
+  #pv .t img{width:100%;height:100%;object-fit:cover;display:block}
   #frame{position:fixed;top:28px;left:0;width:100%;height:calc(100% - 28px);border:0}
 </style>
 </head>
 <body>
 <div id="bar">準備中…</div>
+<div id="wait"><div class="t" id="wait-t"></div><div class="s" id="wait-s"></div><div class="n" id="wait-n"></div></div>
 <iframe id="frame" allow="camera; microphone; clipboard-write"></iframe>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -38,7 +54,84 @@ const FORM_URL = 'https://script.google.com/macros/s/AKfycbxHXmVPXFaOFoXSl1YTDrj
 const bar = (t, err) => { const b = document.getElementById('bar'); b.textContent = t; b.className = err ? 'err' : ''; };
 let canSend = false;
 
+// ===== 写真スライド（2026-11-05）=====
+// 写真のIDはカードのURLに入っているので、Googleのフォームを通さずにすぐ開く
+function viewerParams(q) {
+  const p = q.get('p');
+  if (!p || !/^[\w-]+(\.[\w-]+)*$/.test(p)) return null;
+  return { ids: p.split('.'), i: parseInt(q.get('i'), 10) || 0, o: parseInt(q.get('o'), 10) || 0, t: parseInt(q.get('t'), 10) || 0 };
+}
+
+function renderViewer(v) {
+  const ids = v.ids, total = v.t || ids.length;
+  document.getElementById('bar').style.display = 'none';
+  const pv = document.createElement('div'); pv.id = 'pv';
+  const head = document.createElement('div'); head.className = 'h';
+  const pos = document.createElement('span');
+  const close = document.createElement('button'); close.type = 'button'; close.textContent = '閉じる';
+  close.onclick = () => { try { liff.closeWindow(); } catch (e) { history.back(); } };
+  head.append(pos, close);
+  const s = document.createElement('div'); s.className = 's';
+  const strip = document.createElement('div'); strip.className = 't';
+  const thumbs = ids.map((id, i) => {
+    const box = document.createElement('div'); box.className = 'i';
+    box.textContent = '写真を読み込んでいます…';
+    const img = document.createElement('img'); img.alt = '写真' + (v.o + i + 1);
+    img.onload = () => { box.textContent = ''; box.append(img); };
+    img.onerror = () => { box.textContent = '写真を表示できません（送信から30日で見られなくなります）'; };
+    img.src = photoUrl(id);
+    s.append(box);
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', '写真' + (v.o + i + 1) + 'へ');
+    const th = document.createElement('img'); th.alt = ''; th.loading = 'lazy'; th.src = photoUrl(id, 200);
+    b.append(th); b.onclick = () => s.scrollTo({ left: i * s.clientWidth, behavior: 'smooth' });
+    strip.append(b);
+    return b;
+  });
+  pv.append(head, s);
+  if (ids.length > 1) pv.append(strip);
+  document.body.append(pv);
+  let last = -1;
+  const show = () => {
+    const c = Math.min(ids.length - 1, Math.round(s.scrollLeft / (s.clientWidth || 1)));
+    pos.textContent = (v.o + c + 1) + ' / ' + total;
+    if (c === last) return;
+    if (thumbs[last]) thumbs[last].className = '';
+    thumbs[c].className = 'on';
+    strip.scrollLeft = Math.max(0, thumbs[c].offsetLeft - strip.clientWidth / 2 + 28);
+    last = c;
+  };
+  s.addEventListener('scroll', show);
+  // 押した写真から開く。吸い付きを一度止めて位置を決める（スマホで先頭に戻らないように）
+  const start = Math.max(0, Math.min(ids.length - 1, v.i));
+  const jump = () => { s.style.scrollSnapType = 'none'; s.scrollLeft = start * s.clientWidth; show(); };
+  jump();
+  requestAnimationFrame(() => requestAnimationFrame(() => { jump(); s.style.scrollSnapType = ''; }));
+}
+
+// 待機画面は 初回／編集／写真 で分ける（2026-11-05）
+const WAIT = {
+  form: ['業務報告', 'フォームを開いています…', ['開くまで少しかかります。閉じずにお待ちください']],
+  edit: ['報告を編集', '報告を読み込んでいます…', ['直すところだけ変えて、送ってください', '写真は前のものをそのまま使います。追加するときだけ入れてください', '送ると、グループに修正カードが出ます']],
+  photo: ['写真を見る', '写真を読み込んでいます…', []]
+};
+function showWait(mode) {
+  const w = WAIT[mode];
+  document.getElementById('wait-t').textContent = w[0];
+  document.getElementById('wait-s').textContent = w[1];
+  document.getElementById('wait-n').textContent = '';
+  w[2].forEach(x => { const d = document.createElement('div'); d.textContent = '・' + x; document.getElementById('wait-n').append(d); });
+  document.getElementById('wait').style.display = 'flex';
+}
+const hideWait = () => { document.getElementById('wait').style.display = 'none'; };
+
 async function main() {
+  // LINEの準備中はURLがまだ包まれているので、中身をほどいて判断する
+  let raw = location.search;
+  try { raw = decodeURIComponent(raw); } catch (e) {}
+  showWait(/[?&]p=|[?&]photos=/.test(raw) ? 'photo' : /[?&]edit=/.test(raw) ? 'edit' : 'form');
+  // すでにURLに写真があれば、LINEの準備を待たずに出す
+  let viewer = viewerParams(new URLSearchParams(location.search));
+  if (viewer) { hideWait(); renderViewer(viewer); }
   try {
     await liff.init({ liffId: LIFF_ID });
     const ctx = liff.getContext() || {};
@@ -50,6 +143,8 @@ async function main() {
   // 2026-11-05 ?edit=報告ID で編集、?photos=報告ID&i=番号 で写真スライド
   const q = new URLSearchParams(location.search);
   const okId = v => /^R\d{14}$/.test(v || '');
+  if (!viewer) { viewer = viewerParams(q); if (viewer) { hideWait(); renderViewer(viewer); } }
+  if (viewer) return;   // 写真を見るだけのときはフォームを読み込まない
   let src = FORM_URL;
   if (okId(q.get('photos'))) {
     document.getElementById('bar').style.display = 'none';
@@ -62,6 +157,8 @@ async function main() {
     if (canSend) bar('修正して送ると、このトークに修正カードが出ます（出るまで閉じないでください）');
     src += '?edit=' + q.get('edit') + '&editor=' + encodeURIComponent(editor);
   }
+  // フォームの外側が読めたら、続きはフォームの中の待機画面に引き継ぐ
+  document.getElementById('frame').addEventListener('load', hideWait, { once: true });
   document.getElementById('frame').src = src;
 }
 
@@ -80,9 +177,16 @@ function buildCard(r, photos, reportId, edit) {
   const gencho = r.kubun !== '施工';
   const t = (s, o) => Object.assign({ type: 'text', text: String(s), size: 'sm', color: '#1F2429', wrap: true }, o || {});
   const hasId = okReportId(reportId);
-  // 写真を押すとスライド画面が開く（報告IDが無い赤帯カードは今までどおり1枚だけ開く）
+  // 写真を押すとスライド画面が開く。写真のIDをURLに入れる（LINEのURLは1000字まで・カード全体は50KBまで）
+  const photoIds = photos.map(u => (u.match(/\/d\/([^=]+)=/) || [])[1] || '');
+  const maxLen = Math.max(1, ...photoIds.map(x => x.length));
+  const WINDOW = Math.min(n <= 30 ? 26 : 12, Math.floor(860 / (maxLen + 1)));
+  const viewerUrl = idx => {
+    const o = n <= WINDOW ? 0 : Math.max(0, Math.min(idx - Math.floor(WINDOW / 2), n - WINDOW));
+    return liffUrl('p=' + photoIds.slice(o, o + WINDOW).join('.') + '&i=' + (idx - o) + '&o=' + o + '&t=' + n);
+  };
   const tile = u => ({ type: 'image', url: u, size: 'full', aspectRatio: COLS === 1 ? '4:3' : '1:1', aspectMode: 'cover', flex: 1,
-    action: { type: 'uri', uri: hasId ? liffUrl('photos=' + reportId + '&i=' + photos.indexOf(u)) : u } });
+    action: { type: 'uri', uri: viewerUrl(photos.indexOf(u)) } });
   const grid = list => {
     const rows = [];
     for (let i = 0; i < list.length; i += COLS) {
