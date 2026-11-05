@@ -60,7 +60,8 @@ const FORM_URL = 'https://script.google.com/macros/s/AKfycbxHXmVPXFaOFoXSl1YTDrj
 const bar = (t, err) => { const b = document.getElementById('bar'); b.style.display = t ? 'block' : 'none'; b.textContent = t; b.className = err ? 'err' : ''; };
 let canSend = false;
 // ホーム画面のアイコンから開いたときはグループが分からないので、送り先をLINEの画面で選んでもらう（2026-11-05）
-const usePicker = () => { try { return !canSend && liff.isApiAvailable('shareTargetPicker'); } catch (e) { return false; } };
+// 使えるかの判定が当てにならないことがあるので、グループの外なら必ず試し、失敗したら理由を帯に出す
+const usePicker = () => !canSend;
 
 // ===== 写真スライド（2026-11-05）=====
 // 写真のIDはカードのURLに入っているので、Googleのフォームを通さずにすぐ開く
@@ -420,7 +421,7 @@ async function sendCard() {
   } catch (e) {
     cardSending = false;
     waitTo(1);
-    bar('LINEに送れませんでした。ここをタップしてもう一度送る（報告は保存済み）', true);
+    bar('LINEに送れませんでした。ここをタップしてもう一度送る（報告は保存済み）' + (canSend ? '' : ' [' + ((e && (e.message || e.code)) || e) + ']'), true);
     document.getElementById('bar').className = 'tap';
     document.getElementById('bar').onclick = () => { document.getElementById('bar').onclick = null; sendCard(); };
   }
