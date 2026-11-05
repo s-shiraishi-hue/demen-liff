@@ -187,18 +187,19 @@ const okReportId = v => /^R\d{14}$/.test(v || '');
 // 報告カード（2026-11-05 決定形）：紺の見出し＋区分の帯＋報告者＋1人1行の表。写真は普通にLINEへ貼る
 function buildCard(r, photos, reportId, edit) {
   const INK = '#1B1D21', SUB = '#70747C', NAVY = '#14264F';
-  const t = (s, o) => Object.assign({ type: 'text', text: String(s), size: '14px', color: INK, wrap: true }, o || {});
-  const LABEL_W = '46px', NINKU_W = '34px', ZAN_W = '46px';
+  const t = (s, o) => Object.assign({ type: 'text', text: String(s), size: '16px', color: INK, wrap: true }, o || {});
+  const LABEL_W = '36px', NINKU_W = '34px', ZAN_W = '50px';   // 細いカード（kilo）・本文16pxに合わせる
   const fixed = (w, c) => ({ type: 'box', layout: 'vertical', width: w, flex: 0, contents: [c] });
   const cell = (s, o) => t(s === '' ? ' ' : s, o);
   const zanText = z => Number(z || 0) ? Number(z) + '分' : '−';
   // 表の1行：項目名／名前／人工／残業
   const tableRow = (label, name, ninku, zan, o) => {
     o = o || {};
-    const num = (s, extra) => cell(s, Object.assign({ align: 'end', color: o.head ? SUB : INK, size: o.head ? '12px' : '14px', weight: o.bold ? 'bold' : 'regular' }, extra || {}));
+    const num = (s, extra) => cell(s, Object.assign({ align: 'end', color: o.head ? SUB : INK, size: o.head ? '13px' : '16px', weight: o.bold ? 'bold' : 'regular' }, extra || {}));
     return { type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
       fixed(LABEL_W, cell(label, { color: o.bold ? INK : SUB, weight: o.bold ? 'bold' : 'regular' })),
-      { type: 'box', layout: 'vertical', flex: 1, contents: [cell(name)] },
+      // 名前は折り返さず1行に収める。長い名前だけ自動で文字が小さくなる
+      { type: 'box', layout: 'vertical', flex: 1, contents: [cell(name, { wrap: false, adjustMode: 'shrink-to-fit' })] },
       fixed(NINKU_W, num(ninku)),
       fixed(ZAN_W, num(zan, zan === '−' ? { color: SUB } : {}))
     ] };
@@ -215,7 +216,9 @@ function buildCard(r, photos, reportId, edit) {
   const plist = r.partnersList || [];
   const rows = [tableRow('', '', '人工', '残業', { head: true })];
   members.forEach((m, i) => rows.push(tableRow(i === 0 ? '自社' : '', m, num(kinmus[i]), zanText(zans[i]))));
-  plist.forEach((p, i) => rows.push(tableRow(i === 0 ? '協力' : '', p.name, num(p.ninku), zanText(p.zan))));
+  // 協力会社はカードでは法人の種類を省いて短くする（スプシの名前はそのまま）
+  const shortCo = s => String(s || '').replace(/株式会社|有限会社|合同会社|[(（][株有合個][^)）]*[)）]/g, '').replace(/^[\s　]+|[\s　]+$/g, '') || String(s || '');
+  plist.forEach((p, i) => rows.push(tableRow(i === 0 ? '協力' : '', shortCo(p.name), num(p.ninku), zanText(p.zan))));
   if (!plist.length && r.partners) rows.push(tableRow('協力', r.partners, num(r.partnerNinku), ''));
   const sumNinku = kinmus.reduce((s, k) => s + k, 0) + Number(r.partnerNinku || 0);
   const sumZan = zans.reduce((s, z) => s + z, 0) + plist.reduce((s, p) => s + Number(p.zan || 0), 0);
@@ -230,7 +233,7 @@ function buildCard(r, photos, reportId, edit) {
   if (r.cars) others.push(item('車両', '車 ' + r.cars + '台'));
   if (r.unic) others.push(item(r.cars ? '' : '車両', 'ユニック ' + r.unic + '台'));
   if (!others.length) others.push(item('車両', 'なし'));
-  if (r.memo) others.push(item('MEMO', r.memo));
+  if (r.memo) others.push(item('メモ', r.memo));
 
   const gencho = r.kubun !== '施工';
   const m = String(r.date || '').match(/^\d{4}\/0?(\d+)\/0?(\d+)(.*)$/);
@@ -241,12 +244,12 @@ function buildCard(r, photos, reportId, edit) {
   const kind = gencho ? ['現調・打合せ', '#1F4E8C', '#FFFFFF']
     : done ? ['施工　施工完了', '#FFF1B8', INK]
     : ['施工　本日の作業終了', '#E9EDF5', NAVY];
-  const side = { paddingStart: '16px', paddingEnd: '16px' };
+  const side = { paddingStart: '14px', paddingEnd: '14px' };
   const body = [];
   if (edit) body.push(editBand(edit));
   body.push(Object.assign({ type: 'box', layout: 'vertical', backgroundColor: done ? '#FFC81E' : NAVY, paddingTop: '12px', paddingBottom: '12px', contents: [
     t(r.genba, { size: '18px', weight: 'bold', color: done ? INK : '#FFFFFF' }),
-    t(day + '・' + r.company, { size: '12px', color: done ? '#4A3B00' : '#D5DCE8' })
+    t(day + '・' + r.company, { size: '13px', color: done ? '#4A3B00' : '#D5DCE8' })
   ] }, side));
   body.push(Object.assign({ type: 'box', layout: 'vertical', backgroundColor: kind[1], paddingTop: '7px', paddingBottom: '7px', contents: [
     t(kind[0], { weight: 'bold', color: kind[2] })
@@ -258,7 +261,7 @@ function buildCard(r, photos, reportId, edit) {
     { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: others }
   ] }, side));
 
-  const bubble = { type: 'bubble', size: 'mega', body: { type: 'box', layout: 'vertical', paddingAll: '0px', contents: body } };
+  const bubble = { type: 'bubble', size: 'kilo', body: { type: 'box', layout: 'vertical', paddingAll: '0px', contents: body } };
   if (okReportId(reportId)) bubble.footer = { type: 'box', layout: 'vertical', paddingAll: '4px', contents: [
     { type: 'button', style: 'link', height: 'sm', color: '#0017C1', action: { type: 'uri', label: '編集', uri: liffUrl('edit=' + reportId) } } ] };
   return { type: 'flex', altText: (edit ? '修正 ' : '') + '【業務報告】' + r.date + ' ' + r.genba + '（' + r.reporter + '）', contents: bubble };
