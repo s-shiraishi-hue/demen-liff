@@ -262,82 +262,90 @@ function colsFor(n) { return n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4; }
 const liffUrl = q => 'https://liff.line.me/' + LIFF_ID + '/' + (location.pathname.split('/').pop() || 'form.html') + '?' + q;
 const okReportId = v => /^R\d{14}$/.test(v || '');
 
-// 報告カード（2026-11-05 決定形）：紺の見出し＋区分の帯＋報告者＋1人1行の表。写真は普通にLINEへ貼る
+// 報告カード（2026-11-05 決定形）：紺の見出し＋区分の帯＋報告者＋自社と協力の表＋合計の帯＋メモの枠。写真は普通にLINEへ貼る
 function buildCard(r, photos, reportId, edit) {
-  const INK = '#1B1D21', SUB = '#70747C', NAVY = '#14264F';
-  const t = (s, o) => Object.assign({ type: 'text', text: String(s), size: '16px', color: INK, wrap: true }, o || {});
-  const LABEL_W = '36px', NINKU_W = '34px', ZAN_W = '50px';   // 細いカード（kilo）・本文16pxに合わせる
+  const INK = '#1B1D21', SUB = '#7A7E86', NAVY = '#14264F';
+  const t = (s, o) => Object.assign({ type: 'text', text: String(s), size: '15px', color: INK, wrap: true }, o || {});
+  const LABEL_W = '36px', NINKU_W = '32px', ZAN_W = '46px';
   const fixed = (w, c) => ({ type: 'box', layout: 'vertical', width: w, flex: 0, contents: [c] });
   const cell = (s, o) => t(s === '' ? ' ' : s, o);
   const zanText = z => Number(z || 0) ? Number(z) + '分' : '−';
-  // 表の1行：項目名／名前／人工／残業
-  const tableRow = (label, name, ninku, zan, o) => {
+  const inset = { paddingStart: '8px', paddingEnd: '8px' };   // 文字の左右を揃える。合計の帯だけ色がこの外まで広がる
+  // 表の1行：名前／人工／残業
+  const tableRow = (name, ninku, zan, o) => {
     o = o || {};
-    const num = (s, extra) => cell(s, Object.assign({ align: 'end', color: o.head ? SUB : INK, size: o.head ? '13px' : '16px', weight: o.bold ? 'bold' : 'regular' }, extra || {}));
-    return { type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
-      fixed(LABEL_W, cell(label, { color: o.bold ? INK : SUB, weight: o.bold ? 'bold' : 'regular' })),
+    const n = (s, extra) => cell(s, Object.assign({ align: 'end', color: o.head ? SUB : INK, size: o.head ? '12px' : '15px', weight: o.bold ? 'bold' : 'regular' }, extra || {}));
+    return Object.assign({ type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
       // 名前は折り返さず1行に収める。長い名前だけ自動で文字が小さくなる
-      { type: 'box', layout: 'vertical', flex: 1, contents: [cell(name, { wrap: false, adjustMode: 'shrink-to-fit' })] },
-      fixed(NINKU_W, num(ninku)),
-      fixed(ZAN_W, num(zan, zan === '−' ? { color: SUB } : {}))
-    ] };
+      { type: 'box', layout: 'vertical', flex: 1, contents: [cell(name, { wrap: false, adjustMode: 'shrink-to-fit', color: o.head ? SUB : INK, size: o.head ? '12px' : '15px', weight: o.bold ? 'bold' : 'regular' })] },
+      fixed(NINKU_W, n(ninku)),
+      fixed(ZAN_W, n(zan, zan === '−' ? { color: SUB } : {}))
+    ] }, inset);
   };
   // 項目名／内容の1行
-  const item = (label, value) => ({ type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
-    fixed(LABEL_W, cell(label, { color: SUB })),
+  const item = (label, value) => Object.assign({ type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
+    fixed(LABEL_W, cell(label, { color: SUB, size: '12px', gravity: 'center' })),
     { type: 'box', layout: 'vertical', flex: 1, contents: [cell(value)] }
-  ] });
+  ] }, inset);
+  // 自社・協力の軽い帯
+  const secBand = (label, bg, color) => ({ type: 'box', layout: 'vertical', backgroundColor: bg, cornerRadius: '4px', paddingTop: '2px', paddingBottom: '2px', paddingStart: '8px', paddingEnd: '8px', margin: 'sm', contents: [t(label, { size: '12px', weight: 'bold', color: color })] });
   const num = n => Number(n || 0).toFixed(1);
+  const shortCo = s => String(s || '').replace(/株式会社|有限会社|合同会社|[(（][株有合個][^)）]*[)）]/g, '').replace(/^[\s　]+|[\s　]+$/g, '') || String(s || '');
+
   const members = r.members || [];
   const kinmus = members.map((m, i) => (r.kinmus || [])[i] || r.kinmu || 1);
   const zans = members.map((m, i) => Number((r.zangyo || [])[i] || 0));
   const plist = r.partnersList || [];
-  const rows = [tableRow('', '', '人工', '残業', { head: true })];
-  members.forEach((m, i) => rows.push(tableRow(i === 0 ? '自社' : '', m, num(kinmus[i]), zanText(zans[i]))));
-  // 協力会社はカードでは法人の種類を省いて短くする（スプシの名前はそのまま）
-  const shortCo = s => String(s || '').replace(/株式会社|有限会社|合同会社|[(（][株有合個][^)）]*[)）]/g, '').replace(/^[\s　]+|[\s　]+$/g, '') || String(s || '');
-  plist.forEach((p, i) => rows.push(tableRow(i === 0 ? '協力' : '', shortCo(p.name), num(p.ninku), zanText(p.zan))));
-  if (!plist.length && r.partners) rows.push(tableRow('協力', r.partners, num(r.partnerNinku), ''));
+  const rows = [tableRow('名前', '人工', '残業', { head: true })];
+  rows.push(secBand('自社', '#E9EDF5', NAVY));
+  members.forEach((m, i) => rows.push(tableRow(m, num(kinmus[i]), zanText(zans[i]))));
+  if (plist.length || r.partners) rows.push(secBand('協力', '#FBF1D8', '#7A5300'));
+  plist.forEach(p => rows.push(tableRow(shortCo(p.name), num(p.ninku), zanText(p.zan))));
+  if (!plist.length && r.partners) rows.push(tableRow(r.partners, num(r.partnerNinku), ''));
   const sumNinku = kinmus.reduce((s, k) => s + k, 0) + Number(r.partnerNinku || 0);
   const sumZan = zans.reduce((s, z) => s + z, 0) + plist.reduce((s, p) => s + Number(p.zan || 0), 0);
-  rows.push({ type: 'separator', margin: 'sm' });
-  rows.push(tableRow('合計', '', num(sumNinku), zanText(sumZan), { bold: true }));
 
   const shokucho = r.shokucho || r.reporter;
   const who = shokucho === r.reporter
     ? [item('報告', r.reporter + '（職長）')]
     : [item('報告', r.reporter), item('職長', shokucho)];
-  const others = [];
-  if (r.cars) others.push(item('車両', '車 ' + r.cars + '台'));
-  if (r.unic) others.push(item(r.cars ? '' : '車両', 'ユニック ' + r.unic + '台'));
-  if (!others.length) others.push(item('車両', 'なし'));
-  if (r.memo) others.push(item('メモ', r.memo));
+  const cars = [];
+  if (r.cars) cars.push('車 ' + r.cars + '台');
+  if (r.unic) cars.push('ユニック ' + r.unic + '台');
 
   const gencho = r.kubun !== '施工';
   const m = String(r.date || '').match(/^\d{4}\/0?(\d+)\/0?(\d+)(.*)$/);
   const day = m ? m[1] + '/' + m[2] + m[3] : String(r.date || '');
-  // 区分の帯：普段の施工は薄く、現調と施工完了は濃くして、流し見でも分かるようにする
-  // 施工完了は見出しごと黄色にして、節目だと一目で分かるようにする
+  const co = String(r.company || '');
+  // 白石の現場は会社名を出さない。中嶋・山下のときだけ短く出す
+  const coShort = co.indexOf('白石') >= 0 ? '' : co.replace(/工業$|板金.*$/, '');
+  // 区分の帯：普段の施工も少し目立たせる。現調は緑、施工完了は見出しごと黄色
   const done = !gencho && r.end === '完了';
   const kind = gencho ? ['現調・打合せ', '#17633E', '#FFFFFF']
-    : done ? ['🎉 施工完了', '#FFF1B8', INK]
-    : ['施工　本日の作業終了', '#E9EDF5', NAVY];
-  const side = { paddingStart: '14px', paddingEnd: '14px' };
+    : done ? ['🎉 施工完了　お疲れさまでした！', '#FFF1B8', INK]
+    : ['施工　本日の作業終了', '#CBD7EC', NAVY];
+  const side = { paddingStart: '16px', paddingEnd: '16px' };
   const body = [];
   if (edit) body.push(editBand(edit));
   body.push(Object.assign({ type: 'box', layout: 'vertical', backgroundColor: done ? '#FFC81E' : NAVY, paddingTop: '12px', paddingBottom: '12px', contents: [
     t(r.genba, { size: '18px', weight: 'bold', color: done ? INK : '#FFFFFF' }),
-    t(day + '・' + r.company, { size: '13px', color: done ? '#4A3B00' : '#D5DCE8' })
+    t(day + (coShort ? '・' + coShort : ''), { size: '12px', color: done ? '#4A3B00' : '#C9D2E3' })
   ] }, side));
   body.push(Object.assign({ type: 'box', layout: 'vertical', backgroundColor: kind[1], paddingTop: '7px', paddingBottom: '7px', contents: [
-    t(kind[0], { weight: 'bold', color: kind[2] })
-  ].concat(done ? [t('お疲れさまでした！', { size: '14px', color: kind[2] })] : []) }, side));
-  body.push(Object.assign({ type: 'box', layout: 'vertical', paddingTop: '12px', paddingBottom: '12px', contents: [
+    t(kind[0], { size: '14px', weight: 'bold', color: kind[2] })
+  ] }, side));
+  const inner = [
     { type: 'box', layout: 'vertical', spacing: 'xs', contents: who },
     { type: 'separator', margin: 'md' },
-    { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: rows },
-    { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: others }
-  ] }, side));
+    { type: 'box', layout: 'vertical', spacing: 'sm', margin: 'md', contents: rows },
+    { type: 'box', layout: 'vertical', backgroundColor: '#F5F6F8', cornerRadius: '8px', paddingTop: '8px', paddingBottom: '8px', margin: 'md', contents: [tableRow('合計', num(sumNinku), zanText(sumZan), { bold: true })] },
+    { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: [item('車両', cars.join('・') || 'なし')] }
+  ];
+  if (r.memo) inner.push(Object.assign({ type: 'box', layout: 'vertical', margin: 'md', contents: [
+    t('メモ', { size: '12px', color: SUB }),
+    { type: 'box', layout: 'vertical', borderWidth: '1px', borderColor: '#DDE1E7', cornerRadius: '8px', paddingAll: '8px', margin: 'xs', contents: [t(r.memo)] }
+  ] }, inset));
+  body.push({ type: 'box', layout: 'vertical', paddingTop: '12px', paddingBottom: '12px', paddingStart: '8px', paddingEnd: '8px', contents: inner });
 
   const bubble = { type: 'bubble', size: 'kilo', body: { type: 'box', layout: 'vertical', paddingAll: '0px', contents: body } };
   if (okReportId(reportId)) bubble.footer = { type: 'box', layout: 'vertical', paddingAll: '4px', contents: [
