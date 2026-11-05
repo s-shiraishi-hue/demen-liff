@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>業務報告</title>
-<meta name="description" content="今日の出面（人工・車両・写真）を報告するフォームです。送るとこのグループに報告カードが出ます。">
+<meta name="description" content="今日の出面（人工・車両）を報告するフォームです。送るとこのグループに報告カードが出ます。">
 <meta property="og:title" content="業務報告（出面）">
-<meta property="og:description" content="タップして今日の出面と写真を報告">
+<meta property="og:description" content="タップして今日の出面を報告">
 <meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
 <style>
-  html,body{margin:0;height:100%;background:#f7f6f3;font-family:sans-serif}
-  #bar{position:fixed;top:0;left:0;right:0;height:28px;line-height:28px;padding:0 10px;font-size:12px;color:#fff;background:#1E7B45;z-index:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html,body{margin:0;height:100%;background:#fff;font-family:sans-serif}
+  #bar{display:none;position:fixed;top:0;left:0;right:0;height:28px;line-height:28px;padding:0 10px;font-size:12px;color:#fff;background:#1E7B45;z-index:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #bar.err{background:#B42318}
   #bar.tap{background:#B54708;cursor:pointer;text-decoration:underline}
   #fail{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:5;padding:18px;font-family:sans-serif}
@@ -18,11 +21,30 @@
   #fail textarea{width:100%;height:230px;margin:10px 0;padding:10px;border:1.5px solid #e0ddd6;border-radius:10px;font-size:13px;box-sizing:border-box}
   #fail button{flex:1;padding:13px;border-radius:12px;font-size:15px;border:1px solid #d6d3cc;background:#fff}
   #fail button.go{background:#1a1a18;color:#fff;border:none}
-  #frame{position:fixed;top:28px;left:0;width:100%;height:calc(100% - 28px);border:0}
+  #wait{position:fixed;inset:0;background:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:4;padding:0 20px 170px;box-sizing:border-box}
+  #wait svg{width:170px;max-width:100%;height:auto}
+  #wait .g{display:grid;grid-template-columns:repeat(16,1fr);gap:1px;width:170px;padding:2px;background:#14264F;box-sizing:border-box}
+  #wait .g span{height:7px;background:#2A3C69}
+  #wait .g span.on{background:#FFC81E}
+  #wait .x{font-family:"DotGothic16","Hiragino Sans","Yu Gothic UI",sans-serif;font-size:16px;line-height:1.3;color:#14264F;display:flex}
+  #wait .x i{font-style:normal;display:inline-block;width:1.6em;font-size:12px;align-self:flex-end}
+  #pv{position:fixed;inset:0;background:#000;color:#fff;display:flex;flex-direction:column;z-index:6}
+  #pv .h{height:48px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:15px}
+  #pv .h button{border:0;background:none;color:#fff;font-size:15px;padding:10px 0 10px 16px}
+  #pv .s{flex:1;min-height:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  #pv .s::-webkit-scrollbar,#pv .t::-webkit-scrollbar{display:none}
+  #pv .i{flex:0 0 100%;min-width:0;scroll-snap-align:center;display:flex;align-items:center;justify-content:center}
+  #pv .i img{max-width:100%;max-height:100%;object-fit:contain}
+  #pv .t{flex:none;display:flex;gap:4px;overflow-x:auto;padding:8px;scrollbar-width:none}
+  #pv .t button{flex:none;width:56px;height:56px;padding:0;border:2px solid transparent;border-radius:6px;background:#222;overflow:hidden}
+  #pv .t button.on{border-color:#fff}
+  #pv .t img{width:100%;height:100%;object-fit:cover;display:block}
+  #frame{position:fixed;top:0;left:0;width:100%;height:100%;border:0}
 </style>
 </head>
 <body>
 <div id="bar">準備中…</div>
+<div id="wait"><svg id="wait-house" viewBox="0 0 220 170" aria-hidden="true"></svg><div class="g" id="wait-g"></div><div class="x"><span id="wait-text">読み込み中</span><i id="wait-d"></i></div></div>
 <iframe id="frame" allow="camera; microphone; clipboard-write"></iframe>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -35,19 +57,203 @@ const LIFF_ID = '2011897591-HBBipfnN';
 // 2026-10-28 本番のデプロイ（平川さんが「デプロイを管理」で更新しているもの）
 const FORM_URL = 'https://script.google.com/macros/s/AKfycbzcVSK7nuU3UAHa2K2tXx5HRqWhV3Dl-DLqltlXNyDW6EMKeJyTudP27ELHZCnet4ePSQ/exec';
 
-const bar = (t, err) => { const b = document.getElementById('bar'); b.textContent = t; b.className = err ? 'err' : ''; };
+const bar = (t, err) => { const b = document.getElementById('bar'); b.style.display = t ? 'block' : 'none'; b.textContent = t; b.className = err ? 'err' : ''; };
 let canSend = false;
+// ホーム画面のアイコンから開いたときはグループが分からないので、送り先をLINEの画面で選んでもらう（2026-11-05）
+// 使えるかの判定が当てにならないことがあるので、グループの外なら必ず試し、失敗したら理由を帯に出す
+const usePicker = () => !canSend;
 
+// ===== 写真スライド（2026-11-05）=====
+// 写真のIDはカードのURLに入っているので、Googleのフォームを通さずにすぐ開く
+function viewerParams(q) {
+  const p = q.get('p');
+  if (!p || !/^[\w-]+(\.[\w-]+)*$/.test(p)) return null;
+  return { ids: p.split('.'), i: parseInt(q.get('i'), 10) || 0, o: parseInt(q.get('o'), 10) || 0, t: parseInt(q.get('t'), 10) || 0 };
+}
+
+function renderViewer(v) {
+  const ids = v.ids, total = v.t || ids.length;
+  document.getElementById('bar').style.display = 'none';
+  const pv = document.createElement('div'); pv.id = 'pv';
+  const head = document.createElement('div'); head.className = 'h';
+  const pos = document.createElement('span');
+  const close = document.createElement('button'); close.type = 'button'; close.textContent = '閉じる';
+  close.onclick = () => { try { liff.closeWindow(); } catch (e) { history.back(); } };
+  // 保存・転送：今の写真をスマホのブラウザで開く（長押しで保存・共有できる）
+  const save = document.createElement('button'); save.type = 'button'; save.textContent = '保存・転送';
+  const right = document.createElement('div');
+  right.append(save, close);
+  head.append(pos, right);
+  const s = document.createElement('div'); s.className = 's';
+  const strip = document.createElement('div'); strip.className = 't';
+  const thumbs = ids.map((id, i) => {
+    const box = document.createElement('div'); box.className = 'i';
+    box.textContent = '写真を読み込んでいます…';
+    const img = document.createElement('img'); img.alt = '写真' + (v.o + i + 1);
+    img.onload = () => { box.textContent = ''; box.append(img); };
+    img.onerror = () => { box.textContent = '写真を表示できません（送信から30日で見られなくなります）'; };
+    img.src = photoUrl(id);
+    s.append(box);
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', '写真' + (v.o + i + 1) + 'へ');
+    const th = document.createElement('img'); th.alt = ''; th.loading = 'lazy'; th.src = photoUrl(id, 200);
+    b.append(th); b.onclick = () => s.scrollTo({ left: i * s.clientWidth, behavior: 'smooth' });
+    strip.append(b);
+    return b;
+  });
+  pv.append(head, s);
+  if (ids.length > 1) pv.append(strip);
+  document.body.append(pv);
+  let last = -1;
+  const show = () => {
+    const c = Math.min(ids.length - 1, Math.round(s.scrollLeft / (s.clientWidth || 1)));
+    pos.textContent = (v.o + c + 1) + ' / ' + total;
+    if (c === last) return;
+    if (thumbs[last]) thumbs[last].className = '';
+    thumbs[c].className = 'on';
+    strip.scrollLeft = Math.max(0, thumbs[c].offsetLeft - strip.clientWidth / 2 + 28);
+    last = c;
+  };
+  s.addEventListener('scroll', show);
+  save.onclick = () => {
+    const c = Math.min(ids.length - 1, Math.max(0, Math.round(s.scrollLeft / (s.clientWidth || 1))));
+    const url = photoUrl(ids[c], 1600);
+    try { liff.openWindow({ url: url, external: true }); } catch (e) { window.open(url, '_blank'); }
+  };
+  // 押した写真から開く。吸い付きを一度止めて位置を決める（スマホで先頭に戻らないように）
+  const start = Math.max(0, Math.min(ids.length - 1, v.i));
+  const jump = () => { s.style.scrollSnapType = 'none'; s.scrollLeft = start * s.clientWidth; show(); };
+  jump();
+  requestAnimationFrame(() => requestAnimationFrame(() => { jump(); s.style.scrollSnapType = ''; }));
+}
+
+// 読み込み画面（2026-11-05）：職人が屋根を葺き、ゲージが増える。フォームの準備ができるまで消さない
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const svgEl = (p, n, a) => { const e = document.createElementNS(SVG_NS, n); Object.keys(a).forEach(k => e.setAttribute(k, a[k])); p.appendChild(e); return e; };
+const ROOF_N = 8, GAUGE_N = 16;
+let waitP = 0, waitTarget = 0, waitTimer = null, waitParts = [], waitWorker = null, waitArm = null;
+function buildWait() {
+  const s = document.getElementById('wait-house'), L = '#14264F';
+  svgEl(s, 'rect', { x: 6, y: 160, width: 208, height: 3, fill: L });
+  [[12, 155, 7], [24, 153, 9], [202, 154, 8]].forEach(b => svgEl(s, 'circle', { cx: b[0], cy: b[1], r: b[2], fill: '#7E9C86' }));
+  svgEl(s, 'rect', { x: 136, y: 40, width: 12, height: 26, fill: '#F7F8FA', stroke: L, 'stroke-width': 1.5 });
+  svgEl(s, 'rect', { x: 133, y: 37, width: 18, height: 4, fill: L });
+  svgEl(s, 'polygon', { points: '22,100 60,62 98,100 98,160 22,160', fill: '#F7F8FA', stroke: L, 'stroke-width': 2, 'stroke-linejoin': 'round' });
+  svgEl(s, 'rect', { x: 98, y: 100, width: 106, height: 60, fill: '#EEF1F5', stroke: L, 'stroke-width': 2 });
+  for (let x = 107; x < 204; x += 9) svgEl(s, 'line', { x1: x, y1: 102, x2: x, y2: 159, stroke: '#D5DAE2', 'stroke-width': 1 });
+  svgEl(s, 'rect', { x: 50, y: 122, width: 20, height: 38, fill: '#C9D3E2', stroke: L, 'stroke-width': 2 });
+  svgEl(s, 'circle', { cx: 65, cy: 142, r: 1.6, fill: L });
+  svgEl(s, 'rect', { x: 46, y: 118, width: 28, height: 4, fill: L });
+  svgEl(s, 'circle', { cx: 60, cy: 92, r: 7, fill: '#DCEBFA', stroke: L, 'stroke-width': 2 });
+  [114, 158].forEach(x => {
+    svgEl(s, 'rect', { x: x, y: 114, width: 30, height: 24, fill: '#DCEBFA', stroke: L, 'stroke-width': 2 });
+    svgEl(s, 'line', { x1: x + 15, y1: 114, x2: x + 15, y2: 138, stroke: L, 'stroke-width': 1.5 });
+    svgEl(s, 'rect', { x: x - 2, y: 138, width: 34, height: 3, fill: L });
+  });
+  svgEl(s, 'polygon', { points: '60,60 170,60 210,100 100,100', fill: '#E9EDF5', stroke: L, 'stroke-width': 1.5, 'stroke-linejoin': 'round' });
+  const w = 110 / ROOF_N;
+  for (let i = 0; i < ROOF_N; i++) {
+    const ex = 100 + i * w, rx = 60 + i * w, g = svgEl(s, 'g', { opacity: 0 });
+    svgEl(g, 'polygon', { points: [rx, 60, rx + w, 60, ex + w, 100, ex, 100].join(' '), fill: '#3A4F7A' });
+    svgEl(g, 'line', { x1: rx + w, y1: 60, x2: ex + w, y2: 100, stroke: L, 'stroke-width': 1.5 });
+    waitParts.push({ f: g, x: rx + w / 2 + 20 });
+  }
+  svgEl(s, 'rect', { x: 58, y: 57, width: 114, height: 4, fill: L });
+  svgEl(s, 'rect', { x: 98, y: 100, width: 114, height: 4, fill: '#70747C' });
+  svgEl(s, 'rect', { x: 206, y: 100, width: 4, height: 60, fill: '#70747C' });
+  svgEl(s, 'line', { x1: 18, y1: 104, x2: 60, y2: 60, stroke: L, 'stroke-width': 4, 'stroke-linecap': 'round' });
+  svgEl(s, 'line', { x1: 60, y1: 60, x2: 102, y2: 104, stroke: L, 'stroke-width': 4, 'stroke-linecap': 'round' });
+  waitWorker = svgEl(s, 'g', {});
+  svgEl(waitWorker, 'circle', { cx: 0, cy: -24, r: 6, fill: L });
+  svgEl(waitWorker, 'path', { d: 'M-8 -25 Q0 -36 8 -25 Z', fill: '#FFC81E' });
+  svgEl(waitWorker, 'rect', { x: -4, y: -18, width: 8, height: 13, rx: 2, fill: L });
+  svgEl(waitWorker, 'line', { x1: -2, y1: -5, x2: -3, y2: 2, stroke: L, 'stroke-width': 3, 'stroke-linecap': 'round' });
+  svgEl(waitWorker, 'line', { x1: 2, y1: -5, x2: 3, y2: 2, stroke: L, 'stroke-width': 3, 'stroke-linecap': 'round' });
+  waitArm = svgEl(waitWorker, 'g', {});
+  svgEl(waitArm, 'line', { x1: 3, y1: -15, x2: 12, y2: -11, stroke: L, 'stroke-width': 3, 'stroke-linecap': 'round' });
+  svgEl(waitArm, 'rect', { x: 10, y: -15, width: 7, height: 5, fill: '#0017C1' });
+  const g = document.getElementById('wait-g');
+  for (let i = 0; i < GAUGE_N; i++) g.appendChild(document.createElement('span'));
+}
+function drawWait() {
+  const p = waitP;
+  waitParts.forEach((q, i) => {
+    const t = Math.max(0, Math.min(1, p * ROOF_N - i));
+    q.f.setAttribute('opacity', t > 0 ? 1 : 0);
+    q.f.setAttribute('transform', 'translate(0 ' + (-16 * (1 - (1 - (1 - t) * (1 - t)))) + ')');
+  });
+  const v = Math.min(ROOF_N - .01, p * ROOF_N), i = Math.floor(v), l = v - i;
+  const x = waitParts[i].x + (waitParts[Math.min(ROOF_N - 1, i + 1)].x - waitParts[i].x) * l;
+  waitWorker.setAttribute('transform', 'translate(' + x + ' 79)');
+  waitArm.setAttribute('transform', 'rotate(' + (Math.sin(Date.now() / 90) * 22) + ' 3 -15)');
+  Array.prototype.forEach.call(document.getElementById('wait-g').children, (c, n) => { c.className = p * GAUGE_N > n ? 'on' : ''; });
+  document.getElementById('wait-d').textContent = '...'.slice(0, Math.floor(Date.now() / 400) % 4);
+}
+// 本当の進みは測れないので、見せ方で作る（2026-11-05）
+// 目安の時間で85%まで一定の速さで進み、そこからは少しずつ。終わったら一気に加速して100%にする
+let waitDone = false, waitSpeed = 0, waitLast = 0;
+function showWait(text) {
+  if (!waitParts.length) buildWait();
+  document.getElementById('wait-text').textContent = text || '読み込み中';
+  waitP = 0; waitDone = false; waitSpeed = .85 / (text ? 3 : 5); waitLast = Date.now(); drawWait();
+  document.getElementById('wait').style.display = 'flex';
+  clearInterval(waitTimer);
+  waitTimer = setInterval(() => {
+    const now = Date.now(), dt = (now - waitLast) / 1000;
+    waitLast = now;
+    if (waitDone) { waitSpeed *= 1.25; waitP += waitSpeed * dt; }
+    else if (waitP < .85) waitP += waitSpeed * dt;
+    else if (waitP < .96) waitP += .01 * dt;
+    waitP = Math.min(1, waitP);
+    drawWait();
+    if (waitDone && waitP >= 1) setTimeout(hideWait, 120);
+  }, 50);
+}
+const waitTo = v => { if (v >= 1 && !waitDone) { waitDone = true; waitSpeed = Math.max(waitSpeed, .8); } };
+const hideWait = () => { clearInterval(waitTimer); document.getElementById('wait').style.display = 'none'; };
+
+let lineUserId = '';   // 写真を貼った人を見分けるために報告と一緒に残す（2026-11-05）
 async function main() {
+  // LINEの準備中はURLがまだ包まれているので、中身をほどいて判断する
+  let raw = location.search;
+  try { raw = decodeURIComponent(raw); } catch (e) {}
+  showWait();
+  // すでにURLに写真があれば、LINEの準備を待たずに出す
+  let viewer = viewerParams(new URLSearchParams(location.search));
+  if (viewer) { hideWait(); renderViewer(viewer); }
   try {
     await liff.init({ liffId: LIFF_ID });
+    if (!liff.isInClient() && !liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+    waitTo(.55);
     const ctx = liff.getContext() || {};
+    lineUserId = ctx.userId || '';
+    if (!lineUserId) { try { lineUserId = (await liff.getProfile()).userId || ''; } catch (e) {} }
     canSend = liff.isInClient() && ['group', 'room', 'utou'].includes(ctx.type);
-    bar(canSend ? '送信するとこのトークに報告カードが出ます（出るまで閉じないでください）' : 'このトークには送れません（グループのリンクから開いてください）');
+    if (!canSend && !usePicker()) bar('このトークには送れません（グループのリンクから開いてください）');
   } catch (e) {
     bar('liff.init 失敗: ' + e, true);
   }
-  document.getElementById('frame').src = FORM_URL;
+  // 2026-11-05 ?edit=報告ID で編集、?photos=報告ID&i=番号 で写真スライド
+  const q = new URLSearchParams(location.search);
+  const okId = v => /^R\d{14}$/.test(v || '');
+  if (!viewer) { viewer = viewerParams(q); if (viewer) { hideWait(); renderViewer(viewer); } }
+  if (viewer) return;   // 写真を見るだけのときはフォームを読み込まない
+  let src = FORM_URL;
+  if (okId(q.get('photos'))) {
+    document.getElementById('bar').style.display = 'none';
+    document.getElementById('frame').style.top = '0';
+    document.getElementById('frame').style.height = '100%';
+    src += '?photos=' + q.get('photos') + '&i=' + (parseInt(q.get('i'), 10) || 0);
+  } else if (okId(q.get('edit'))) {
+    let editor = '';
+    try { editor = (await liff.getProfile()).displayName || ''; } catch (e) {}
+    src += '?edit=' + q.get('edit') + '&editor=' + encodeURIComponent(editor);
+  }
+  // フォームの外側が読めたら、続きはフォームの中の待機画面に引き継ぐ
+  // フォームが「準備できた」と知らせるまで読み込み画面を消さない。知らせが来ないときも、遅くとも閉じる
+  waitTo(.92);
+  document.getElementById('frame').addEventListener('load', () => setTimeout(() => waitTo(1), 6000), { once: true });
+  setTimeout(() => waitTo(1), 30000);
+  document.getElementById('frame').src = src;
 }
 
 // ===== 報告カード（card5.html と同じ形）2026-10-09 =====
@@ -56,68 +262,109 @@ const photoUrl = (id, w) => 'https://lh3.googleusercontent.com/d/' + id + '=w' +
 
 function colsFor(n) { return n <= 1 ? 1 : n <= 4 ? 2 : n <= 9 ? 3 : 4; }
 
-function buildCard(r, photos) {
-  const n = photos.length, COLS = colsFor(n);
-  const gencho = r.kubun !== '施工';
-  const t = (s, o) => Object.assign({ type: 'text', text: String(s), size: 'sm', color: '#1F2429', wrap: true }, o || {});
-  const tile = u => ({ type: 'image', url: u, size: 'full', aspectRatio: COLS === 1 ? '4:3' : '1:1', aspectMode: 'cover', flex: 1,
-    action: { type: 'uri', uri: u } });
-  const grid = list => {
-    const rows = [];
-    for (let i = 0; i < list.length; i += COLS) {
-      const row = list.slice(i, i + COLS).map(tile);
-      while (row.length < COLS) row.push({ type: 'filler' });
-      rows.push({ type: 'box', layout: 'horizontal', spacing: 'xs', contents: row });
-    }
-    return { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: rows };
+// 編集ボタン・写真スライドの行き先（今開いているファイルに戻す。テスト中はテスト用に戻る）
+const liffUrl = q => 'https://liff.line.me/' + LIFF_ID + '/' + (location.pathname.split('/').pop() || 'form.html') + '?' + q;
+const okReportId = v => /^R\d{14}$/.test(v || '');
+
+// 報告カード（2026-11-05 決定形）：紺の見出し＋区分の帯＋報告者＋自社と協力の表＋合計の帯＋メモの枠。写真は普通にLINEへ貼る
+function buildCard(r, photos, reportId, edit) {
+  const INK = '#1B1D21', SUB = '#7A7E86', NAVY = '#14264F';
+  const t = (s, o) => Object.assign({ type: 'text', text: String(s), size: '15px', color: INK, wrap: true }, o || {});
+  const LABEL_W = '36px', NINKU_W = '32px', ZAN_W = '46px';
+  const fixed = (w, c) => ({ type: 'box', layout: 'vertical', width: w, flex: 0, contents: [c] });
+  const cell = (s, o) => t(s === '' ? ' ' : s, o);
+  const zanText = z => Number(z || 0) ? Number(z) + '分' : '−';
+  const inset = { paddingStart: '8px', paddingEnd: '8px' };   // 文字の左右を揃える。合計の帯だけ色がこの外まで広がる
+  // 表の1行：名前／人工／残業
+  const tableRow = (name, ninku, zan, o) => {
+    o = o || {};
+    const n = (s, extra) => cell(s, Object.assign({ align: 'end', color: o.head ? SUB : INK, size: o.head ? '12px' : '15px', weight: o.bold ? 'bold' : 'regular' }, extra || {}));
+    return Object.assign({ type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
+      // 名前は折り返さず1行に収める。長い名前だけ自動で文字が小さくなる
+      { type: 'box', layout: 'vertical', flex: 1, contents: [cell(name, { wrap: false, adjustMode: 'shrink-to-fit', color: o.head ? SUB : INK, size: o.head ? '12px' : '15px', weight: o.bold ? 'bold' : 'regular' })] },
+      fixed(NINKU_W, n(ninku)),
+      fixed(ZAN_W, n(zan, zan === '−' ? { color: SUB } : {}))
+    ] }, inset);
   };
+  // 項目名／内容の1行
+  const item = (label, value) => Object.assign({ type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
+    fixed(LABEL_W, cell(label, { color: SUB, size: '12px', gravity: 'center' })),
+    { type: 'box', layout: 'vertical', flex: 1, contents: [cell(value)] }
+  ] }, inset);
+  // 自社・協力の軽い帯
+  const secBand = (label, bg, color) => ({ type: 'box', layout: 'vertical', backgroundColor: bg, cornerRadius: '4px', paddingTop: '2px', paddingBottom: '2px', paddingStart: '8px', paddingEnd: '8px', margin: 'sm', contents: [t(label, { size: '12px', weight: 'bold', color: color })] });
+  const num = n => Number(n || 0).toFixed(1);
+  const shortCo = s => String(s || '').replace(/株式会社|有限会社|合同会社|[(（][株有合個][^)）]*[)）]/g, '').replace(/^[\s　]+|[\s　]+$/g, '') || String(s || '');
+
   const members = r.members || [];
-  // 勤務区分は一人ずつ（r.kinmus）。無い古い報告は全員 r.kinmu
   const kinmus = members.map((m, i) => (r.kinmus || [])[i] || r.kinmu || 1);
-  const selfNinku = kinmus.reduce((s, k) => s + k, 0);
-  const halfs = members.filter((m, i) => kinmus[i] === 0.5);
-  // 送信した内容は全部出す（入れていない項目は「なし」）
-  const lines = [
-    t('▼区分：' + r.kubun),
-    t('▼会社：' + r.company),
-    t('▼現場：' + r.genba),
-    t('▼報告者：' + r.reporter),
-    t('▼職長：' + (r.shokucho || r.reporter)),
-    t('▼勤務区分：' + (!halfs.length ? '全員 1.0 一日' : halfs.length === members.length ? '全員 0.5 半日' : '半日 ' + halfs.join('・') + '／他は一日')),
-    t('▼自社（' + selfNinku + '人工）'),
-    t('　' + (members.join('・') || 'なし')),
-    t('　残業 ' + (members.map((m, i) => m + ((r.zangyo || [])[i] || 0)).join('・') || 'なし') + '（分）'),
-    t('▼協力：' + (r.partners || 'なし')),
-    t('▼車両：車' + r.cars + '台・ユニック' + r.unic + '台'),
-    t('▼MEMO：' + (r.memo || 'なし'))
+  const zans = members.map((m, i) => Number((r.zangyo || [])[i] || 0));
+  const plist = r.partnersList || [];
+  const rows = [tableRow('名前', '人工', '残業', { head: true })];
+  rows.push(secBand('自社', '#E9EDF5', NAVY));
+  members.forEach((m, i) => rows.push(tableRow(m, num(kinmus[i]), zanText(zans[i]))));
+  if (plist.length || r.partners) rows.push(secBand('協力', '#FBF1D8', '#7A5300'));
+  plist.forEach(p => rows.push(tableRow(shortCo(p.name), num(p.ninku), zanText(p.zan))));
+  if (!plist.length && r.partners) rows.push(tableRow(r.partners, num(r.partnerNinku), ''));
+  const sumNinku = kinmus.reduce((s, k) => s + k, 0) + Number(r.partnerNinku || 0);
+  const sumZan = zans.reduce((s, z) => s + z, 0) + plist.reduce((s, p) => s + Number(p.zan || 0), 0);
+
+  const shokucho = r.shokucho || r.reporter;
+  const who = shokucho === r.reporter
+    ? [item('報告', r.reporter + '（職長）')]
+    : [item('報告', r.reporter), item('職長', shokucho)];
+  const cars = [];
+  if (r.cars) cars.push('車 ' + r.cars + '台');
+  if (r.unic) cars.push('ユニック ' + r.unic + '台');
+
+  const gencho = r.kubun !== '施工';
+  const m = String(r.date || '').match(/^\d{4}\/0?(\d+)\/0?(\d+)(.*)$/);
+  const day = m ? m[1] + '/' + m[2] + m[3] : String(r.date || '');
+  const co = String(r.company || '');
+  // 白石の現場は会社名を出さない。中嶋・山下のときだけ短く出す
+  const coShort = co.indexOf('白石') >= 0 ? '' : co.replace(/工業$|板金.*$/, '');
+  // 区分の帯：普段の施工も少し目立たせる。現調は緑、施工完了は見出しごと黄色
+  const done = !gencho && r.end === '完了';
+  const kind = gencho ? ['現調・打合せ', '#17633E', '#FFFFFF']
+    : done ? ['🎉 施工完了　お疲れさまでした！', '#FFF1B8', INK]
+    : ['施工　本日の作業終了', '#CBD7EC', NAVY];
+  const side = { paddingStart: '16px', paddingEnd: '16px' };
+  const body = [];
+  if (edit) body.push(editBand(edit));
+  body.push(Object.assign({ type: 'box', layout: 'vertical', backgroundColor: done ? '#FFC81E' : NAVY, paddingTop: '12px', paddingBottom: '12px', contents: [
+    t(r.genba, { size: '18px', weight: 'bold', color: done ? INK : '#FFFFFF' }),
+    t(day + (coShort ? '・' + coShort : ''), { size: '12px', color: done ? '#4A3B00' : '#C9D2E3' })
+  ] }, side));
+  body.push(Object.assign({ type: 'box', layout: 'vertical', backgroundColor: kind[1], paddingTop: '7px', paddingBottom: '7px', contents: [
+    t(kind[0], { size: '14px', weight: 'bold', color: kind[2] })
+  ] }, side));
+  const inner = [
+    { type: 'box', layout: 'vertical', spacing: 'xs', contents: who },
+    { type: 'separator', margin: 'md' },
+    { type: 'box', layout: 'vertical', spacing: 'sm', margin: 'md', contents: rows },
+    { type: 'box', layout: 'vertical', backgroundColor: '#F5F6F8', cornerRadius: '8px', paddingTop: '8px', paddingBottom: '8px', margin: 'md', contents: [tableRow('合計', num(sumNinku), zanText(sumZan), { bold: true })] },
+    { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: [item('車両', cars.join('・') || 'なし')] }
   ];
-  const pages = [photos.slice(0, 12)];
-  for (let i = 12; i < n; i += 12) pages.push(photos.slice(i, i + 12));
-  let from = 1;
-  const bubbles = pages.map((list, p) => {
-    let contents;
-    if (p === 0) {
-      contents = [
-        t('【業務報告】' + r.date, { size: 'md', weight: 'bold' }),
-        r.end === '完了'
-          ? { type: 'box', layout: 'vertical', backgroundColor: '#E6F4EC', cornerRadius: '10px', paddingAll: '8px', margin: 'md', contents: [
-              t('🎉 施工完了', { weight: 'bold', align: 'center', color: '#1E7B45' }),
-              t('お疲れさまでした！', { size: 'xs', align: 'center', color: '#2E7D4F' }) ] }
-          : t(gencho ? '📝 現調・打合せ' : '本日の作業終了', { size: 'xs', color: gencho ? '#185FA5' : '#5F5E5A', margin: 'sm' }),
-        { type: 'separator', margin: 'md' },
-        { type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', contents: lines },
-        { type: 'separator', margin: 'md' },
-        t('合計：' + (selfNinku + (r.partnerNinku || 0)) + '人工' + (n ? '　📷 写真' + n + '枚' : ''), { margin: 'md' })
-      ];
-      if (list.length) contents.push(grid(list));
-    } else {
-      contents = [t('📷 写真 ' + from + '〜' + (from + list.length - 1) + ' / ' + n + '枚', { size: 'xs', color: '#5F5E5A' }), grid(list)];
-    }
-    from += list.length;
-    return { type: 'bubble', size: 'mega', body: { type: 'box', layout: 'vertical', paddingAll: '14px', contents: contents } };
-  });
-  return { type: 'flex', altText: '【業務報告】' + r.date + ' ' + r.genba + '（' + r.reporter + '）',
-    contents: bubbles.length === 1 ? bubbles[0] : { type: 'carousel', contents: bubbles } };
+  if (r.memo) inner.push(Object.assign({ type: 'box', layout: 'vertical', margin: 'md', contents: [
+    t('メモ', { size: '12px', color: SUB }),
+    { type: 'box', layout: 'vertical', borderWidth: '1px', borderColor: '#DDE1E7', cornerRadius: '8px', paddingAll: '8px', margin: 'xs', contents: [t(r.memo)] }
+  ] }, inset));
+  body.push({ type: 'box', layout: 'vertical', paddingTop: '12px', paddingBottom: '12px', paddingStart: '8px', paddingEnd: '8px', contents: inner });
+
+  const bubble = { type: 'bubble', size: 'kilo', body: { type: 'box', layout: 'vertical', paddingAll: '0px', contents: body } };
+  if (okReportId(reportId)) bubble.footer = { type: 'box', layout: 'vertical', paddingAll: '4px', contents: [
+    { type: 'button', style: 'link', height: 'sm', color: '#0017C1', action: { type: 'uri', label: '編集', uri: liffUrl('edit=' + reportId) } } ] };
+  return { type: 'flex', altText: (edit ? '修正 ' : '') + '【業務報告】' + r.date + ' ' + r.genba + '（' + r.reporter + '）', contents: bubble };
+}
+
+// 修正カードの帯。古いカードは消せないので、修正だと分かるようにする
+function editBand(e) {
+  const parts = (e.changes || []).slice();
+  const rows = [
+    { type: 'text', text: '修正（' + e.no + '回目）', weight: 'bold', color: '#7A5300', size: '14px', wrap: true },
+    { type: 'text', text: '直した項目：' + (parts.join('・') || 'なし') + '／前のカードは使いません', color: '#7A5300', size: '12px', wrap: true } ];
+  if (e.siteChanged) rows.push({ type: 'text', text: '事務の方へ：現場を変えました。前からある写真は前の現場のフォルダにあります。移してください', color: '#B3261E', size: '12px', wrap: true });
+  return { type: 'box', layout: 'vertical', backgroundColor: '#FFF4D6', paddingAll: '10px', paddingStart: '14px', paddingEnd: '14px', contents: rows };
 }
 
 // フォーム（出面アプリの index.html）から「送信しました」を受け取ったら、カードにしてこのトークへ送る
@@ -126,32 +373,55 @@ window.addEventListener('message', async ev => {
   try { host = new URL(ev.origin).hostname; } catch (e) { return; }
   if (!/\.googleusercontent\.com$/.test(host)) return;
   const d = ev.data || {};
+  if (d.type === 'demen-ready') { waitTo(1); return; }
+  if (d.type === 'demen-busy') {   // 送信中に何度か届くので、進み具合を戻さない
+    if (document.getElementById('wait').style.display !== 'flex') showWait('送信中');
+    return;
+  }
+  if (d.type === 'demen-idle') { if (!cardSending) waitTo(1); return; }
+  if (d.type === 'demen-hello') {
+    let last = ''; try { last = localStorage.getItem('demen-last-reporter') || ''; } catch (e) {}
+    try { ev.source.postMessage({ type: 'demen-user', userId: lineUserId, lastReporter: last }, '*'); } catch (e) {}
+    return;
+  }
+  if (d.type === 'demen-close') { try { liff.closeWindow(); } catch (e) {} return; }
   if (d.type === 'demen-failed' && d.report) {
     try { ev.source.postMessage({ type: 'demen-fail-ack' }, '*'); } catch (e) {}   // フォームはいつもの「送信完了」を出す
-    if (!canSend) { bar('報告は送れませんでした。事務に連絡してください', true); return; }
+    if (!canSend && !usePicker()) { bar('報告は送れませんでした。事務に連絡してください', true); return; }
     lastCard = buildFailCard(d, d.saved ? 'photo' : 'save');   // 職人にはいつもどおりに見せ、カードの赤い帯で事務に知らせる
     sendCard();
     return;
   }
   if (d.type !== 'demen-sent' || !d.report) return;
-  if (!canSend) { bar('報告は保存しました（このトークには送れません）'); return; }
+  try { if (!d.edit && d.report.reporter) localStorage.setItem('demen-last-reporter', d.report.reporter); } catch (e) {}
+  if (!canSend && !usePicker()) { bar('報告は保存しました（このトークには送れません）'); return; }
   const photos = (d.photoIds || []).map(id => photoUrl(id));
-  lastCard = buildCard(d.report, photos);
+  lastCard = buildCard(d.report, photos, d.reportId, d.edit);
   sendCard();
 });
 
 // ===== 送れなかったとき（2026-10-28 追加）=====
 // D：保存はできたがLINEに送れなかった → 帯をタップするともう一度送る
-let lastCard = null;
+let lastCard = null, cardSending = false;
 async function sendCard() {
   if (!lastCard) return;
-  bar('グループに送信中…（閉じないでください）');
+  cardSending = true;
   try {
-    await liff.sendMessages([lastCard]);
-    bar('グループに送りました。閉じて大丈夫です');
+    if (canSend) {
+      await liff.sendMessages([lastCard]);
+    } else {
+      waitTo(1);   // 送り先を選ぶ画面が隠れないように、先に読み込み画面を閉じる
+      const res = await liff.shareTargetPicker([lastCard]);   // isMultiple:false にすると友だちしか選べなくなる
+      if (!res) throw new Error('送り先を選んでいません');
+    }
+    bar('');   // 送れたら帯は消す（送信完了の画面が出ている）
     lastCard = null;
+    cardSending = false;
+    waitTo(1);
   } catch (e) {
-    bar('LINEに送れませんでした。ここをタップしてもう一度送る（報告は保存済み）', true);
+    cardSending = false;
+    waitTo(1);
+    bar('LINEに送れませんでした。ここをタップしてもう一度送る（報告は保存済み）' + (canSend ? '' : ' [' + ((e && (e.message || e.code)) || e) + ']'), true);
     document.getElementById('bar').className = 'tap';
     document.getElementById('bar').onclick = () => { document.getElementById('bar').onclick = null; sendCard(); };
   }
@@ -162,13 +432,13 @@ async function sendCard() {
 // （フォームが開かないときはこの枠も開かないので、手入力用のテンプレートは前もってグループのノートに置いておく）
 function buildFailCard(d, kind) {
   const photos = (d.photoIds || []).map(id => photoUrl(id));
-  const card = buildCard(d.report, photos);
+  const card = buildCard(d.report, photos, d.saved ? d.reportId : '');
   const bubble = card.contents.type === 'carousel' ? card.contents.contents[0] : card.contents;
   const got = photos.length + '/' + (d.photoTotal || 0) + '枚';
   const warn = kind === 'photo'
-    ? ['⚠ 写真が途中までしか入っていません', '事務の方へ：報告はスプシに入っています（' + (d.reportId || '') + '）。写真は ' + got + ' まで保存。残りは職人に確認してください']
-    : ['⚠ スプシに入っていません', '事務の方へ：日報データへの転記をお願いします。' + (d.photoTotal ? '写真（' + got + '）は「写真未整理」フォルダにあります。案件フォルダへ移してください' : '写真はありません')];
-  bubble.body.contents.unshift({ type: 'box', layout: 'vertical', backgroundColor: '#FDECEA', cornerRadius: '10px', paddingAll: '8px', margin: 'none', contents: [
+    ? ['写真が途中までしか入っていません', '事務の方へ：報告はスプシに入っています（' + (d.reportId || '') + '）。写真は ' + got + ' まで保存。残りは職人に確認してください']
+    : ['スプシに入っていません', '事務の方へ：日報データへの転記をお願いします。' + (d.photoTotal ? '写真（' + got + '）は「写真未整理」フォルダにあります。案件フォルダへ移してください' : '写真はありません')];
+  bubble.body.contents.unshift({ type: 'box', layout: 'vertical', backgroundColor: '#FDECEA', paddingAll: '10px', paddingStart: '14px', paddingEnd: '14px', contents: [
     { type: 'text', text: warn[0], weight: 'bold', color: '#B42318', size: 'sm', wrap: true },
     { type: 'text', text: warn[1], color: '#7A271A', size: 'xs', wrap: true } ] });
   card.altText = warn[0] + ' ' + d.report.date + ' ' + d.report.genba + '（' + d.report.reporter + '）';
