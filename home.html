@@ -30,11 +30,17 @@
 <script>
 // ホーム画面のアイコンの入口（2026-11-05）。アイコンから開いたら、そのままLINEのフォームへ移る
 var page = /[?&]t=test/.test(location.search) ? 'form-test.html' : 'form.html';
-var url = 'https://liff.line.me/2011897591-HBBipfnN/' + page;
-document.getElementById('open').href = url;
+var LIFF = '2011897591-HBBipfnN';
+var app = 'line://app/' + LIFF + '/' + page;                 // LINEアプリを直接開く（ブラウザの中で開かないように）
+var web = 'https://liff.line.me/' + LIFF + '/' + page;       // LINEアプリが開かないときの予備
+document.getElementById('open').href = app;
 var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+function goLine() {
+  location.href = app;
+  setTimeout(function () { if (!document.hidden) location.href = web; }, 1800);
+}
 if (standalone) {
-  location.replace(url);
+  goLine();
 } else {
   document.getElementById('how').hidden = false;
   var ios = /iPhone|iPad|iPod/.test(navigator.userAgent);

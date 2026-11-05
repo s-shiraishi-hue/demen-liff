@@ -221,6 +221,7 @@ async function main() {
   if (viewer) { hideWait(); renderViewer(viewer); }
   try {
     await liff.init({ liffId: LIFF_ID });
+    if (!liff.isInClient() && !liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
     waitTo(.55);
     const ctx = liff.getContext() || {};
     lineUserId = ctx.userId || '';
