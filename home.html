@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>業務報告</title>
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<meta name="apple-mobile-web-app-title" content="業務報告">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+  html,body{margin:0;height:100%;background:#fff;color:#14264F;font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;box-sizing:border-box;text-align:center}
+  img{width:96px;height:96px;border-radius:22px}
+  h1{font-size:20px;margin:0}
+  p{font-size:16px;line-height:1.8;margin:0;color:#333}
+  a{display:block;width:100%;max-width:320px;box-sizing:border-box;padding:14px;border-radius:8px;background:#0017C1;color:#fff;font-weight:700;text-decoration:none}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<img src="icon-512.png" alt="">
+<h1>業務報告</h1>
+<div id="how" hidden>
+  <p>ホーム画面に追加すると、<br>アイコンから開けます。</p>
+  <p id="how-ios" hidden>下の共有ボタン → 「ホーム画面に追加」</p>
+  <p id="how-android" hidden>右上の ⋮ → 「ホーム画面に追加」</p>
+</div>
+<a id="open" href="#">フォームを開く</a>
+<script>
+// ホーム画面のアイコンの入口（2026-11-05）。アイコンから開いたら、そのままLINEのフォームへ移る
+var page = /[?&]t=test/.test(location.search) ? 'form-test.html' : 'form.html';
+var url = 'https://liff.line.me/2011897591-HBBipfnN/' + page;
+document.getElementById('open').href = url;
+var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+if (standalone) {
+  location.replace(url);
+} else {
+  document.getElementById('how').hidden = false;
+  var ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  document.getElementById(ios ? 'how-ios' : 'how-android').hidden = false;
+}
+</script>
+</body>
+</html>

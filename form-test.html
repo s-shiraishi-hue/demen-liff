@@ -4,9 +4,9 @@
 <meta charset="UTF-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>業務報告</title>
-<meta name="description" content="今日の出面（人工・車両・写真）を報告するフォームです。送るとこのグループに報告カードが出ます。">
+<meta name="description" content="今日の出面（人工・車両）を報告するフォームです。送るとこのグループに報告カードが出ます。">
 <meta property="og:title" content="業務報告（出面）">
-<meta property="og:description" content="タップして今日の出面と写真を報告">
+<meta property="og:description" content="タップして今日の出面を報告">
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -59,6 +59,8 @@ const FORM_URL = 'https://script.google.com/macros/s/AKfycbxHXmVPXFaOFoXSl1YTDrj
 
 const bar = (t, err) => { const b = document.getElementById('bar'); b.style.display = t ? 'block' : 'none'; b.textContent = t; b.className = err ? 'err' : ''; };
 let canSend = false;
+// ホーム画面のアイコンから開いたときはグループが分からないので、送り先をLINEの画面で選んでもらう（2026-11-05）
+const usePicker = () => { try { return !canSend && liff.isApiAvailable('shareTargetPicker'); } catch (e) { return false; } };
 
 // ===== 写真スライド（2026-11-05）=====
 // 写真のIDはカードのURLに入っているので、Googleのフォームを通さずにすぐ開く
@@ -224,7 +226,7 @@ async function main() {
     lineUserId = ctx.userId || '';
     if (!lineUserId) { try { lineUserId = (await liff.getProfile()).userId || ''; } catch (e) {} }
     canSend = liff.isInClient() && ['group', 'room', 'utou'].includes(ctx.type);
-    if (!canSend) bar('このトークには送れません（グループのリンクから開いてください）');
+    if (!canSend && !usePicker()) bar('このトークには送れません（グループのリンクから開いてください）');
   } catch (e) {
     bar('liff.init 失敗: ' + e, true);
   }
@@ -383,14 +385,14 @@ window.addEventListener('message', async ev => {
   if (d.type === 'demen-close') { try { liff.closeWindow(); } catch (e) {} return; }
   if (d.type === 'demen-failed' && d.report) {
     try { ev.source.postMessage({ type: 'demen-fail-ack' }, '*'); } catch (e) {}   // フォームはいつもの「送信完了」を出す
-    if (!canSend) { bar('報告は送れませんでした。事務に連絡してください', true); return; }
+    if (!canSend && !usePicker()) { bar('報告は送れませんでした。事務に連絡してください', true); return; }
     lastCard = buildFailCard(d, d.saved ? 'photo' : 'save');   // 職人にはいつもどおりに見せ、カードの赤い帯で事務に知らせる
     sendCard();
     return;
   }
   if (d.type !== 'demen-sent' || !d.report) return;
   try { if (!d.edit && d.report.reporter) localStorage.setItem('demen-last-reporter', d.report.reporter); } catch (e) {}
-  if (!canSend) { bar('報告は保存しました（このトークには送れません）'); return; }
+  if (!canSend && !usePicker()) { bar('報告は保存しました（このトークには送れません）'); return; }
   const photos = (d.photoIds || []).map(id => photoUrl(id));
   lastCard = buildCard(d.report, photos, d.reportId, d.edit);
   sendCard();
@@ -403,7 +405,13 @@ async function sendCard() {
   if (!lastCard) return;
   cardSending = true;
   try {
-    await liff.sendMessages([lastCard]);
+    if (canSend) {
+      await liff.sendMessages([lastCard]);
+    } else {
+      waitTo(1);   // 送り先を選ぶ画面が隠れないように、先に読み込み画面を閉じる
+      const res = await liff.shareTargetPicker([lastCard], { isMultiple: false });
+      if (!res) throw new Error('送り先を選んでいません');
+    }
     bar('');   // 送れたら帯は消す（送信完了の画面が出ている）
     lastCard = null;
     cardSending = false;
