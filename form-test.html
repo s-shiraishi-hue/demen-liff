@@ -40,11 +40,15 @@
   #pv .t button.on{border-color:#fff}
   #pv .t img{width:100%;height:100%;object-fit:cover;display:block}
   #frame{position:fixed;top:0;left:0;width:100%;height:100%;border:0}
+  #wait-sum{display:none;grid-template-columns:4.6em minmax(0,1fr);gap:6px 8px;width:100%;max-width:360px;margin:0;font-size:14px;color:#14264F}
+  #wait-sum dt{font-weight:700;font-size:13px}
+  #wait-sum dd{margin:0;overflow-wrap:anywhere}
+  #wait-note{display:none;max-width:360px;margin:0;font-size:13px;color:#5F6368;text-align:center}
 </style>
 </head>
 <body>
 <div id="bar">準備中…</div>
-<div id="wait"><svg id="wait-house" viewBox="0 0 220 170" aria-hidden="true"></svg><div class="g" id="wait-g"></div><div class="x"><span id="wait-text">読み込み中</span><i id="wait-d"></i></div></div>
+<div id="wait"><svg id="wait-house" viewBox="0 0 220 170" aria-hidden="true"></svg><div class="g" id="wait-g"></div><div class="x"><span id="wait-text">読み込み中</span><i id="wait-d"></i></div><dl id="wait-sum"></dl><p id="wait-note">閉じずにお待ちください。修正がある場合は、送信後にカードの［編集］から再送信してください</p></div>
 <iframe id="frame" allow="camera; microphone; clipboard-write"></iframe>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -210,6 +214,21 @@ function showWait(text) {
 }
 const waitTo = v => { if (v >= 1 && !waitDone) { waitDone = true; waitSpeed = Math.max(waitSpeed, .8); } };
 const hideWait = () => { clearInterval(waitTimer); document.getElementById('wait').style.display = 'none'; };
+function showSendSummary(list) {
+  const box = document.getElementById('wait-sum'), note = document.getElementById('wait-note');
+  box.innerHTML = '';
+  (Array.isArray(list) ? list : []).forEach(x => {
+    const dt = document.createElement('dt'); dt.textContent = String(x[0]); box.appendChild(dt);
+    const dd = document.createElement('dd'); dd.textContent = String(x[1]); box.appendChild(dd);
+  });
+  const on = box.children.length > 0;
+  box.style.display = on ? 'grid' : 'none';
+  note.style.display = on ? 'block' : 'none';
+  document.getElementById('wait').style.justifyContent = on ? 'flex-start' : 'center';
+  document.getElementById('wait').style.paddingTop = on ? '16px' : '0';
+  document.getElementById('wait').style.paddingBottom = on ? '16px' : '170px';
+  document.getElementById('wait').style.overflowY = on ? 'auto' : 'visible';
+}
 
 let lineUserId = '';   // 写真を貼った人を見分けるために報告と一緒に残す（2026-11-05）
 async function main() {
@@ -375,7 +394,10 @@ window.addEventListener('message', async ev => {
   const d = ev.data || {};
   if (d.type === 'demen-ready') { waitTo(1); return; }
   if (d.type === 'demen-busy') {   // 送信中に何度か届くので、進み具合を戻さない
-    if (document.getElementById('wait').style.display !== 'flex') showWait('送信中');
+    if (document.getElementById('wait').style.display !== 'flex') {
+      showWait(d.summary ? (d.editing ? 'この内容で修正中' : 'この内容で送信中') : '送信中');
+      showSendSummary(d.summary);
+    }
     return;
   }
   if (d.type === 'demen-idle') { if (!cardSending) waitTo(1); return; }
