@@ -317,7 +317,7 @@ function buildCard(r, photos, reportId, edit) {
       { type: 'box', layout: 'vertical', spacing: 'xs', paddingTop: '12px', paddingBottom: '12px', paddingStart: '8px', paddingEnd: '8px', contents: rowsG }
     ];
     // 写真を田の字に並べる（最大9枚、10枚目からは「+N」）。押すとその写真から横にめくって見られる（写真スライド）
-    const gids = (r.photoIds || []).filter(id => /^[w-]+$/.test(id));
+    const gids = (r.photoIds || []).filter(id => /^[A-Za-z0-9_-]+$/.test(id));
     if (gids.length) {
       const vids = gids.slice(0, 25);   // LINEのリンクの長さの上限があるので、スライドに入れるのは25枚まで
       const open = k => ({ type: 'uri', label: '写真', uri: liffUrl('p=' + vids.join('.') + '&i=' + Math.min(k, vids.length - 1) + '&t=' + vids.length) });
