@@ -316,30 +316,31 @@ function buildCard(r, photos, reportId, edit) {
         t(r.kubun || '現調', { size: '14px', weight: 'bold', color: '#FFFFFF' }) ] }, gside),
       { type: 'box', layout: 'vertical', spacing: 'xs', paddingTop: '12px', paddingBottom: '12px', paddingStart: '8px', paddingEnd: '8px', contents: rowsG }
     ];
-    // 写真を田の字に並べる（最大9枚、10枚目からは「+N」）。押すとその写真から横にめくって見られる（写真スライド）
+    // 写真は10月の出面カードと同じ並べ方（LINEで動いていた形）：1〜4枚は2列、5〜9枚は3列、10枚〜は4列。12枚ごとに次のカード（横にめくる）
+    // 押すと写真スライド（25枚まで）。それより後ろの写真は、その写真をそのまま開く
     const gids = (r.photoIds || []).filter(id => /^[A-Za-z0-9_-]+$/.test(id));
-    if (gids.length) {
-      const vids = gids.slice(0, 25);   // LINEのリンクの長さの上限があるので、スライドに入れるのは25枚まで
-      const open = k => ({ type: 'uri', label: '写真', uri: liffUrl('p=' + vids.join('.') + '&i=' + Math.min(k, vids.length - 1) + '&t=' + vids.length) });
-      const shown = gids.slice(0, 9), gridRows = [];
-      for (let k = 0; k < shown.length; k += 3) {
-        const cells = shown.slice(k, k + 3).map((id, j) => {
-          const n = k + j, cell = [{ type: 'image', url: photoUrl(id, 400), size: 'full', aspectMode: 'cover', aspectRatio: '1:1' }];
-          if (n === 8 && gids.length > 9) cell.push({ type: 'box', layout: 'vertical', position: 'absolute', offsetTop: '0px', offsetBottom: '0px', offsetStart: '0px', offsetEnd: '0px',
-            backgroundColor: '#00000080', justifyContent: 'center', alignItems: 'center', contents: [t('+' + (gids.length - 8), { size: '20px', weight: 'bold', color: '#FFFFFF', align: 'center' })] });
-          return { type: 'box', layout: 'vertical', flex: 1, cornerRadius: '4px', contents: cell, action: open(n) };
-        });
-        while (cells.length < 3) cells.push({ type: 'filler' });
-        gridRows.push({ type: 'box', layout: 'horizontal', spacing: '2px', contents: cells });
+    const gn = gids.length, GC = gn <= 1 ? 1 : gn <= 4 ? 2 : gn <= 9 ? 3 : 4, vids = gids.slice(0, 25);
+    const gtile = (id, k) => ({ type: 'image', url: photoUrl(id, 640), size: 'full', aspectRatio: GC === 1 ? '4:3' : '1:1', aspectMode: 'cover', flex: 1,
+      action: { type: 'uri', uri: k < vids.length ? liffUrl('p=' + vids.join('.') + '&i=' + k + '&t=' + vids.length) : photoUrl(id) } });
+    const ggrid = (list, base) => {
+      const rows = [];
+      for (let k = 0; k < list.length; k += GC) {
+        const row = list.slice(k, k + GC).map((id, j) => gtile(id, base + k + j));
+        while (row.length < GC) row.push({ type: 'filler' });
+        rows.push({ type: 'box', layout: 'horizontal', spacing: 'xs', contents: row });
       }
-      gbody.splice(2, 0, { type: 'box', layout: 'vertical', spacing: '2px', paddingTop: '2px', paddingStart: '2px', paddingEnd: '2px', contents: gridRows });
-    }
+      return { type: 'box', layout: 'vertical', spacing: 'xs', paddingAll: '4px', contents: rows };
+    };
+    if (gn) gbody.splice(2, 0, ggrid(gids.slice(0, 12), 0));
     const gbubble = { type: 'bubble', size: 'kilo', body: { type: 'box', layout: 'vertical', paddingAll: '0px', contents: gbody } };
+    const gmore = [];
+    for (let k = 12; k < gn; k += 12) gmore.push({ type: 'bubble', size: 'kilo', body: { type: 'box', layout: 'vertical', paddingAll: '8px', contents: [
+      t('📷 写真 ' + (k + 1) + '〜' + Math.min(gn, k + 12) + ' / ' + gn + '枚', { size: '12px', color: SUB }), ggrid(gids.slice(k, k + 12), k) ] } });
     const btns = [];
     if (/^https:\/\//.test(r.folderUrl || '')) btns.push({ type: 'button', style: 'link', height: 'sm', color: '#0017C1', action: { type: 'uri', label: 'フォルダ（社内）', uri: r.folderUrl } });
     if (/^https:\/\//.test(r.memoUrl || '')) btns.push({ type: 'button', style: 'link', height: 'sm', color: '#0017C1', action: { type: 'uri', label: 'メモを見る', uri: r.memoUrl } });
     if (btns.length) gbubble.footer = { type: 'box', layout: 'horizontal', paddingAll: '4px', contents: btns };
-    return { type: 'flex', altText: '【' + (r.kubun || '現調') + '】' + r.date + ' ' + r.genba + '（' + r.reporter + '）', contents: gbubble };
+    return { type: 'flex', altText: '【' + (r.kubun || '現調') + '】' + r.date + ' ' + r.genba + '（' + r.reporter + '）', contents: gmore.length ? { type: 'carousel', contents: [gbubble].concat(gmore) } : gbubble };
   }
 
   const members = r.members || [];
