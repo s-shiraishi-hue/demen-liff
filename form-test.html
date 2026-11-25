@@ -335,9 +335,27 @@ function buildCard(r, photos, reportId, edit) {
         t(r.kubun || '現調', { size: '14px', weight: 'bold', color: '#FFFFFF' }) ] }, gside),
       { type: 'box', layout: 'vertical', spacing: 'xs', paddingTop: '12px', paddingBottom: '12px', paddingStart: '8px', paddingEnd: '8px', contents: rowsG }
     ];
+    // 写真を田の字に並べる（最大9枚、10枚目からは「+N」）。押すとその写真から横にめくって見られる（写真スライド）
+    const gids = (r.photoIds || []).filter(id => /^[w-]+$/.test(id));
+    if (gids.length) {
+      const vids = gids.slice(0, 25);   // LINEのリンクの長さの上限があるので、スライドに入れるのは25枚まで
+      const open = k => ({ type: 'uri', label: '写真', uri: liffUrl('p=' + vids.join('.') + '&i=' + Math.min(k, vids.length - 1) + '&t=' + vids.length) });
+      const shown = gids.slice(0, 9), gridRows = [];
+      for (let k = 0; k < shown.length; k += 3) {
+        const cells = shown.slice(k, k + 3).map((id, j) => {
+          const n = k + j, cell = [{ type: 'image', url: photoUrl(id, 400), size: 'full', aspectMode: 'cover', aspectRatio: '1:1' }];
+          if (n === 8 && gids.length > 9) cell.push({ type: 'box', layout: 'vertical', position: 'absolute', offsetTop: '0px', offsetBottom: '0px', offsetStart: '0px', offsetEnd: '0px',
+            backgroundColor: '#00000080', justifyContent: 'center', alignItems: 'center', contents: [t('+' + (gids.length - 8), { size: '20px', weight: 'bold', color: '#FFFFFF', align: 'center' })] });
+          return { type: 'box', layout: 'vertical', flex: 1, cornerRadius: '4px', contents: cell, action: open(n) };
+        });
+        while (cells.length < 3) cells.push({ type: 'filler' });
+        gridRows.push({ type: 'box', layout: 'horizontal', spacing: '2px', contents: cells });
+      }
+      gbody.splice(2, 0, { type: 'box', layout: 'vertical', spacing: '2px', paddingTop: '2px', paddingStart: '2px', paddingEnd: '2px', contents: gridRows });
+    }
     const gbubble = { type: 'bubble', size: 'kilo', body: { type: 'box', layout: 'vertical', paddingAll: '0px', contents: gbody } };
     const btns = [];
-    if (/^https:\/\//.test(r.folderUrl || '')) btns.push({ type: 'button', style: 'link', height: 'sm', color: '#0017C1', action: { type: 'uri', label: '写真を見る', uri: r.folderUrl } });
+    if (/^https:\/\//.test(r.folderUrl || '')) btns.push({ type: 'button', style: 'link', height: 'sm', color: '#0017C1', action: { type: 'uri', label: 'フォルダ（社内）', uri: r.folderUrl } });
     if (/^https:\/\//.test(r.memoUrl || '')) btns.push({ type: 'button', style: 'link', height: 'sm', color: '#0017C1', action: { type: 'uri', label: 'メモを見る', uri: r.memoUrl } });
     if (btns.length) gbubble.footer = { type: 'box', layout: 'horizontal', paddingAll: '4px', contents: btns };
     return { type: 'flex', altText: '【' + (r.kubun || '現調') + '】' + r.date + ' ' + r.genba + '（' + r.reporter + '）', contents: gbubble };
@@ -447,10 +465,9 @@ window.addEventListener('message', async ev => {
   try { if (!d.edit && d.report.reporter) localStorage.setItem('demen-last-reporter', d.report.reporter); } catch (e) {}
   if (!canSend && !usePicker()) { bar('報告は保存しました（このトークには送れません）'); return; }
   const photos = (d.photoIds || []).map(id => photoUrl(id));
+  if (d.report && d.report.gencho) d.report.photoIds = d.photoIds || [];   // 現調・打合せはカードの中に写真を並べる（2026-11-25）
   lastCard = buildCard(d.report, photos, d.reportId, d.edit);
-  // 現調・打合せは写真もふつうの写真としてグループへ折り返す（2026-11-25）。1回5つまでなので、カード＋4枚、そのあと5枚ずつ
-  pendingMsgs = [lastCard].concat(d.report && d.report.gencho ? (d.photoIds || []).map(id => ({
-    type: 'image', originalContentUrl: photoUrl(id, 1600), previewImageUrl: photoUrl(id, 480) })) : []);
+  pendingMsgs = [lastCard];
   sendCard();
 });
 
