@@ -894,6 +894,8 @@ textarea.fin{min-height:64px;line-height:1.5}
   .board>.col>.card{border-color:rgba(0,0,0,.08)}
   .board>.col .empty{background:transparent;border-color:rgba(0,0,0,.15)}
 }
+/* 新しい依頼をグループに送るときの中身（左寄せ） */
+.rgrp{margin-top:8px}.rgrp .npre{text-align:left}
 </style>
 
 <div class="wrap">
@@ -1076,6 +1078,18 @@ textarea.fin{min-height:64px;line-height:1.5}
   /* LINE へ送る文の形（白石さん 11/25）：加工番号／案件名／名前（頼んだ人）／内容 の4行 */
   function lineMsg(r,content){return '【加工】'+r.id+'\n案件：'+r.site+'\n名前：'+r.worker+'\n内容：'+content;}
   window.kakoLine=function(r,content){return lineSend(lineMsg(r,content));}; /* 依頼フォーム（別のかたまり）からも使う */
+  window.kakoLineText=function(r,content){return lineMsg(r,content);};
+  /* 写真つきのカード（Flex）。写真は LINE が取りに行くので、インターネットから見られるアドレス（https）が要る。
+     出面と同じく、宮本さん版で写真を「リンクを知っている人は見られる」にしてアドレスを返してもらう前提。アドレスがなければ文だけ */
+  function photoCard(r,content,urls){
+    var pics=urls.slice(0,4).map(function(u){return {type:'image',url:u,size:'full',aspectMode:'cover',aspectRatio:'1:1',action:{type:'uri',uri:u},flex:1};});
+    var rows=[];for(var i=0;i<pics.length;i+=2)rows.push({type:'box',layout:'horizontal',spacing:'xs',contents:pics.slice(i,i+2)});
+    var t=function(s,b){return {type:'text',text:s,wrap:true,size:b?'md':'sm',weight:b?'bold':'regular',color:b?'#1a1a1c':'#4d4f55'};};
+    return {type:'flex',altText:lineMsg(r,content).slice(0,390),contents:{type:'bubble',
+      hero:rows.length?{type:'box',layout:'vertical',spacing:'xs',contents:rows}:undefined,
+      body:{type:'box',layout:'vertical',spacing:'sm',contents:[t('【加工】'+r.id,true),t('案件：'+r.site),t('名前：'+r.worker),t('内容：'+content)]}}};}
+  window.kakoLineCard=function(r,content,urls){urls=(urls||[]).filter(function(u){return /^https:\/\//.test(u);});
+    var text=lineMsg(r,content);return urls.length?lineSendX([photoCard(r,content,urls)],text):lineSend(text);};
   function toGroup(r,name,text){return lineSend(lineMsg(r,(name?name+'「':'「')+text+'」'));}
   /* LINE へ送る（シロの送る数は使わない。送るのは本人の名前）（白石さん 11/25）：
      ① グループに貼ったリンクから開いたとき（LIFF）＝そのグループへ直接送る
@@ -1088,11 +1102,13 @@ textarea.fin{min-height:64px;line-height:1.5}
   /* 送り先を、画面の上に重なる窓で選ぶ（シェアターゲットピッカー。白石さん 11/25「オンにしよう」）。送ったあとも元の画面のまま。
      LIFF の設定でオンになっていないときは使えないので、そのときは LINE の「送る」画面に切り替える */
   function canPicker(){try{return !!(window.liff&&liff.isApiAvailable&&liff.isApiAvailable('shareTargetPicker'));}catch(e){return false;}}
-  function pickAndSend(msg){return liff.shareTargetPicker([{type:'text',text:msg}]).then(function(res){toast(res?'LINE に送りました':'送るのをやめました');},function(e){toast('送り先を選べませんでした（'+((e&&e.message)||'')+'）');lineShare(msg);});}
-  function lineSend(msg){
+  function pickAndSend(msgs,msg){return liff.shareTargetPicker(msgs).then(function(res){toast(res?'LINE に送りました':'送るのをやめました');},function(e){toast('送り先を選べませんでした（'+((e&&e.message)||'')+'）');lineShare(msg);});}
+  function lineSend(msg){return lineSendX([{type:'text',text:msg}],msg);}
+  /* msgs＝LINE に送る中身（文やカード）、msg＝「送る」画面に渡すときの文（カードは渡せないので文だけ） */
+  function lineSendX(msgs,msg){
     if(window.liff&&liff.isInClient&&liff.isInClient()&&liff.sendMessages&&window.KAKO_IN_LINE){
-      return liff.sendMessages([{type:'text',text:msg}]).then(function(){toast('LINE のグループに送りました');},function(e){if(canPicker())return pickAndSend(msg);toast('グループに直接は送れませんでした（'+((e&&e.message)||'')+'）。送り先を選んでください');lineShare(msg);});}
-    if(canPicker())return pickAndSend(msg);
+      return liff.sendMessages(msgs).then(function(){toast('LINE のグループに送りました');},function(e){if(canPicker())return pickAndSend(msgs,msg);toast('グループに直接は送れませんでした（'+((e&&e.message)||'')+'）。送り先を選んでください');lineShare(msg);});}
+    if(canPicker())return pickAndSend(msgs,msg);
     /* Safari など LINE の外：LIFF が使えるページ（GitHub の外枠）なら、最初の1回だけ「LINE でログイン」すると、次からはこの画面のまま送り先を選んで送れる */
     if(window.liff&&liff.isInClient&&!liff.isInClient()&&liff.isLoggedIn&&!liff.isLoggedIn()&&liff.login){
       return ask('LINE にログインすると、次からはこの画面のまま送り先を選んで送れます（最初の1回だけ）。\n今回は LINE アプリに切り替えて送ることもできます。','LINE でログイン','LINE アプリで送る').then(function(y){if(y){try{liff.login({redirectUri:location.href.split('#')[0]});}catch(e){lineShare(msg);}}else lineShare(msg);});}
@@ -1610,17 +1626,27 @@ textarea.fin{min-height:64px;line-height:1.5}
       category:val('rqCat'),method:$('rqMeth').value,due:due,destination:dest,memo:memo,constructionId:'',rush:$('rqRush').checked};
     busy=true;$('rqSend').disabled=true;$('rqErr').textContent='';$('rqSend').textContent='送っています…';
     save('kako-me',me);save('kako-company',input.siteCompany);
-    (editing?rpc('shiraishiUpdateWorkerRequest',Object.assign({caseId:editing.id},input)):rpc('shiraishiRegisterWorkerRequest',input)).then(function(res){var id=(res&&res.id)||(editing&&editing.id);var n=0,list=photos.slice(),offs=editing?oldPh.filter(function(p){return p.off;}):[];
-      return offs.reduce(function(p,ph){return p.then(function(){$('rqSend').textContent='写真を外しています…';return rpc('shiraishiRemoveWorkerAttachment',{caseId:id,fileId:ph.id});});},Promise.resolve()).then(function(){return list.reduce(function(p,ph){return p.then(function(){$('rqSend').textContent='写真を送っています… '+(++n)+' / '+list.length;return rpc('shiraishiSaveWorkerAttachment',{caseId:id,name:ph.name,mime:'image/jpeg',data:ph.data});});},Promise.resolve());}).then(function(){return id;});
-    }).then(function(id){busy=false;done(id,input);},function(e){busy=false;$('rqSend').disabled=false;$('rqSend').textContent=editing?'もう一度直して送る':'もう一度送る';$('rqErr').textContent='送れませんでした。電波のよい所で、もう一度押してください。（'+(e&&e.message||'')+'）';});
+    (editing?rpc('shiraishiUpdateWorkerRequest',Object.assign({caseId:editing.id},input)):rpc('shiraishiRegisterWorkerRequest',input)).then(function(res){var id=(res&&res.id)||(editing&&editing.id);var n=0,list=photos.slice(),urls=[],offs=editing?oldPh.filter(function(p){return p.off;}):[];
+      return offs.reduce(function(p,ph){return p.then(function(){$('rqSend').textContent='写真を外しています…';return rpc('shiraishiRemoveWorkerAttachment',{caseId:id,fileId:ph.id});});},Promise.resolve()).then(function(){return list.reduce(function(p,ph){return p.then(function(){$('rqSend').textContent='写真を送っています… '+(++n)+' / '+list.length;return rpc('shiraishiSaveWorkerAttachment',{caseId:id,name:ph.name,mime:'image/jpeg',data:ph.data}).then(function(x){if(x&&x.url)urls.push(x.url);});});},Promise.resolve());}).then(function(){return {id:id,urls:urls};});
+    }).then(function(o){busy=false;done(o.id,input,o.urls);},function(e){busy=false;$('rqSend').disabled=false;$('rqSend').textContent=editing?'もう一度直して送る':'もう一度送る';$('rqErr').textContent='送れませんでした。電波のよい所で、もう一度押してください。（'+(e&&e.message||'')+'）';});
   }
   /* 送ったあと：見出し、送った内容の一覧、［続けて依頼する］［一覧に戻る］（出面フォームの完了画面と同じ形） */
-  function done(id,input){var box=$('rqBox');if(!box)return;
+  function done(id,input,urls){var box=$('rqBox');if(!box)return;urls=urls||[];
     $('rqBody').innerHTML='<div class="fwrap rdone"><p class="rok">'+(editing?'直しました':'受け付けました')+'</p><p class="rid">'+esc(id||'')+'</p><dl class="kv2"><dt>会社</dt><dd>'+esc(input.company)+'</dd><dt>名前</dt><dd>'+esc(input.worker)+'</dd><dt>現場</dt><dd>'+esc(input.site)+'</dd><dt>元請</dt><dd>'+esc(input.customer)+'</dd><dt>納期</dt><dd>'+esc(input.due)+(input.rush?'（即日）':'')+'</dd><dt>写真</dt><dd>'+(editing?'外した写真 '+oldPh.filter(function(p){return p.off;}).length+'枚、足した写真 '+photos.length+'枚':photos.length+'枚')+'</dd></dl><p class="rhelp">工場で確認して加工が終わると、一覧の「加工済み」に移ります。</p></div>';
     /* 写真を足した・外したときは［LINE で知らせる］を出す（白石さん 11/25「写真の追加も通知を飛ばしたい」） */
     var nAdd=photos.length,nOff=editing?oldPh.filter(function(p){return p.off;}).length:0,phMsg=editing&&(nAdd||nOff)?'写真を'+(nAdd?nAdd+'枚追加':'')+(nAdd&&nOff?'・':'')+(nOff?nOff+'枚外した':''):'';
     box.querySelector('.rqfoot').innerHTML=(phMsg&&window.kakoLine&&window.KAKO_LINE_ALL?'<button class="rsend rline" type="button" id="rqLine">LINE で知らせる（'+esc(phMsg)+'）</button>':'')+'<div class="rdbtn"><button class="btn quiet" type="button" id="rqAgain">続けて依頼する</button><button class="rsend" type="button" id="rqEnd">一覧に戻る</button></div>';
     if($('rqLine'))$('rqLine').onclick=function(){window.kakoLine({id:id,site:input.site,worker:input.worker},phMsg);this.disabled=true;this.textContent='LINE に送りました';};
+    /* 新しい依頼は、グループにも返す（白石さん 11/25「携帯の加工を依頼するも戻してほしい。グループで開くから」）。
+       写真のアドレスが返ってきたら写真つきのカード、なければ文だけ */
+    if(!editing&&window.kakoLineCard){
+      var dd=input.due?(+input.due.slice(5,7))+'/'+(+input.due.slice(8,10)):'なし';
+      var content='新しい依頼（納期 '+dd+(input.rush?'・即日':'')+'）'+(input.memo&&input.memo!=='写真のとおり'?'\n'+input.memo:'');
+      var rr={id:id,site:input.site,worker:input.worker};
+      $('rqBody').insertAdjacentHTML('beforeend','<div class="fwrap rdone rgrp"><p class="rhelp">この内容でグループに送れます'+(urls.length?'（写真 '+urls.length+'枚つき）':'')+'</p><pre class="npre">'+esc(window.kakoLineText(rr,content))+'</pre></div>');
+      var f=box.querySelector('.rqfoot');f.insertAdjacentHTML('afterbegin','<button class="rsend rline" type="button" id="rqGrp">グループに送る</button>');
+      $('rqGrp').onclick=function(){var b=this;b.disabled=true;window.kakoLineCard(rr,content,urls).then(function(){b.textContent='グループに送りました';},function(){b.disabled=false;});};
+    }
     $('rqAgain').onclick=function(){box.remove();window.openRequestForm();};$('rqEnd').onclick=function(){box.remove();};
     K.load();
   }
