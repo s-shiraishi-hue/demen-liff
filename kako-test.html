@@ -1083,7 +1083,8 @@ textarea.fin{min-height:64px;line-height:1.5}
      送れなかったときは理由を出して、②に切り替える */
   function lineShare(msg){var u='https://line.me/R/share?text='+encodeURIComponent(msg);
     if(window.liff&&liff.isInClient&&liff.isInClient()&&liff.openWindow){try{liff.openWindow({url:u,external:false});return;}catch(e){}}
-    var w=null;try{w=window.open(u,'_blank');}catch(e){}if(!w)location.href=u;}
+    /* 新しいタブは開かない（白石さん 11/25「Safari を押しても LINE の画面になる」：残ったタブがまた LINE に飛ぶため）。今の画面のまま LINE アプリに渡す */
+    var a=document.createElement('a');a.href=u;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();}
   /* 送り先を、画面の上に重なる窓で選ぶ（シェアターゲットピッカー。白石さん 11/25「オンにしよう」）。送ったあとも元の画面のまま。
      LIFF の設定でオンになっていないときは使えないので、そのときは LINE の「送る」画面に切り替える */
   function canPicker(){try{return !!(window.liff&&liff.isApiAvailable&&liff.isApiAvailable('shareTargetPicker'));}catch(e){return false;}}
@@ -1092,6 +1093,9 @@ textarea.fin{min-height:64px;line-height:1.5}
     if(window.liff&&liff.isInClient&&liff.isInClient()&&liff.sendMessages&&window.KAKO_IN_LINE){
       return liff.sendMessages([{type:'text',text:msg}]).then(function(){toast('LINE のグループに送りました');},function(e){if(canPicker())return pickAndSend(msg);toast('グループに直接は送れませんでした（'+((e&&e.message)||'')+'）。送り先を選んでください');lineShare(msg);});}
     if(canPicker())return pickAndSend(msg);
+    /* Safari など LINE の外：LIFF が使えるページ（GitHub の外枠）なら、最初の1回だけ「LINE でログイン」すると、次からはこの画面のまま送り先を選んで送れる */
+    if(window.liff&&liff.isInClient&&!liff.isInClient()&&liff.isLoggedIn&&!liff.isLoggedIn()&&liff.login){
+      return ask('LINE にログインすると、次からはこの画面のまま送り先を選んで送れます（最初の1回だけ）。\n今回は LINE アプリに切り替えて送ることもできます。','LINE でログイン','LINE アプリで送る').then(function(y){if(y){try{liff.login({redirectUri:location.href.split('#')[0]});}catch(e){lineShare(msg);}}else lineShare(msg);});}
     if(window.liff&&liff.isInClient&&liff.isInClient())toast('グループに貼ったリンクから開くと、そのグループへ直接送れます。今回は送り先を選んでください');
     lineShare(msg);return Promise.resolve();}
   /* iPad を縦・横に回したら、カレンダーを描き直す（月のマスに出す件数が変わるため） */
