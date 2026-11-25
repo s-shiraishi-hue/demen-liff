@@ -355,10 +355,7 @@ function buildCard(r, photos, reportId, edit) {
     const gmore = [];
     for (let k = 12; k < gn; k += 12) gmore.push({ type: 'bubble', size: 'kilo', body: { type: 'box', layout: 'vertical', paddingAll: '8px', contents: [
       t('📷 写真 ' + (k + 1) + '〜' + Math.min(gn, k + 12) + ' / ' + gn + '枚', { size: '12px', color: SUB }), ggrid(gids.slice(k, k + 12), k) ] } });
-    const btns = [];
-    if (/^https:\/\//.test(r.folderUrl || '')) btns.push({ type: 'button', style: 'link', height: 'sm', color: '#0017C1', action: { type: 'uri', label: 'フォルダ（社内）', uri: r.folderUrl } });
-    if (/^https:\/\//.test(r.memoUrl || '')) btns.push({ type: 'button', style: 'link', height: 'sm', color: '#0017C1', action: { type: 'uri', label: 'メモを見る', uri: r.memoUrl } });
-    if (btns.length) gbubble.footer = { type: 'box', layout: 'horizontal', paddingAll: '4px', contents: btns };
+    // フォルダ・メモのボタンは付けない（メモはカードに出ている。写真はカードの中で見られる）2026-11-25
     return { type: 'flex', altText: '【' + (r.kubun || '現調') + '】' + r.date + ' ' + r.genba + '（' + r.reporter + '）', contents: gmore.length ? { type: 'carousel', contents: [gbubble].concat(gmore) } : gbubble };
   }
 
