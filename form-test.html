@@ -315,6 +315,34 @@ function buildCard(r, photos, reportId, edit) {
   const num = n => Number(n || 0).toFixed(1);
   const shortCo = s => String(s || '').replace(/株式会社|有限会社|合同会社|[(（][株有合個][^)）]*[)）]/g, '').replace(/^[\s　]+|[\s　]+$/g, '') || String(s || '');
 
+  // 現調・打合せ（2026-11-25）：集計に入れないので、人工・残業・車の表は出さない。現場・報告者・写真の枚数・メモだけ
+  if (r.gencho) {
+    const GREEN = '#17633E';
+    const gm = String(r.date || '').match(/^\d{4}\/0?(\d+)\/0?(\d+)(.*)$/);
+    const gday = gm ? gm[1] + '/' + gm[2] + gm[3] : String(r.date || '');
+    const gco = String(r.company || '').indexOf('白石') >= 0 ? '' : String(r.company || '').replace(/工業$|板金.*$/, '');
+    const gside = { paddingStart: '16px', paddingEnd: '16px' };
+    const rowsG = [item('報告', r.reporter), item('写真', (r.photoCount || 0) + '枚')];
+    if (r.memo) rowsG.push(Object.assign({ type: 'box', layout: 'vertical', margin: 'md', contents: [
+      t('メモ', { size: '12px', color: SUB }),
+      { type: 'box', layout: 'vertical', borderWidth: '1px', borderColor: '#DDE1E7', cornerRadius: '8px', paddingAll: '8px', margin: 'xs', contents: [t(r.memo)] }
+    ] }, inset));
+    const gbody = [
+      Object.assign({ type: 'box', layout: 'vertical', backgroundColor: NAVY, paddingTop: '12px', paddingBottom: '12px', contents: [
+        t(r.genba, { size: '18px', weight: 'bold', color: '#FFFFFF' }),
+        t(gday + (gco ? '・' + gco : ''), { size: '12px', color: '#C9D2E3' }) ] }, gside),
+      Object.assign({ type: 'box', layout: 'vertical', backgroundColor: GREEN, paddingTop: '7px', paddingBottom: '7px', contents: [
+        t(r.kubun || '現調', { size: '14px', weight: 'bold', color: '#FFFFFF' }) ] }, gside),
+      { type: 'box', layout: 'vertical', spacing: 'xs', paddingTop: '12px', paddingBottom: '12px', paddingStart: '8px', paddingEnd: '8px', contents: rowsG }
+    ];
+    const gbubble = { type: 'bubble', size: 'kilo', body: { type: 'box', layout: 'vertical', paddingAll: '0px', contents: gbody } };
+    const btns = [];
+    if (/^https:\/\//.test(r.folderUrl || '')) btns.push({ type: 'button', style: 'link', height: 'sm', color: '#0017C1', action: { type: 'uri', label: '写真を見る', uri: r.folderUrl } });
+    if (/^https:\/\//.test(r.memoUrl || '')) btns.push({ type: 'button', style: 'link', height: 'sm', color: '#0017C1', action: { type: 'uri', label: 'メモを見る', uri: r.memoUrl } });
+    if (btns.length) gbubble.footer = { type: 'box', layout: 'horizontal', paddingAll: '4px', contents: btns };
+    return { type: 'flex', altText: '【' + (r.kubun || '現調') + '】' + r.date + ' ' + r.genba + '（' + r.reporter + '）', contents: gbubble };
+  }
+
   const members = r.members || [];
   const kinmus = members.map((m, i) => (r.kinmus || [])[i] || r.kinmu || 1);
   const zans = members.map((m, i) => Number((r.zangyo || [])[i] || 0));
@@ -411,6 +439,7 @@ window.addEventListener('message', async ev => {
     try { ev.source.postMessage({ type: 'demen-fail-ack' }, '*'); } catch (e) {}   // フォームはいつもの「送信完了」を出す
     if (!canSend && !usePicker()) { bar('報告は送れませんでした。事務に連絡してください', true); return; }
     lastCard = buildFailCard(d, d.saved ? 'photo' : 'save');   // 職人にはいつもどおりに見せ、カードの赤い帯で事務に知らせる
+    pendingMsgs = [lastCard];
     sendCard();
     return;
   }
@@ -419,22 +448,31 @@ window.addEventListener('message', async ev => {
   if (!canSend && !usePicker()) { bar('報告は保存しました（このトークには送れません）'); return; }
   const photos = (d.photoIds || []).map(id => photoUrl(id));
   lastCard = buildCard(d.report, photos, d.reportId, d.edit);
+  // 現調・打合せは写真もふつうの写真としてグループへ折り返す（2026-11-25）。1回5つまでなので、カード＋4枚、そのあと5枚ずつ
+  pendingMsgs = [lastCard].concat(d.report && d.report.gencho ? (d.photoIds || []).map(id => ({
+    type: 'image', originalContentUrl: photoUrl(id, 1600), previewImageUrl: photoUrl(id, 480) })) : []);
   sendCard();
 });
 
 // ===== 送れなかったとき（2026-10-28 追加）=====
 // D：保存はできたがLINEに送れなかった → 帯をタップするともう一度送る
 let lastCard = null, cardSending = false;
+let pendingMsgs = [];   // まだ送っていないもの（カード・現調の写真）。途中で失敗したら、帯のタップで続きから送る
 async function sendCard() {
   if (!lastCard) return;
+  if (!pendingMsgs.length) pendingMsgs = [lastCard];
   cardSending = true;
   try {
     if (canSend) {
-      await liff.sendMessages([lastCard]);
+      while (pendingMsgs.length) {
+        await liff.sendMessages(pendingMsgs.slice(0, 5));
+        pendingMsgs = pendingMsgs.slice(5);
+      }
     } else {
       waitTo(1);   // 送り先を選ぶ画面が隠れないように、先に読み込み画面を閉じる
-      const res = await liff.shareTargetPicker([lastCard], { isMultiple: false });
+      const res = await liff.shareTargetPicker(pendingMsgs.slice(0, 5), { isMultiple: false });   // 選ぶ画面は1回だけ（現調の写真は4枚まで）
       if (!res) throw new Error('送り先を選んでいません');
+      pendingMsgs = [];
     }
     bar('');   // 送れたら帯は消す（送信完了の画面が出ている）
     lastCard = null;
