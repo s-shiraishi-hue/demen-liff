@@ -883,6 +883,17 @@ textarea.fin{min-height:64px;line-height:1.5}
 .nsend{background:#06c755!important;border-color:#06c755!important}
 .nundo{border:0;background:none;color:var(--sub);font-size:13px;text-decoration:underline;min-height:36px;padding:0}
 .talkno{margin:6px 0 2px}
+/* iPad：縦の列＝同じ状態だと分かるように、列ごとに薄い色の枠でまとめる（白石さん 11/25「下にギャラリーが並んでいるように見える」「薄い色で統一」） */
+@media (min-width:601px){
+  .board>.col{padding:6px 6px 0;border-radius:14px;border:2px solid var(--line);background:#f6f7f9}
+  .board>.col.c0{background:#eef0f3;border-color:#b9bdc4}
+  .board>.col.c1{background:#eef3fd;border-color:#9bb3ea}
+  .board>.col.c2{background:#e2eafc;border-color:#5b7fe0}
+  .board>.col.c3{background:#e9f6ee;border-color:#8fc8a6}
+  .board>.col>.colh{margin:0 0 6px}
+  .board>.col>.card{border-color:rgba(0,0,0,.08)}
+  .board>.col .empty{background:transparent;border-color:rgba(0,0,0,.15)}
+}
 </style>
 
 <div class="wrap">
@@ -1178,7 +1189,7 @@ textarea.fin{min-height:64px;line-height:1.5}
       html='<div class="ptabs" role="tablist">'+groups.map(function(g,gi){var c=glist(g).length;return '<button type="button" role="tab" class="ptab s'+g[2]+'" data-ptab="'+gi+'" aria-selected="'+(gi===ptab)+'">'+g[0]+'<b>'+c+'</b></button>';}).join('')+'</div>'+
       '<div class="board'+(WORKER?' b2':'')+'">'+groups.map(function(g,gi){var list=rows.filter(function(r){return g[1].indexOf(r.status)>=0;}).sort(byDue);
       list=glist(g);
-      return '<section class="col'+(gi===ptab?' pon':'')+'" aria-label="'+g[0]+'"><h2 class="colh s'+g[2]+'">'+g[0]+'<b>'+list.length+'</b></h2>'+(list.length?list.map(card).join(''):'<p class="empty">いまはありません</p>')+'</section>';}).join('')+'</div>';}
+      return '<section class="col c'+g[2]+(gi===ptab?' pon':'')+'" aria-label="'+g[0]+'"><h2 class="colh s'+g[2]+'">'+g[0]+'<b>'+list.length+'</b></h2>'+(list.length?list.map(card).join(''):'<p class="empty">いまはありません</p>')+'</section>';}).join('')+'</div>';}
     /* カレンダーは納期の日に出す。納品済みも「済」の印つきで出す（白石さん 11/25：納期より先に納品したものも消えないように） */
     if(!isDone&&vmode==='cal')html=calendar(rows);
     else html+=calPopup();
