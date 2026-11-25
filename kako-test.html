@@ -1,0 +1,1553 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta property="og:title" content="加工管理（テスト）">
+<meta property="og:description" content="加工の依頼・状態・やりとり（見本のデータ）">
+<!-- 加工管理の LINE テスト用（白石さん 11/25「仮グループで試す」）。中身は見本の絵のデータだけ（本物にはつながっていない・本物の写真は入れない）。
+     出面と同じ LIFF「出面報告」の下で開く：https://liff.line.me/2011897591-HBBipfnN/kako-test.html
+     グループに貼ったこのリンクから開いたときだけ、やりとりを本人の名前でそのグループに送れる（liff.sendMessages） -->
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+window.KAKO_IN_LINE=false;
+window.KAKO_LIFF=(window.liff?liff.init({liffId:'2011897591-HBBipfnN'}).then(function(){
+  var c=liff.getContext()||{};window.KAKO_IN_LINE=liff.isInClient()&&(c.type==='group'||c.type==='room'||c.type==='utou');
+  try{var p=liff.isLoggedIn()?liff.getProfile():null;if(p)p.then(function(pr){try{if(!localStorage.getItem('kako-me'))localStorage.setItem('kako-me',pr.displayName);}catch(e){}});}catch(e){}
+}).catch(function(){}):Promise.resolve());
+</script>
+</head><body>
+<title>工場長画面 作り直し案1</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap">
+<style>
+/* 工事管理システムの決めごと（DADS もと）にそろえる：灰が基本、青は「今ここ」と「押せるもの」だけ。
+   札：灰＝開始前、青＝進行中、緑＝完了、赤＝要確認、黄＝警告。文字は 28/20/16/14px・太さ2つ。
+   工場の明るい所で iPad を見る前提で、明るい地に固定（暗い表示にはしない）。押せる所は 56px 以上。 */
+:root{
+  color-scheme:light;
+  --bg:#f1f2f4; --surface:#ffffff; --ink:#1a1a1c; --sub:#4d4f55; --line:#c9ccd2; --line-strong:#8e939b;
+  --blue:#0031d8; --blue-bg:#e8f1fe; --blue-ink:#00118f;
+  --green:#197a4b; --green-bg:#e6f5ec;
+  --gray-tag:#5f6368; --gray-bg:#eceef1;
+  --red:#d01c1c; --red-bg:#fdeeee;
+  --yellow:#8a5300; --yellow-bg:#fff3c4;
+  --skel:#e2e4e8; --skel-hi:#f2f3f5;
+  --font:'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',Meiryo,sans-serif;
+  --f1:28px; --f2:20px; --f3:16px; --f4:14px;
+}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:var(--f3);line-height:1.6;-webkit-text-size-adjust:100%}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid #000;box-shadow:0 0 0 6px #ffd43d;outline-offset:2px}
+.wrap{max-width:1000px;margin:0 auto;padding-block:12px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.mihon{background:var(--yellow-bg);color:var(--yellow);border:1px solid #e0b84a;border-radius:8px;padding:8px 12px;font-size:var(--f4);margin-bottom:12px}
+.mihon b{font-weight:700}
+
+/* 上の帯 */
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.top h1{margin:0;font-size:var(--f1);line-height:1.3}
+.top .today{color:var(--sub);font-size:var(--f3)}
+.top .sp{flex:1}
+.btn{min-height:56px;padding:0 20px;border-radius:10px;border:2px solid var(--blue);background:var(--surface);color:var(--blue);font-weight:700;font-size:var(--f3);display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.primary{background:var(--blue);color:#fff}
+.btn.quiet{border-color:var(--line-strong);color:var(--ink);font-weight:400}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* 状態のタブ */
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.tab{min-height:64px;border-radius:10px;border:2px solid var(--line);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.25;padding:4px}
+.tab b{font-size:var(--f2);font-variant-numeric:tabular-nums}
+.tab span{font-size:var(--f4)}
+.tab[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-ink)}
+.tab[aria-pressed="true"] span{font-weight:700}
+.find{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:6px}
+.find input{min-height:56px;border:2px solid var(--line-strong);border-radius:10px;padding:0 14px;background:var(--surface);font-size:var(--f3);width:100%}
+.more{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.more select{min-height:52px;border:2px solid var(--line-strong);border-radius:10px;padding:0 12px;background:var(--surface);flex:1 1 200px;min-width:0}
+.status-line{min-height:24px;font-size:var(--f4);color:var(--sub);margin:4px 0 8px}
+
+/* 一覧 */
+.group{margin-top:18px}
+.group h2{margin:0 0 8px;font-size:var(--f2);display:flex;align-items:center;gap:10px}
+.group h2 small{font-size:var(--f4);font-weight:400;color:var(--sub)}
+.group.late h2{color:var(--red)}
+.cards{display:grid;gap:10px}
+@media (min-width:900px) and (orientation:landscape){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* 写真メイン：カードの上半分を写真にして、納期・即日は写真の上に重ねる */
+.cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:900px) and (orientation:landscape){.cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.cards{grid-template-columns:minmax(0,1fr)}}
+.card{display:grid;grid-template-columns:minmax(0,1fr);gap:0;align-items:start;text-align:left;width:100%;background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:0;overflow:hidden}
+.card .thumb{width:100%;border-radius:0;aspect-ratio:4/3}
+.card .thumb img{object-fit:cover;object-position:center;background:#fff}
+.card .cnt{font-size:var(--f3);padding:2px 10px;right:8px;bottom:8px}
+/* カードの上で状態を変える：開く所（写真と文字）と、状態のボタンを分ける */
+.card .open{display:block;width:100%;padding:0;border:0;background:none;text-align:left;color:inherit;font:inherit;border-radius:0}
+.cact{padding:0 12px 12px;display:grid;gap:8px}
+.mini{display:-webkit-flex;display:flex;list-style:none;margin:0;padding:0}
+.mini li{-webkit-flex:1 1 0;flex:1 1 0;margin-right:3px;border-top:6px solid var(--line);padding-top:3px;font-size:12px;color:var(--sub);text-align:center;line-height:1.3}
+.mini li:last-child{margin-right:0}
+.mini li.done{border-top-color:var(--green);color:var(--ink)}
+.mini li.now{border-top-color:var(--blue);color:var(--blue-ink);font-weight:700}
+.nextb{min-height:60px;width:100%;border:0;border-radius:10px;background:var(--blue);color:#fff;font-size:var(--f2);font-weight:700;line-height:1.25;padding:6px 10px}
+.nextb small{display:block;font-size:13px;font-weight:400;opacity:.9}
+.nextb:disabled{opacity:.5}
+.finished{min-height:48px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;border-radius:10px;background:var(--green-bg);color:var(--green);font-weight:700}
+.toast button{margin-left:14px;background:#fff;color:#1a1a1c;border:0;border-radius:8px;min-height:40px;padding:0 14px;font-weight:700}
+.ov{position:absolute;left:8px;top:8px;display:flex;flex-wrap:wrap;gap:6px;z-index:1}
+.ov .due{background:rgba(255,255,255,.95);border-radius:8px;padding:0 10px;border:2px solid var(--line-strong);color:var(--ink)}
+.ov .due.late{border-color:var(--red);color:var(--red)}
+.card .cbody{padding:10px 12px 12px}
+@media (hover:hover){.card:hover{border-color:var(--blue)}}
+.card.late{border-color:var(--red)}
+.thumb{position:relative;width:132px;aspect-ratio:4/3;border-radius:8px;overflow:hidden;background:var(--skel)}
+.thumb img{display:block;width:100%;height:100%;object-fit:cover}
+.thumb .cnt{position:absolute;right:4px;bottom:4px;background:rgba(0,0,0,.72);color:#fff;font-size:var(--f4);font-weight:700;border-radius:6px;padding:0 8px}
+.thumb .none{position:absolute;top:0;right:0;bottom:0;left:0;display:grid;place-items:center;color:var(--sub);font-size:var(--f4);background:var(--gray-bg)}
+.skel{background:linear-gradient(90deg,var(--skel) 0,var(--skel-hi) 50%,var(--skel) 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+@keyframes sh{from{background-position:200% 0}to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.skel{animation:none}}
+.cbody{min-width:0;display:grid;gap:4px}
+.row1{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.due{font-size:var(--f2);font-weight:700;font-variant-numeric:tabular-nums}
+.due.late{color:var(--red)}
+.site{font-size:var(--f2);font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+.who{font-size:var(--f3);color:var(--sub);overflow-wrap:anywhere}
+.memo{font-size:var(--f4);color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tag{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;font-size:var(--f4);font-weight:700;border:1.5px solid currentColor;white-space:nowrap}
+.tag.s0{color:var(--gray-tag);background:var(--gray-bg)}
+.tag.s1{color:var(--blue);background:var(--surface)}
+.tag.s2{color:#fff;background:var(--blue);border-color:var(--blue)}
+.tag.s3{color:var(--green);background:var(--green-bg)}
+.tag.rush{color:var(--yellow);background:var(--yellow-bg)}
+.tag.late{color:var(--red);background:var(--red-bg)}
+.empty{background:var(--surface);border:2px dashed var(--line);border-radius:12px;padding:24px;text-align:center;color:var(--sub)}
+@media (max-width:560px){.tabs{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* 詳細：いちばん上に大きい写真、その下に小さい写真の列 */
+.hero{display:block;width:100%;padding:0;border:2px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;position:relative}
+.hero .box{aspect-ratio:4/3;background:var(--skel)}
+.hero img{display:block;width:100%;height:100%;object-fit:contain;background:#fff}
+.hero .hint{position:absolute;right:10px;bottom:10px;background:rgba(0,0,0,.72);color:#fff;border-radius:8px;padding:4px 12px;font-size:var(--f3);font-weight:700}
+.strip{display:flex;gap:8px;overflow-x:auto;margin-top:10px;padding-bottom:4px}
+.strip .ph{flex:0 0 120px}
+.strip .ph[aria-current="true"]{border-color:var(--blue);background:var(--blue-bg)}
+
+/* 詳細 */
+.sheet{position:fixed;top:0;right:0;bottom:0;left:0;background:var(--bg);overflow-y:auto;z-index:5}
+.bar{position:sticky;top:0;z-index:6;background:var(--surface);border-bottom:2px solid var(--line);padding-top:max(8px,env(safe-area-inset-top,0px));padding-bottom:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;gap:10px;align-items:center}
+.bar .t{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.d-head{display:grid;gap:6px;margin:8px 0 14px}
+.d-head h2{margin:0;font-size:var(--f1);line-height:1.3;overflow-wrap:anywhere}
+.panel{background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.panel h3{margin:0 0 10px;font-size:var(--f2)}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-bottom:14px;list-style:none;padding:0}
+.steps li{position:relative;text-align:center;font-size:var(--f4);padding:8px 2px 0;border-top:6px solid var(--line);color:var(--sub)}
+.steps li.done{border-top-color:var(--green);color:var(--ink)}
+.steps li.now{border-top-color:var(--blue);color:var(--blue-ink);font-weight:700}
+.steps li.now::before{content:"いまここ";display:block;font-size:12px;color:var(--blue)}
+.act{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:10px}
+.act .btn{min-height:64px;font-size:var(--f2)}
+.act .btn.quiet{font-size:var(--f3)}
+.saved{min-height:26px;margin-top:8px;font-size:var(--f3)}
+.saved.ok{color:var(--green);font-weight:700}
+.saved.ng{color:var(--red);font-weight:700}
+.kv{display:grid;grid-template-columns:120px minmax(0,1fr);gap:0;margin:0}
+.kv dt,.kv dd{padding:10px 0;border-bottom:1px solid var(--line);margin:0}
+.kv dt{color:var(--sub);font-size:var(--f4);padding-top:12px}
+.kv dd{font-size:var(--f3);overflow-wrap:anywhere;white-space:pre-wrap}
+.kv dd.big{font-size:var(--f2);font-weight:700}
+.kv dd.big.late{color:var(--red)}
+details summary{min-height:56px;display:flex;align-items:center;font-weight:700;cursor:pointer;color:var(--blue)}
+.photos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (orientation:landscape) and (min-width:900px){.photos{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:560px){.photos{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ph{display:grid;gap:4px;text-align:left;border:2px solid var(--line);border-radius:10px;padding:6px;background:var(--surface);min-width:0}
+.ph .box{aspect-ratio:4/3;border-radius:6px;overflow:hidden;background:var(--skel)}
+.ph img{display:block;width:100%;height:100%;object-fit:contain;background:#fff}
+.ph span{font-size:var(--f4);overflow-wrap:anywhere}
+.pdf{display:flex;align-items:center;gap:10px;min-height:56px;font-size:var(--f3)}
+.pdf i{font-style:normal;background:var(--red);color:#fff;border-radius:4px;font-size:12px;font-weight:700;padding:2px 6px}
+
+/* 図面を大きく・書き込み */
+.viewer{position:fixed;top:0;right:0;bottom:0;left:0;background:#2b2d31;z-index:20;overflow:auto}
+.viewer .bar{background:#fff}
+.vbody{padding:12px max(16px,env(safe-area-inset-left,0px)) 24px max(16px,env(safe-area-inset-right,0px))}
+.vbody img,.vbody canvas{display:block;max-width:100%;height:auto;margin:0 auto;background:#fff;border-radius:4px}
+.vbody canvas{touch-action:none;user-select:none;-webkit-user-select:none;width:100%}
+.tools{position:sticky;top:76px;z-index:7;background:#fff;border-radius:12px;padding:10px;margin-bottom:10px;display:grid;gap:8px}
+.tline{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tline .lab{font-size:var(--f4);color:var(--sub);width:3.5em;flex:none}
+.tb{min-height:52px;min-width:64px;padding:0 12px;border-radius:10px;border:2px solid var(--line-strong);background:#fff;font-size:var(--f3);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.tb[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-ink);font-weight:700}
+.tb .dot{width:18px;height:18px;border-radius:50%;display:inline-block}
+.tb.num{min-width:52px;font-size:var(--f2)}
+.nowsel{font-size:var(--f3);font-weight:700;color:var(--blue-ink)}
+.drawer{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0;display:grid;gap:8px}
+.nums{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.vhint{color:#e6e7ea;font-size:var(--f4);text-align:center;margin:6px 0 10px}
+.vmsg{color:#fff;font-size:var(--f3);text-align:center;min-height:26px}
+
+/* 確かめの小窓（ページの中に作る） */
+.dlg{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.5);z-index:40;display:grid;place-items:center;padding:16px}
+.dlg .in{background:#fff;border-radius:14px;padding:20px;max-width:440px;width:100%;display:grid;gap:14px}
+.dlg p{margin:0;font-size:var(--f3)}
+.dlg .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#1a1a1c;color:#fff;padding:12px 20px;border-radius:10px;font-size:var(--f3);z-index:50}
+/* 古い iPad（iPadOS 14 以前の Safari）向けのつくろい：横並びの間は gap でなく余白で空ける・縦横比は padding で作る・sticky は -webkit- 付き */
+.row1,.ov,.tline,.strip,.more,.top,.bar,.nums{gap:0}
+.row1>*,.ov>*,.tline>*,.nums>*,.top>*,.bar>*{margin:0 6px 6px 0}
+.strip>*{margin-right:8px}.more>*{margin:0 8px 8px 0}
+.tb .dot{margin-right:6px}
+.bar,.tools{position:-webkit-sticky;position:sticky}
+.wrap,.bar{padding-left:16px;padding-right:16px}
+@supports (padding:max(1px,2px)){.wrap,.bar{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
+@supports not (aspect-ratio:1/1){
+  .thumb,.ph .box,.hero .box{height:0;padding-top:75%;position:relative}
+  .thumb>img,.ph .box>img,.hero .box>img{position:absolute;top:0;left:0}
+}
+/* 一覧はいつも2列（白石さん）。grid が使えない古い Safari でも flex で2列にする */
+.cards{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:space-between;justify-content:space-between}
+.cards>.card{width:49%;margin-bottom:10px}
+.tabs{display:-webkit-flex;display:flex}
+.tabs>.tab{-webkit-flex:1 1 0;flex:1 1 0;margin-right:6px}.tabs>.tab:last-child{margin-right:0}
+@supports (display:grid){
+  .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cards>.card{width:auto;margin-bottom:0}
+  .tabs{display:grid}.tabs>.tab{margin-right:0}
+}
+.viewbar{display:-webkit-flex;display:flex;-webkit-justify-content:flex-end;justify-content:flex-end;margin-bottom:4px}
+.group h2{font-size:var(--f1);padding-bottom:6px;border-bottom:2px solid var(--line)}
+.sdot{display:inline-block;width:18px;height:18px;border-radius:5px;margin-right:10px;vertical-align:middle;box-sizing:border-box}
+.sdot.s0{background:var(--gray-tag)}.sdot.s1{background:#fff;border:4px solid var(--blue)}.sdot.s2{background:var(--blue)}
+.stbtn{width:100%;min-height:60px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;border-radius:10px;border:3px solid var(--gray-tag);background:#fff;padding:0 12px;text-align:left;color:var(--ink)}
+.stbtn .lbl{font-size:13px;color:var(--sub);margin-right:10px}
+.stbtn b{-webkit-flex:1;flex:1;font-size:var(--f2)}
+.stbtn .arr{font-size:var(--f4);font-weight:700;white-space:nowrap}
+.stbtn.s1{border-color:var(--blue)}.stbtn.s1 .arr{color:var(--blue)}
+.stbtn.s2{border-color:var(--blue);background:var(--blue);color:#fff}.stbtn.s2 .lbl{color:#dfe7ff}
+.stbtn.s3{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.stmenu{margin-top:6px;border:2px solid var(--line-strong);border-radius:10px;padding:6px;background:var(--surface)}
+.stopt,.stclose{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;width:100%;min-height:56px;border:0;border-radius:8px;background:none;font-size:var(--f2);padding:0 10px;text-align:left;color:var(--ink);margin-bottom:4px}
+.stopt small{margin-left:auto;font-size:13px;color:var(--blue-ink)}
+.stopt.cur{background:var(--blue-bg);font-weight:700}
+.stclose{-webkit-justify-content:center;justify-content:center;font-size:var(--f3);color:var(--sub);border-top:1px solid var(--line);border-radius:0;margin:0}
+.sdot.s3{background:var(--green)}
+/* 3列の板 */
+.wrap{max-width:1200px}
+.board{display:-webkit-flex;display:flex;-webkit-align-items:flex-start;align-items:flex-start;margin-top:8px}
+.board>.col{-webkit-flex:1 1 0;flex:1 1 0;min-width:0;margin-right:10px}.board>.col:last-child{margin-right:0}
+@supports (display:grid){.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.board>.col{margin-right:0}}
+.col>.card{margin-bottom:10px}
+.col .empty{padding:16px 8px;font-size:var(--f4)}
+.colh{position:-webkit-sticky;position:sticky;top:0;z-index:3;margin:0 0 10px;min-height:56px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-between;justify-content:space-between;padding:0 14px;border-radius:10px;font-size:var(--f2);border:3px solid var(--gray-tag);background:var(--surface)}
+.colh b{font-size:var(--f1);font-variant-numeric:tabular-nums}
+.colh.s0{border-color:var(--gray-tag);background:var(--gray-bg)}
+.colh.s1{border-color:var(--blue);background:var(--surface);color:var(--blue-ink)}
+.colh.s2{border-color:var(--blue);background:var(--blue);color:#fff}
+.col .stbtn .lbl{display:none}
+.col .stbtn{padding:0 10px}.col .stbtn b{font-size:var(--f3)}
+.col .site{font-size:var(--f3)}.col .who{font-size:var(--f4)}
+.col .ov .tag.late{display:none}
+.dates{display:-webkit-flex;display:flex;margin:0 0 4px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.dates>div{-webkit-flex:1 1 0;flex:1 1 0;padding:4px 8px;min-width:0}
+.dates>div+div{border-left:1px solid var(--line)}
+.dates dt{font-size:12px;color:var(--sub)}
+.dates dd{margin:0;font-size:var(--f3);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dates>div.late{background:var(--red-bg)}.dates>div.late dd{color:var(--red)}
+.ed{position:fixed;top:0;right:0;bottom:0;left:0;z-index:30;background:#2b2d31;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+.edbar{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;background:#fff;padding:6px 8px;border-bottom:1px solid var(--line);overflow-x:auto;-webkit-flex:none;flex:none}
+@supports (padding:max(1px,2px)){.edbar{padding-top:max(6px,env(safe-area-inset-top,0px))}}
+.edbar>*{margin-right:6px;-webkit-flex:none;flex:none}.edbar .sp{-webkit-flex:1;flex:1}
+.pidx{font-size:14px;font-weight:700;margin:0 2px}
+.edbar .ttl{font-weight:700;max-width:30vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eb{min-height:44px;padding:0 12px;border-radius:8px;border:1.5px solid var(--line-strong);background:#fff;font-size:15px;color:var(--ink);white-space:nowrap}
+.eb:disabled{opacity:.4}.eb.tool{border-color:var(--blue);color:var(--blue-ink);font-weight:700}
+.eb.save{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700;padding:0 18px}
+.edload{color:#fff;text-align:center;margin-top:40px}
+.tbar{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;background:#fff;border-top:1px solid var(--line);padding:6px 8px;overflow-x:auto;-webkit-flex:none;flex:none}
+.tgrp{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;padding:0 8px;border-right:1px solid var(--line);-webkit-flex:none;flex:none}.tgrp:last-of-type{border-right:0}
+.tk{min-height:48px;min-width:48px;margin:0 3px;padding:0 10px;border-radius:10px;border:2px solid transparent;background:#f1f2f4;font-size:15px;color:var(--ink);display:-webkit-inline-flex;display:inline-flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;white-space:nowrap}
+.tk[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-ink);font-weight:700}
+.tk.col{padding:0}.tk .dot{width:26px;height:26px;border-radius:50%;border:1px solid #bbb}
+.tk .wl{display:block;width:26px;background:currentColor;border-radius:2px;margin-bottom:3px}
+.tk.fill{-webkit-flex-direction:row;flex-direction:row}.tk.fill input{margin-right:6px}
+.nrow{display:-webkit-flex;display:flex;-webkit-justify-content:center;justify-content:center;background:#fff;border-top:1px solid var(--line);padding:6px;overflow-x:auto;-webkit-flex:none;flex:none}
+.tk.num{font-size:var(--f2)}
+.drawer2{position:absolute;left:8px;right:8px;top:64px;z-index:2;background:#fff;border-radius:12px;padding:10px;box-shadow:0 6px 20px rgba(0,0,0,.35);display:grid;gap:8px}
+.stage{position:relative;-webkit-flex:1;flex:1;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.stage canvas{position:absolute;left:0;top:0;-webkit-transform-origin:0 0;transform-origin:0 0;background:#fff;touch-action:none}
+.pmain{-webkit-flex:1;flex:1;min-height:0;padding:10px 10px 0;display:-webkit-flex;display:flex}
+.pbig{position:relative;-webkit-flex:1;flex:1;min-width:0;padding:0;border:2px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.pbig .pbox2{position:absolute;top:0;right:0;bottom:0;left:0}
+.pbox2 img{display:block;width:100%;height:100%;object-fit:contain;background:#fff}
+.pbig .hint{position:absolute;right:10px;bottom:10px;background:rgba(0,0,0,.72);color:#fff;border-radius:8px;padding:4px 12px;font-size:var(--f3);font-weight:700}
+.pstrip{-webkit-flex:none;flex:none;display:-webkit-flex;display:flex;overflow-x:auto;padding:10px}
+.pcell2{position:relative;-webkit-flex:none;flex:none;width:150px;height:112px;margin-right:10px;padding:0;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.pcell2 .pbox2{position:absolute;top:0;right:0;bottom:0;left:0}
+.ed.pick{z-index:25;background:var(--bg)}
+.pgrid{-webkit-flex:1;flex:1;min-height:0;overflow-y:auto;padding:10px;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-align-content:flex-start;align-content:flex-start}
+.pcell{position:relative;padding:0;margin:0 1% 1% 0;border:2px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.pgrid.c2 .pcell{width:49%}.pgrid.c3 .pcell{width:32%}.pgrid.c4 .pcell{width:24%}
+@supports (display:grid){.pgrid{display:grid;gap:10px;-webkit-align-content:start;align-content:start}.pgrid.c2{grid-template-columns:repeat(2,minmax(0,1fr))}.pgrid.c3{grid-template-columns:repeat(3,minmax(0,1fr))}.pgrid.c4{grid-template-columns:repeat(4,minmax(0,1fr))}.pgrid .pcell{width:auto;margin:0}}
+.pbox{display:block;width:100%;aspect-ratio:4/3;background:var(--skel)}
+@supports not (aspect-ratio:1/1){.pbox{height:0;padding-top:75%;position:relative}.pbox>img{position:absolute;top:0;left:0}}
+.pbox img{display:block;width:100%;height:100%;object-fit:contain;background:#fff}
+.pno{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.7);color:#fff;font-weight:700;border-radius:8px;padding:0 10px;font-size:var(--f3)}
+.edmsg{position:absolute;left:50%;top:64px;-webkit-transform:translateX(-50%);transform:translateX(-50%);margin:0;background:rgba(0,0,0,.7);color:#fff;font-size:14px;padding:6px 14px;border-radius:999px;white-space:nowrap;pointer-events:none}
+#detail{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;overflow:hidden}
+#detail>.bar{-webkit-flex:none;flex:none}
+#dBody{-webkit-flex:1;flex:1;min-height:0;max-width:none;width:100%;padding:10px 12px;overflow:hidden}
+.dv{height:100%;display:-webkit-flex;display:flex}
+.dv-photo{-webkit-flex:3 1 0;flex:3 1 0;min-width:0;min-height:0;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;margin-right:12px}
+.dv-info{-webkit-flex:2 1 0;flex:2 1 0;min-width:0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#phArea{-webkit-flex:1;flex:1;min-height:0;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column}
+.dv .hero{-webkit-flex:1;flex:1;min-height:0;position:relative;display:block;width:100%}
+.dv .hero .box{position:absolute;top:0;right:0;bottom:0;left:0;height:auto!important;padding-top:0!important;aspect-ratio:auto}
+.dv .hero .box>img{position:static;width:100%;height:100%;object-fit:contain}
+.dv .strip{-webkit-flex:none;flex:none;margin-top:8px}
+.dv .strip .ph{-webkit-flex:0 0 84px;flex:0 0 84px;padding:3px}
+.dv .strip .ph span{font-size:12px}
+.dv .pdf{-webkit-flex:none;flex:none;min-height:40px;margin:6px 0 0}
+@media (orientation:portrait){
+  .dv{-webkit-flex-direction:column;flex-direction:column}
+  .dv-photo{-webkit-flex:1 1 0;flex:1 1 0;margin:0 0 10px}
+  .dv-info{-webkit-flex:none;flex:none;max-height:44%}
+}
+.dpanel{margin-bottom:10px}
+.dlab{font-size:13px;color:var(--sub);margin-bottom:4px}
+.seg{display:-webkit-flex;display:flex}
+.sg{-webkit-flex:1 1 0;flex:1 1 0;min-width:0;min-height:56px;margin-right:6px;border-radius:10px;border:2px solid var(--line-strong);background:var(--surface);font-size:var(--f3);color:var(--ink);padding:0 4px}
+.sg:last-child{margin-right:0}
+.sg[aria-pressed="true"]{font-weight:700;border-width:3px}
+.sg.s0[aria-pressed="true"]{border-color:var(--gray-tag);background:var(--gray-bg)}
+.sg.s1[aria-pressed="true"]{border-color:var(--blue);color:var(--blue-ink)}
+.sg.s2[aria-pressed="true"]{border-color:var(--blue);background:var(--blue);color:#fff}
+.sg.s3[aria-pressed="true"]{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.dates.big{margin-bottom:10px}.dates.big dd{font-size:var(--f2)}
+.kv2{display:grid;grid-template-columns:88px minmax(0,1fr);margin:0 0 6px}
+.kv2 dt,.kv2 dd{padding:6px 0;border-bottom:1px solid var(--line);margin:0}
+.kv2 dt{font-size:13px;color:var(--sub);padding-top:8px}
+.kv2 dd{font-size:var(--f3);font-weight:700;overflow-wrap:anywhere}
+.kv2 dd.m{font-weight:400;font-size:var(--f4)}
+.phcap{font-size:13px;color:var(--sub);margin:4px 0}
+.more2 summary{min-height:44px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;color:var(--blue);font-weight:700;cursor:pointer}
+/* 一覧の上は細い1段にまとめて、カードの板を主役にする */
+.wrap{padding-top:8px}
+.top{margin-bottom:4px}
+.top h1{font-size:22px}
+.top .today{font-size:13px}
+.viewbar{margin:0 0 0 8px}
+.viewbar .btn{min-height:40px;padding:0 12px;font-size:14px;font-weight:400;border-width:1.5px}
+.status-line{min-height:0;margin:0}
+.board{margin-top:4px}
+.dnote{font-size:13px;color:var(--sub);margin:0 0 6px}
+.dgrid{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+.dgrid>.dcard{width:19%;margin:0 1% 8px 0}
+@supports (display:grid){.dgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.dgrid>.dcard{width:auto;margin:0}}
+@media (orientation:portrait){@supports (display:grid){.dgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}@supports not (display:grid){.dgrid>.dcard{width:24%}}}
+.dcard{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;overflow:hidden;min-width:0}
+.dcard .open{display:block;width:100%;padding:0;border:0;background:none;text-align:left;color:inherit;font:inherit}
+.dcard .thumb{width:100%;border-radius:0;aspect-ratio:2/1}
+@supports not (aspect-ratio:1/1){.dcard .thumb{padding-top:50%}}
+@media (orientation:landscape){.dcard .thumb{aspect-ratio:5/2}@supports not (aspect-ratio:1/1){.dcard .thumb{padding-top:40%}}}
+.dcard .thumb img{object-fit:cover}
+.dcb{padding:3px 8px 0}
+.dsite{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dwho,.ddate{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ddate{color:var(--green);font-weight:700}
+.drow{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;padding:0 6px 6px 8px}
+.drow .dwho{-webkit-flex:1;flex:1;min-width:0;line-height:1.35}
+.rb{-webkit-flex:none;flex:none;margin:0 0 0 4px;padding:0 8px;min-height:40px;border-radius:8px;border:1.5px solid var(--line-strong);background:#fff;font-size:13px;color:var(--ink)}
+.dcard .stmenu{margin:0 6px 6px;padding:4px}.dcard .stopt,.dcard .stclose{min-height:44px;font-size:14px}
+.stview{width:100%;min-height:48px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;border-radius:10px;border:3px solid var(--gray-tag);background:var(--gray-bg);padding:0 12px}
+.stview .lbl{font-size:13px;color:var(--sub);margin-right:10px}.stview b{font-size:var(--f3)}
+.stview.s1{border-color:var(--blue);background:#fff;color:var(--blue-ink)}.stview.s2{border-color:var(--blue);background:var(--blue);color:#fff}.stview.s2 .lbl{color:#dfe7ff}.stview.s3{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.who-bar{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin:0 0 6px}.who-bar:empty{display:none}
+.who-bar label{font-size:13px;color:var(--sub);margin-right:8px}.who-bar select{min-height:44px;border:2px solid var(--line-strong);border-radius:10px;padding:0 10px;background:#fff;font-size:var(--f3)}
+.worker .sg:disabled{opacity:1}
+/* 携帯の幅：3列を縦に並べ、見出しの下にカード。納品済みは2列 */
+@media (max-width:600px){
+  .board{display:block}.board>.col{margin:0 0 14px}
+  .colh{position:static}
+  .col>.card{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+  .col>.card>.open{display:-webkit-flex;display:flex}
+  .col>.card .thumb{width:40%;-webkit-flex:none;flex:none;aspect-ratio:4/3}
+  .col>.card .cbody{-webkit-flex:1;flex:1;min-width:0}
+  .col>.card .cact{width:100%}
+  @supports not (aspect-ratio:1/1){.col>.card .thumb{padding-top:30%}}
+  @supports (display:grid){.dgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}.dgrid>.dcard{width:49%}
+  .top h1{font-size:20px}.top .today{display:none}
+}
+/* 職人さんの「加工を依頼する」 */
+.reqbtn{min-height:44px!important;font-size:15px!important;font-weight:700!important;margin-right:8px}
+.ed.rq{z-index:35;background:var(--bg)}
+.rqbody{-webkit-flex:1;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 24px;width:100%;max-width:720px;margin:0 auto}
+.rf{background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.rf h3{margin:0 0 6px;font-size:var(--f2)}
+.rf h4{margin:0 0 4px;font-size:var(--f3)}
+.rsub{font-size:var(--f3);color:var(--blue-ink)}
+.rreq{display:inline-block;font-size:12px;font-weight:700;color:#fff;background:var(--red);border-radius:6px;padding:0 6px;margin-right:8px;vertical-align:middle}
+.rhelp{margin:0 0 8px;font-size:14px;color:var(--sub)}
+.rin{display:block;width:100%;min-height:52px;border:2px solid var(--line-strong);border-radius:10px;padding:8px 12px;font-size:17px;background:#fff;color:var(--ink);margin-bottom:6px}
+textarea.rin{min-height:96px;line-height:1.5}
+.rin[aria-invalid="true"],.rseg[aria-invalid="true"]{border-color:var(--red);background:var(--red-bg)}
+.rerr{margin:0;color:var(--red);font-weight:700;font-size:14px;min-height:0}
+.rerr:empty{display:none}
+.rphoto{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;min-height:64px;border:2px dashed var(--blue);border-radius:12px;background:var(--blue-bg);color:var(--blue-ink);font-size:var(--f2);font-weight:700;cursor:pointer}
+.rphoto input{position:absolute;width:1px;height:1px;opacity:0}
+.rphs{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;margin-top:8px}
+.rph{position:relative;width:96px;height:96px;margin:0 8px 8px 0;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.rph img{width:100%;height:100%;object-fit:cover;display:block}
+.rph button{position:absolute;right:2px;top:2px;width:32px;height:32px;border-radius:50%;border:0;background:rgba(0,0,0,.7);color:#fff;font-size:18px;line-height:1}
+.rseg{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;border-radius:10px;margin-bottom:6px}
+.rseg button{min-height:52px;min-width:64px;margin:0 6px 6px 0;padding:0 14px;border-radius:10px;border:2px solid var(--line-strong);background:#fff;font-size:var(--f3);color:var(--ink)}
+.rseg button[aria-pressed="true"]{border-color:var(--blue);background:var(--blue);color:#fff;font-weight:700}
+.rchk{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;min-height:48px;font-size:var(--f3);font-weight:700}
+.rchk input{width:24px;height:24px;margin-right:10px}
+.rsm{margin-top:10px}
+.rqfoot{-webkit-flex:none;flex:none;background:#fff;border-top:1px solid var(--line);padding:10px 16px}
+@supports (padding:max(1px,2px)){.rqfoot{padding-bottom:max(10px,env(safe-area-inset-bottom,0px))}}
+.rsend{display:block;width:100%;max-width:720px;margin:0 auto;min-height:60px;border:0;border-radius:12px;background:var(--blue);color:#fff;font-size:var(--f2);font-weight:700}
+.rsend:disabled{opacity:.6}
+.rqfoot .rerr{max-width:720px;margin:0 auto 6px}
+.rdone{text-align:center;padding:24px 8px}
+.rok{font-size:var(--f1);font-weight:700;color:var(--green);margin:0}
+.rid{font-size:var(--f2);font-weight:700;margin:4px 0 16px}
+.rdone .kv2{text-align:left;max-width:420px;margin:0 auto 12px}
+.rdbtn{display:-webkit-flex;display:flex;max-width:720px;margin:0 auto}.rdbtn>*{-webkit-flex:1;flex:1;margin-right:8px}.rdbtn>*:last-child{margin-right:0}
+/* 携帯の幅：上は2段（［＋ 加工を依頼する］を横いっぱい／表示の選び・納品済み）。カードは「左に写真・右に文字」で低く */
+@media (max-width:600px){
+  .wrap{padding-top:6px}
+  .top{-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-align-items:baseline;align-items:baseline;margin-bottom:6px}
+  .top h1{font-size:20px;margin-right:8px}
+  .top .sp{display:none}
+  #updated{font-size:12px;margin-left:auto}
+  .viewbar{width:100%;margin:6px 0 0}
+  .viewbar .btn{-webkit-flex:1;flex:1}
+  .viewbar .reqbtn{min-height:44px!important;font-size:16px!important;margin:0!important;white-space:nowrap}
+  .who-bar{margin:0 0 10px}
+  .who-bar label{display:block;font-size:14px;font-weight:700;color:var(--ink);margin-right:8px}
+  .who-bar select{-webkit-flex:1;flex:1;min-width:0;min-height:44px;font-size:16px;margin-right:8px}
+  .who-bar .btn{min-height:44px;padding:0 12px;font-size:14px;font-weight:400;border-width:1.5px;white-space:nowrap}
+  .colh{min-height:44px;font-size:18px;padding:0 12px;margin-bottom:8px;border-width:2px}
+  .colh b{font-size:22px}
+  .col>.card{margin-bottom:8px;border-width:1.5px}
+  .col>.card>.open{-webkit-align-items:stretch;align-items:stretch}
+  .col>.card .thumb{width:112px;aspect-ratio:auto;height:auto!important;min-height:112px;padding-top:0!important}
+  .col>.card .thumb img{position:absolute;top:0;left:0;width:100%;height:100%}
+  .col>.card .cnt{font-size:12px;padding:0 6px;right:4px;bottom:4px}
+  .col>.card .ov{left:4px;top:4px}.col>.card .ov .tag{min-height:22px;font-size:12px;padding:0 6px}
+  .col>.card .cbody{padding:8px 10px 6px}
+  .col>.card .site{font-size:17px;line-height:1.35}
+  .col>.card .who{font-size:13px}
+  .col>.card .dates{border:0;margin:0 0 2px}
+  .col>.card .dates>div{padding:0 8px 0 0;border:0!important;background:none!important}
+  .col>.card .dates dt{display:inline;font-size:12px;margin-right:4px}
+  .col>.card .dates dd{display:inline;font-size:14px}
+  .col>.card .dates>div.late dd{color:var(--red)}
+  .col>.card .cact{padding:0 10px 8px}
+  .col>.card .stbtn{min-height:44px}
+  .worker .col>.card .cact{display:none}
+}
+@supports (display:grid){.board.b2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ptabs{display:none}
+@media (max-width:600px){
+  .ptabs{display:-webkit-flex;display:flex;position:-webkit-sticky;position:sticky;top:0;z-index:4;background:var(--bg);padding:4px 0 8px;margin-bottom:2px}
+  .ptab{-webkit-flex:1 1 0;flex:1 1 0;min-height:52px;margin-right:6px;border-radius:10px;border:2px solid var(--line-strong);background:var(--surface);font-size:17px;font-weight:700;color:var(--sub);display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+  .ptab:last-child{margin-right:0}
+  .ptab b{font-size:20px;margin-left:8px}
+  .ptab[aria-selected="true"].s0{border-color:var(--gray-tag);background:var(--gray-bg);color:var(--ink)}
+  .ptab[aria-selected="true"].s1{border-color:var(--blue);color:var(--blue-ink);background:#fff}
+  .ptab[aria-selected="true"].s2{border-color:var(--blue);background:var(--blue);color:#fff}
+  .board>.col{display:none}.board>.col.pon{display:block}
+  .col>.colh{display:none}
+}
+.colh.s3{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.wtag{display:inline-block;font-size:12px;font-weight:700;border-radius:6px;padding:0 6px;margin:0 0 2px;background:var(--blue);color:#fff}
+.wtag.ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green)}
+.worker .col>.card .cact{display:none}
+/* 職人さん用は携帯でも2列。カードは写真を上・文字を下の小さい形 */
+@media (max-width:600px){
+  .worker .ptabs{display:none}
+  .worker .board{display:-webkit-flex;display:flex;-webkit-align-items:flex-start;align-items:flex-start}
+  .worker .board>.col{display:block;-webkit-flex:1 1 0;flex:1 1 0;min-width:0;margin:0 8px 0 0}.worker .board>.col:last-child{margin-right:0}
+  .worker .col>.colh{display:-webkit-flex;display:flex;position:-webkit-sticky;position:sticky;top:0;min-height:44px;font-size:17px;padding:0 10px}
+  .worker .col>.colh b{font-size:20px}
+  .worker .col>.card{display:block}
+  .worker .col>.card>.open{display:block}
+  .worker .col>.card .thumb{width:100%;min-height:0;height:0!important;padding-top:75%!important}
+  .worker .col>.card .thumb>img{position:absolute;top:0;left:0;width:100%;height:100%}
+  .worker .col>.card .cbody{padding:6px 8px 8px}
+  .worker .col>.card .site{font-size:15px}
+  .worker .col>.card .who{font-size:12px}
+  .worker .col>.card .dates dt{display:block;font-size:11px}
+  .worker .col>.card .dates dd{display:block;font-size:13px}
+  .worker .col .empty{font-size:13px;padding:12px 4px}
+}
+.wfix{display:block;width:calc(100% - 16px);margin:0 8px 8px;min-height:44px;border-radius:10px;border:2px solid var(--blue);background:#fff;color:var(--blue-ink);font-size:15px;font-weight:700}
+/* 依頼フォーム：出面フォームの決まりにそろえる（最大430px、項目名は左の固定幅、必須は赤い＊） */
+.fband{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;background:var(--blue);color:#fff;padding:6px 8px;-webkit-flex:none;flex:none}
+.fband .eb{background:#fff}.fband .ttl{font-weight:700;margin-left:10px;font-size:17px}
+.fwrap{max-width:430px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px 12px}
+.fr{display:-webkit-flex;display:flex;-webkit-align-items:flex-start;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.fl{-webkit-flex:0 0 84px;flex:0 0 84px;font-size:15px;font-weight:700;padding-top:12px;color:var(--ink)}
+.fl b{color:var(--red);margin-left:2px}
+.fv{-webkit-flex:1;flex:1;min-width:0}
+.fin{display:block;width:100%;min-height:48px;border:1.5px solid var(--line-strong);border-radius:8px;padding:6px 10px;font-size:16px;background:#fff;color:var(--ink);margin-bottom:4px}
+textarea.fin{min-height:64px;line-height:1.5}
+.fin[aria-invalid="true"],.frad[aria-invalid="true"] button{border-color:var(--red);background:var(--red-bg)}
+.frad{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;margin-bottom:2px}
+.frad button{min-height:44px;margin:0 6px 6px 0;padding:0 12px;border-radius:999px;border:1.5px solid var(--line-strong);background:#fff;font-size:15px;color:var(--ink)}
+.frad button[aria-checked="true"]{border-color:var(--blue);background:var(--blue);color:#fff;font-weight:700}
+.fchk{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;min-height:40px;font-size:15px}
+.fchk input{width:22px;height:22px;margin-right:8px}
+.fmore{padding:4px 0}.fmore summary{min-height:44px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;color:var(--blue);font-weight:700;cursor:pointer}
+.fr .rphoto{min-height:48px;font-size:16px}
+.fr .rerr{margin-top:2px}
+/* 表示の選び：はっきり見えるように（青い枠・太字・自分で描く▼） */
+.who-bar select{-webkit-appearance:none;appearance:none;border:2px solid var(--blue)!important;color:var(--blue-ink);font-weight:700;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%2300118f' stroke-width='2.5'/%3E%3C/svg%3E") no-repeat right 12px center;padding-right:34px!important}
+/* カードの日付：「依頼 11/23(月)」「納期 11/25(水) ［今日］」を2行でそろえる（どのカードも同じ位置） */
+.card .dates{display:block;border:0;margin:0 0 4px;border-radius:0;overflow:visible}
+.card .dates>div{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;padding:0!important;border:0!important;background:none!important;min-width:0}
+.card .dates dt{display:block!important;-webkit-flex:0 0 2.6em;flex:0 0 2.6em;font-size:12px!important;color:var(--sub);margin:0!important}
+.card .dates dd{display:block!important;font-size:15px!important;font-weight:700;white-space:nowrap;margin:0}
+.card .dates>div.late dd{color:var(--red)}
+.dbg{display:inline-block;font-size:11px;font-weight:700;line-height:1.5;border-radius:5px;padding:0 5px;margin-left:5px;vertical-align:1px;background:var(--gray-bg);color:var(--ink);border:1px solid var(--line-strong)}
+.dbg.today{background:var(--blue);color:#fff;border-color:var(--blue)}.dbg.late{background:var(--red);color:#fff;border-color:var(--red)}
+@media (max-width:600px){.worker .col>.card .dates dd{font-size:14px!important}.worker .col>.card .dates dt{-webkit-flex-basis:2.4em;flex-basis:2.4em}}
+/* 一覧｜カレンダー の切り替えと、カレンダー */
+.vtabs{display:-webkit-flex;display:flex;margin:0 0 8px;border:2px solid var(--blue);border-radius:10px;overflow:hidden;max-width:420px}
+.vtabs button{-webkit-flex:1;flex:1;min-height:44px;border:0;background:#fff;color:var(--blue-ink);font-size:16px;font-weight:700}
+.vtabs button[aria-selected="true"]{background:var(--blue);color:#fff}
+.cband{background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:8px 10px;margin-bottom:10px}
+.cband.late{border-color:var(--red);background:var(--red-bg)}
+.cband h3{margin:0 0 6px;font-size:17px}.cband.late h3{color:var(--red)}.cband h3 b{margin-left:6px}
+.citems{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+.citems .citem{width:auto;max-width:100%;margin:0 6px 6px 0}
+.cal{margin-bottom:10px}
+.cwk{display:-webkit-flex;display:flex}.cwk span{-webkit-flex:1;flex:1;text-align:center;font-size:13px;font-weight:700;color:var(--sub);padding:2px 0}.cwk .we{color:var(--red)}
+.cgrid{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+.cday{width:14.2857%;min-height:120px;border:1px solid var(--line);background:var(--surface);padding:4px;margin:-1px 0 0 -1px;min-width:0}
+.cday.past{background:var(--gray-bg)}.cday.we{background:#fbfbfc}
+.cday.today{outline:3px solid var(--blue);outline-offset:-3px;position:relative;z-index:1}
+.cdh{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;font-size:13px;font-weight:700;margin-bottom:4px;white-space:nowrap}
+.cdh b{margin-left:auto;font-size:12px;color:var(--blue-ink)}
+.ctd{font-size:11px;background:var(--blue);color:#fff;border-radius:5px;padding:0 4px;margin-left:4px}
+.citem{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;width:100%;min-height:36px;margin:0 0 4px;padding:2px 4px;border-radius:8px;border:1.5px solid var(--gray-tag);background:var(--gray-bg);text-align:left;color:var(--ink);font-size:13px;line-height:1.3;overflow:hidden}
+.citem.s1{border-color:var(--blue);background:#fff}.citem.s2{border-color:var(--blue);background:var(--blue-bg)}.citem.s3{border-color:var(--green);background:var(--green-bg)}
+.cst{-webkit-flex:none;flex:none;width:20px;height:20px;border-radius:5px;background:var(--gray-tag);color:#fff;font-size:12px;font-weight:700;text-align:center;line-height:20px;margin-right:4px}
+.citem.s1 .cst{background:#fff;color:var(--blue);border:1.5px solid var(--blue);line-height:17px}.citem.s2 .cst{background:var(--blue)}.citem.s3 .cst{background:var(--green)}
+.csite{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;-webkit-flex:1;flex:1}
+.cwho{display:none}
+.crush{-webkit-flex:none;flex:none;font-size:11px;font-weight:700;background:var(--yellow-bg);color:var(--yellow);border-radius:4px;padding:0 3px;margin-left:3px}
+.cnote{font-size:13px;color:var(--sub);margin:4px 0 16px}
+@supports (display:grid){.cgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}.cday{width:auto}}
+@media (min-width:900px){.cwho{display:inline;font-size:11px;color:var(--sub);margin-left:4px;white-space:nowrap}}
+/* 携帯：7列は狭いので、日ごとに縦に並べる（依頼がない日は出さない。今日は必ず出す） */
+@media (max-width:600px){
+  .cwk{display:none}
+  .cgrid{display:block}
+  .cday{width:auto;min-height:0;margin:0 0 8px;border-radius:10px;border:1.5px solid var(--line)}
+  .cday.empty:not(.today){display:none}
+  .cdh{font-size:15px}
+  .citem{min-height:44px;font-size:15px}
+  .cwho{display:inline;font-size:12px;color:var(--sub);margin-left:6px}
+}
+/* 会社のボタンは3つ横1列（同じ幅） */
+.frad.eq3{-webkit-flex-wrap:nowrap;flex-wrap:nowrap}
+.frad.eq3 button{-webkit-flex:1 1 0;flex:1 1 0;min-width:0;padding:0 4px;margin-right:6px;font-size:14px;white-space:nowrap;border-radius:10px}
+.frad.eq3 button:last-child{margin-right:0}
+.cst{width:auto!important;min-width:20px;padding:0 4px;white-space:nowrap}
+.cnote.top{margin:0 0 8px;line-height:2}.cnote.top .cst{display:inline-block;height:20px;margin:0 4px 0 0;border-radius:5px;color:#fff;font-size:12px;font-weight:700;line-height:20px;background:var(--gray-tag)}
+.cnote.top .cst.s1{background:#fff;color:var(--blue);border:1.5px solid var(--blue);line-height:17px}.cnote.top .cst.s2{background:var(--blue)}.cnote.top .cst.s3{background:var(--green)}
+.cdue{-webkit-flex:none;flex:none;font-size:11px;font-weight:700;border-radius:4px;padding:0 4px;margin-left:4px;background:var(--blue);color:#fff}.cdue.late{background:var(--red)}
+.cband.late{border-color:#e0a23a;background:var(--yellow-bg)}.cband.late h3{color:var(--yellow)}
+/* 月のカレンダー */
+.cmh{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin:0 0 6px}
+.cmh b{font-size:20px;margin:0 10px}
+.cnav{min-width:44px;min-height:40px;border-radius:8px;border:1.5px solid var(--line-strong);background:#fff;font-size:16px;color:var(--ink)}
+.cnav.ctoday{margin-left:auto;padding:0 14px;font-weight:700;color:var(--blue-ink);border-color:var(--blue)}
+.cal.month .cday{min-height:108px;cursor:pointer}
+.cal.month .cday.other{background:#f6f7f9}.cal.month .cday.other .cdn{color:#a5a9b0}
+.cal.month .cday.sel{outline:3px solid #f0b400;outline-offset:-3px;position:relative;z-index:2}
+.cdn{font-size:14px;font-weight:700}
+.cal.month .citem{min-height:26px;font-size:12px;margin-bottom:3px;padding:1px 3px}
+.cal.month .citem .cst{height:18px;line-height:18px;font-size:11px;padding:0 3px}
+.cmore{display:block;width:100%;border:0;background:none;color:var(--blue-ink);font-size:12px;font-weight:700;text-align:left;padding:0 2px;min-height:22px}
+.cdots{display:none}
+.cband.csel{border-color:#f0b400}
+@media (max-width:600px){
+  .cal.month .cwk{display:-webkit-flex;display:flex}
+  .cal.month .cgrid{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+  .cal.month .cday{width:14.2857%;min-height:56px;margin:-1px 0 0 -1px;border-radius:0;border:1px solid var(--line);padding:3px 2px}
+  .cal.month .cday.empty:not(.today){display:block}
+  .cal.month .cday .citem,.cal.month .cday .cmore,.cal.month .ctd{display:none}
+  .cal.month .cdh{-webkit-justify-content:center;justify-content:center;margin:0}
+  .cal.month .cday.today .cdn{background:var(--blue);color:#fff;border-radius:50%;width:24px;height:24px;line-height:24px;text-align:center;display:inline-block}
+  .cdots{display:-webkit-flex;display:flex;-webkit-justify-content:center;justify-content:center;-webkit-flex-wrap:wrap;flex-wrap:wrap;margin-top:3px}
+  .cdots i{width:8px;height:8px;border-radius:50%;margin:1px;background:var(--gray-tag)}
+  .cdots i.s1{background:#fff;border:1.5px solid var(--blue)}.cdots i.s2{background:var(--blue)}.cdots i.s3{background:var(--green)}
+  .cdots em{font-style:normal;font-size:10px;color:var(--sub)}
+  .cmh b{font-size:18px}
+}
+@supports (display:grid){@media (max-width:600px){.cal.month .cgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}.cal.month .cday{width:auto}}}
+/* 月のマスの中：現場名と名前。状態は左の色の線（文字の札は出さない） */
+.cal.month .citem .cst{display:none}
+.cal.month .citem{border-left-width:5px;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+.cal.month .citem .csite{font-size:12px}
+.cal.month .citem .cwho{display:inline;font-size:11px;color:var(--sub);margin-left:3px}
+.cal.month .citem .crush{font-size:10px}
+/* 2週間の週の表示（iPad・PC） */
+.cweek{display:-webkit-flex;display:flex;-webkit-align-items:stretch;align-items:stretch;margin-bottom:8px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.wcol{-webkit-flex:1 1 0;flex:1 1 0;min-width:0;border-right:1px solid var(--line);padding:4px;min-height:150px}
+.wcol:last-child{border-right:0}
+.wcol.past{background:var(--gray-bg)}.wcol.we{background:#fbfbfc}
+.wcol.today{background:var(--blue-bg);box-shadow:inset 0 0 0 3px var(--blue)}
+.wh{display:-webkit-flex;display:flex;-webkit-align-items:baseline;align-items:baseline;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.wd{font-size:13px;font-weight:700;color:var(--sub);margin-right:4px}.wcol.we .wd{color:var(--red)}
+.wn{font-size:15px;font-weight:700}
+.wcol .ctd{margin-left:auto}
+.ctall{display:block;width:100%;text-align:left;margin:0 0 5px;padding:4px 6px;border-radius:8px;border:1px solid var(--line);border-left:5px solid var(--gray-tag);background:#fff;color:var(--ink);line-height:1.3}
+.ctall.s1{border-left-color:var(--blue)}.ctall.s2{border-left-color:var(--blue);background:var(--blue-bg)}.ctall.s3{border-left-color:var(--green);background:var(--green-bg)}
+.ctall .ts{display:block;font-size:13px;font-weight:700;overflow-wrap:anywhere}
+.ctall .tw{display:block;font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 携帯の2週間：1日1行 */
+.prow-h{font-size:13px;font-weight:700;color:var(--sub);margin:8px 0 4px}
+.pweek{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:6px}
+.prow{display:-webkit-flex;display:flex;-webkit-align-items:stretch;align-items:stretch;border-bottom:1px solid var(--line);min-height:48px}
+.prow:last-child{border-bottom:0}
+.prow.none{min-height:34px}
+.prow.past{background:var(--gray-bg)}
+.pd{-webkit-flex:0 0 52px;flex:0 0 52px;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;border-right:1px solid var(--line);line-height:1.1;padding:4px 0}
+.pw{font-size:11px;color:var(--sub)}.pd.we .pw{color:var(--red)}
+.pn{font-size:18px;font-weight:700;margin-top:2px}
+.prow.today .pn{background:var(--blue);color:#fff;border-radius:50%;width:30px;height:30px;line-height:30px;text-align:center}
+.prow.today{background:var(--blue-bg)}
+.pi{-webkit-flex:1;flex:1;min-width:0;padding:5px 6px 0}
+.pi .ctall{margin-bottom:5px}
+.pnone{display:block;color:#b0b4ba;font-size:13px;padding-top:4px}
+/* 携帯の1日1行：依頼1件を1行に（左に現場名、右に名前。幅と高さをそろえる） */
+.pi .ctall{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;min-height:36px;padding:2px 8px;margin-bottom:4px}
+.pi .ctall .ts{-webkit-flex:1;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+.pi .ctall .tw{-webkit-flex:0 0 5.5em;flex:0 0 5.5em;text-align:right;font-size:12px;margin-left:6px}
+.prow{min-height:44px}.prow.none{min-height:36px}
+/* 携帯の1週間を大きく */
+@media (max-width:600px){
+  .cmh{margin:4px 0 10px}.cmh b{font-size:19px}.cnav{min-height:48px;min-width:52px;font-size:18px}
+  .prow{min-height:72px}.prow.none{min-height:60px}
+  .pd{-webkit-flex-basis:62px;flex-basis:62px}
+  .pw{font-size:13px}.pn{font-size:24px}
+  .prow.today .pn{width:38px;height:38px;line-height:38px}
+  .pi{padding:8px 8px 4px}
+  .pi .ctall{min-height:48px;padding:4px 10px;margin-bottom:6px;border-left-width:6px}
+  .pi .ctall .ts{font-size:16px}
+  .pi .ctall .tw{font-size:14px;-webkit-flex-basis:6em;flex-basis:6em}
+  .pnone{font-size:16px;padding-top:12px}
+}
+.cmh b,.cnav{white-space:nowrap}
+/* 納品済みの「済」の丸（ハンコのような印） */
+.zumi{display:-webkit-inline-flex;display:inline-flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;-webkit-flex:none;flex:none;width:24px;height:24px;border:2px solid #d0342c;border-radius:50%;color:#d0342c;font-size:12px;font-weight:700;line-height:1;margin-left:6px;-webkit-transform:rotate(-12deg);transform:rotate(-12deg);background:#fff}
+.ctall .zumi{float:right;margin:0 0 0 4px}
+.pi .ctall .zumi{float:none}
+/* 「済」を一発で分かるように：大きく、行の頭に */
+.zumi{width:30px;height:30px;font-size:15px;border-width:2.5px}
+.pi .ctall .zumi{-webkit-order:-1;order:-1;margin:0 8px 0 0}
+.ctall .zumi{float:left;margin:0 6px 2px 0}
+.ctall.s3 .ts,.ctall.s3 .tw{color:#5d6b63}
+/* 携帯の1週間：少し小さく（1画面にほぼ1週間） */
+@media (max-width:600px){
+  .prow{min-height:54px}.prow.none{min-height:40px}
+  .pd{-webkit-flex-basis:50px;flex-basis:50px}
+  .pw{font-size:11px}.pn{font-size:19px}
+  .prow.today .pn{width:30px;height:30px;line-height:30px}
+  .pi{padding:5px 6px 1px}
+  .pi .ctall{min-height:38px;padding:2px 8px;margin-bottom:4px;border-left-width:5px}
+  .pi .ctall .ts{font-size:14px}
+  .pi .ctall .tw{font-size:12px;-webkit-flex-basis:5em;flex-basis:5em}
+  .pi .ctall .zumi{width:24px;height:24px;font-size:12px;border-width:2px;margin-right:6px}
+  .pnone{font-size:14px;padding-top:6px}
+  .cnav{min-height:42px;min-width:46px;font-size:16px}.cmh b{font-size:17px}
+}
+/* 携帯の決まり（白石さん 11/25）：1画面にバランスよく。大きすぎない（細かいところは指で拡大できる） */
+@media (max-width:600px){
+  .top h1{font-size:18px}
+  .viewbar .reqbtn{min-height:40px!important;font-size:15px!important}
+  .who-bar{margin-bottom:6px}.who-bar select{min-height:38px!important;font-size:15px}.who-bar label{font-size:13px}
+  .vtabs{margin-bottom:6px}.vtabs button{min-height:36px;font-size:15px}
+  .colh{min-height:38px!important;font-size:16px!important}.colh b{font-size:18px!important}
+  .worker .col>.card .site{font-size:14px}
+  /* カレンダー：1日5件でも1週間が1画面に入る大きさ */
+  .cmh{margin:2px 0 6px}.cmh b{font-size:17px}.cnav{min-height:38px;min-width:44px;font-size:16px}
+  .prow{min-height:40px}.prow.none{min-height:32px}
+  .pd{-webkit-flex-basis:48px;flex-basis:48px}.pw{font-size:11px}.pn{font-size:18px}
+  .prow.today .pn{width:28px;height:28px;line-height:28px}
+  .pi{padding:3px 6px 0}
+  .pi .ctall{min-height:28px;padding:1px 8px;margin-bottom:3px;border-left-width:4px}
+  .pi .ctall .ts{font-size:13px}.pi .ctall .tw{font-size:12px}
+  .pnone{font-size:13px;padding-top:6px}
+  .zumi{width:20px!important;height:20px!important;line-height:18px!important;font-size:11px!important}
+}
+/* 依頼を直す：いまの写真（×で外す、外したものは薄く［戻す］） */
+#rqOld{margin-bottom:4px}
+.rph.off img{opacity:.3}
+.rph .rback{width:auto!important;padding:0 8px;border-radius:14px!important;font-size:13px}
+.rofft{position:absolute;left:4px;bottom:4px;background:var(--red);color:#fff;font-size:12px;font-weight:700;border-radius:4px;padding:0 4px}
+.rphw{display:block;width:100%;height:100%;font-size:12px;color:var(--sub);text-align:center;padding-top:30%}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* iPad・PC の決まり（白石さん 11/25）：1画面にバランスよく。大きすぎない。
+   一覧は横向きで各列2枚、縦向きで各列3枚が見える大きさ。カレンダーは2週間で画面の高さを分ける */
+@media (min-width:601px){
+  .vtabs{max-width:320px;margin-bottom:6px}.vtabs button{min-height:38px;font-size:15px}
+  .colh{min-height:44px;font-size:17px;padding:0 12px;margin-bottom:8px;border-width:2px}.colh b{font-size:22px}
+  .col>.card{margin-bottom:8px;border-width:1.5px}
+  .col>.card .thumb{aspect-ratio:16/9}
+  .col>.card .cnt{font-size:13px;padding:0 8px;right:6px;bottom:6px}
+  .col>.card .ov{left:6px;top:6px}.col>.card .ov .tag{min-height:24px;font-size:12px;padding:0 8px}
+  .col>.card .cbody{padding:6px 10px 6px;gap:1px}
+  .col>.card .dates{margin-bottom:2px}
+  .col>.card .dates dd{font-size:14px!important}
+  .col .site{font-size:15px;line-height:1.35}.col .who{font-size:12px;line-height:1.4}
+  .col>.card .cact{padding:0 10px 8px}
+  .col .stbtn{min-height:42px;border-width:2px}.col .stbtn b{font-size:15px}.col .stbtn .arr{font-size:13px}
+  .col .stmenu{padding:4px}.col .stopt,.col .stclose{min-height:46px;font-size:17px}.col .stclose{font-size:15px}
+  .col .empty{padding:12px 8px;font-size:13px}
+  /* カレンダー：上の段を細く、2週間で画面の高さを半分ずつ */
+  .cmh{margin:0 0 6px}.cmh b{font-size:18px}.cnav{min-height:38px}
+  .wcol{min-height:150px;min-height:calc(50vh - 92px)}
+  .wrap{padding-bottom:12px}
+  .wh{margin-bottom:4px}
+  .ctall{margin-bottom:4px}
+}
+@supports not (aspect-ratio:1/1){@media (min-width:601px){.col>.card .thumb{padding-top:56.25%}}}
+@media (min-width:601px) and (orientation:landscape){.col>.card .thumb{aspect-ratio:5/2}}
+@supports not (aspect-ratio:1/1){@media (min-width:601px) and (orientation:landscape){.col>.card .thumb{padding-top:40%}}}
+/* 月のカレンダーで依頼を押したときの小窓（中身は一覧と同じカード） */
+.cpop{position:fixed;top:0;right:0;bottom:0;left:0;z-index:12;background:rgba(0,0,0,.45);display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;padding:16px}
+.cpin{width:100%;max-width:380px;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);border-radius:14px;padding:8px}
+.cpbar{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-between;justify-content:space-between;margin:0 0 8px;font-size:14px;font-weight:700;color:var(--sub);padding-left:4px}
+.cpx{min-height:40px;padding:0 14px;border-radius:8px;border:1.5px solid var(--line-strong);background:#fff;font-size:15px;color:var(--ink)}
+.cpin .card{border-width:1.5px}
+.cpin .card .thumb{aspect-ratio:4/3}
+.cpin .card .cbody{padding:8px 12px}
+.cpin .card .site{font-size:18px}.cpin .card .who{font-size:13px}
+.cpin .card .cact{padding:0 12px 12px}
+.cpin .stbtn{min-height:48px}.cpin .stbtn b{font-size:17px}
+.cpin .stopt{min-height:48px;font-size:17px}
+/* カレンダーの形の切り替え［週］［月］ */
+.ckind{display:-webkit-inline-flex;display:inline-flex;margin-left:12px;border:1.5px solid var(--line-strong);border-radius:8px;overflow:hidden}
+.ckind button{min-height:36px;padding:0 12px;border:0;border-right:1px solid var(--line);background:#fff;font-size:14px;color:var(--ink)}
+.ckind button:last-child{border-right:0}
+.ckind button[aria-pressed="true"]{background:var(--ink);color:#fff;font-weight:700}
+/* 月：マス目。週の数で画面の高さを分ける */
+.mcal{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.mwh{display:-webkit-flex;display:flex;border-bottom:1px solid var(--line);background:#f7f8fa}
+.mwh span{-webkit-flex:1 1 0;flex:1 1 0;text-align:center;font-size:12px;font-weight:700;color:var(--sub);padding:2px 0}.mwh .we{color:var(--red)}
+.mwk{display:-webkit-flex;display:flex;border-bottom:1px solid var(--line)}.mwk:last-child{border-bottom:0}
+.mcal.w4 .mwk{min-height:calc((100vh - 226px)/4)}.mcal.w5 .mwk{min-height:calc((100vh - 226px)/5)}.mcal.w6 .mwk{min-height:calc((100vh - 226px)/6)}
+.mday{-webkit-flex:1 1 0;flex:1 1 0;min-width:0;border-right:1px solid var(--line);padding:2px 3px 3px}.mday:last-child{border-right:0}
+.mday.we{background:#fbfbfc}.mday.past{background:var(--gray-bg)}.mday.other .mdn{color:#a5a9b0}
+.mday.today{background:var(--blue-bg);box-shadow:inset 0 0 0 2px var(--blue)}
+.mday.opn{box-shadow:inset 0 0 0 2px #f0b400}
+.mdh{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin-bottom:2px}
+.mdn{font-size:13px;font-weight:700}.mday.we .mdn{color:var(--red)}
+.mitem{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;width:100%;min-height:22px;margin:0 0 2px;padding:0 4px;border-radius:5px;border:1px solid var(--line);border-left:4px solid var(--gray-tag);background:#fff;font-size:12px;line-height:1.25;color:var(--ink);text-align:left}
+.mitem.s1{border-left-color:var(--blue)}.mitem.s2{border-left-color:var(--blue);background:var(--blue-bg)}.mitem.s3{border-left-color:var(--green);background:var(--green-bg)}
+.ms{-webkit-flex:1;flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mw{-webkit-flex:none;flex:none;max-width:4.5em;margin-left:4px;font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mz{-webkit-flex:none;flex:none;width:16px;height:16px;line-height:13px;margin-right:3px;border:1.5px solid #d0342c;border-radius:50%;color:#d0342c;font-size:10px;font-weight:700;text-align:center;background:#fff}
+.mitem.s3 .ms,.mitem.s3 .mw{color:#5d6b63}
+.mday .cmore{min-height:22px;font-size:12px}
+/* 横の週：1日1段。依頼は横に5件まで（同じ幅） */
+.hweek{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.hrow{display:-webkit-flex;display:flex;-webkit-align-items:stretch;align-items:stretch;border-bottom:1px solid var(--line);min-height:calc((100vh - 176px)/7)}
+.hrow:last-child{border-bottom:0}
+.hrow.past{background:var(--gray-bg)}.hrow.today{background:var(--blue-bg);box-shadow:inset 0 0 0 2px var(--blue)}
+.hd{-webkit-flex:0 0 64px;flex:0 0 64px;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;border-right:1px solid var(--line);line-height:1.15}
+.hd .pw{font-size:12px}.hrow.we .pw{color:var(--red)}
+.hn{font-size:16px;font-weight:700}
+.hd .ctd{margin:2px 0 0}
+.hi{-webkit-flex:1;flex:1;min-width:0;padding:5px 0 1px 6px}
+.hi .ctall{display:inline-block;vertical-align:top;width:19%;margin:0 1% 4px 0;padding:3px 6px}
+.hi .ctall .ts{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hi .ctall .tw{font-size:12px}
+.hi .ctall .zumi{width:22px;height:22px;font-size:11px;border-width:2px;margin:0 4px 0 0}
+.hi .pnone{padding-top:8px}
+/* 横の週の写真つき：写真が上、現場名と名前が下 */
+.hi .hchip{padding:0 0 3px;overflow:hidden;position:relative}
+.hph{display:block;position:relative;height:56px;margin:0 0 3px;overflow:hidden;background:var(--skel)}
+.hph img{display:block;width:100%;height:100%;object-fit:cover}
+.hnone{display:block;padding-top:18px;text-align:center;font-size:11px;color:var(--sub);background:var(--gray-bg);height:100%}
+.hrush{position:absolute;left:3px;top:3px;font-size:11px;font-weight:700;background:var(--yellow-bg);color:var(--yellow);border:1px solid #e0b84a;border-radius:4px;padding:0 4px;line-height:1.5}
+.hi .hchip .ts,.hi .hchip .tw{padding:0 6px}
+.hi .hchip .zumi{position:absolute;right:4px;top:4px;float:none;margin:0;width:34px;height:34px;font-size:17px;border-width:2.5px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.hrow{min-height:52px}
+@media (min-width:601px) and (orientation:portrait){.hph{height:72px}.hrow{min-height:calc((100vh - 176px)/7)}}
+/* iPad 縦：曜日の列が細いので、現場名と名前は1行（はみ出しは…） */
+@media (min-width:601px) and (orientation:portrait){
+  .ctall{padding:3px 5px}
+  .ctall .ts{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+  .ctall .tw{font-size:11px}
+  .wd{font-size:12px}.wn{font-size:14px}
+  /* 月：マスが細いので「現場名」と「名前」を2行に */
+  .mitem{display:block;padding:1px 4px}
+  .ms,.mw{display:block}.mw{max-width:none;margin:0;font-size:10px;line-height:1.2}
+  .mz{float:left;margin-top:1px}
+}
+/* 携帯の週も写真つきで横に並べる（白石さん 11/25「アイホンの週もアイパッドみたいに写真を横に」）。多い日は指で横に送る */
+@media (max-width:600px){
+  .pi.pch{white-space:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 2px 6px}
+  .pi.pch .hchip{display:inline-block;vertical-align:top;width:92px;min-height:0;margin:0 6px 3px 0;padding:0 0 2px;white-space:normal;border-left-width:4px;overflow:hidden;position:relative}
+  .pi.pch .hph{height:50px;margin:0 0 2px}
+  .pi.pch .hchip .ts{display:block;font-size:12px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+  .pi.pch .hchip .tw{display:block;font-size:10px;line-height:1.3;text-align:left;margin:0;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pi.pch .hchip .zumi{position:absolute;right:3px;top:3px;margin:0!important;width:24px!important;height:24px!important;line-height:20px!important;font-size:12px!important;border-width:2px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .pi.pch .hrush{font-size:10px}
+  .pi.pch .pnone{display:inline-block}
+}
+/* 全員同じ画面（白石さん 11/25）：上の段に［＋ 加工を依頼する］、2段目に［表示 ▼］［納品済みを見る］。［▼ 変える］の中に「依頼を直す・写真を入れ替える」 */
+.stopt.sfix{font-size:15px!important;color:var(--blue-ink);border-top:1px solid var(--line);border-radius:0;margin:4px 0 0;padding-top:4px}
+@media (min-width:601px){
+  .viewbar .reqbtn{min-height:40px!important;font-size:15px!important;margin-right:0}
+  .who-bar{float:right;margin:0 0 6px 8px}
+  .who-bar label{font-size:13px;margin-right:6px}
+  .who-bar select{min-height:38px!important;font-size:14px;padding:0 30px 0 10px}
+  .who-bar .btn{min-height:38px;padding:0 12px;font-size:14px;font-weight:400;border-width:1.5px;margin-left:8px}
+  #list{clear:both}
+}
+@media (max-width:600px){.col .stmenu{padding:4px}.col .stopt,.col .stclose{min-height:44px;font-size:16px}.col .stclose{font-size:14px}.col .stopt.sfix{font-size:14px!important}}
+@media (max-width:600px){.ptab[aria-selected="true"].s3{border-color:var(--green);background:var(--green-bg);color:var(--green)}}
+/* 携帯の一覧：カードの上の［▼ 変える］は出さない（押すと小窓のカードで変える） */
+@media (max-width:600px){.board .col>.card .cact{display:none}.board .col>.card{margin-bottom:6px}}
+/* 納期を変える小窓 */
+.duein .dueh{font-size:18px;font-weight:700;margin:0}
+.duein .duesub{font-size:14px;color:var(--sub);margin:0}
+.duein .frad button{min-width:72px}
+.duein .row .btn{min-height:48px}
+/* 携帯の一覧は写真つき2列（白石さん 11/25）：写真が上、日付・現場名・名前が下。押すと小窓のカード */
+@media (max-width:600px){
+  .board>.col.pon{display:-webkit-flex!important;display:flex!important;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:space-between;justify-content:space-between;-webkit-align-items:flex-start;align-items:flex-start}
+  .board .col>.card{display:block;width:49%;margin:0 0 8px}
+  .board .col>.card>.open{display:block}
+  .board .col>.card .thumb{width:100%;min-height:0;height:0!important;padding-top:75%!important;aspect-ratio:auto}
+  .board .col>.card .thumb>img{position:absolute;top:0;left:0;width:100%;height:100%}
+  .board .col>.card .cbody{padding:5px 7px 7px}
+  .board .col>.card .dates dt{-webkit-flex-basis:2.3em!important;flex-basis:2.3em!important;font-size:11px!important}
+  .board .col>.card .dates dd{font-size:13px!important}
+  .board .col>.card .dbg{font-size:10px;padding:0 3px;margin-left:3px}
+  .board .col>.card .site{font-size:14px;line-height:1.3}
+  .board .col>.card .who{font-size:11px}
+  .board .col>.card .wtag{font-size:11px}
+  .board .col>.p.empty,.board .col>.empty{width:100%}
+}
+/* 小窓の納品日の段 */
+.cpdd{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-between;justify-content:space-between;background:var(--green-bg);border:1.5px solid var(--green);border-radius:10px;padding:6px 6px 6px 12px;margin:0 0 8px;color:var(--green);font-size:15px}
+.cpdd b{font-size:17px;margin-left:4px}
+.cpddb{min-height:40px;padding:0 12px;border-radius:8px;border:1.5px solid var(--green);background:#fff;color:var(--green);font-size:14px;font-weight:700;white-space:nowrap}
+/* 小窓の日付・写真の段（iPad も携帯も同じ） */
+.cpin .card{margin-bottom:8px}
+.cpdd.due{background:var(--blue-bg);border-color:var(--blue);color:var(--blue-ink)}.cpdd.due .cpddb{border-color:var(--blue);color:var(--blue-ink)}
+.cpdd.ph{background:#fff;border-color:var(--line-strong);color:var(--ink)}.cpdd.ph .cpddb{border-color:var(--line-strong);color:var(--ink)}
+.cpdd i{font-style:normal;font-size:12px;font-weight:700;background:var(--yellow-bg);color:var(--yellow);border-radius:4px;padding:0 5px;margin-left:6px}
+@media (min-width:601px){.cpin{max-width:420px}}
+/* やりとり欄 */
+.talk{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;margin:0 0 8px}
+.talkh{margin:0 0 6px;font-size:14px;font-weight:700;color:var(--sub)}
+.talkl{max-height:220px;overflow-y:auto;-webkit-overflow-scrolling:touch;margin-bottom:6px}
+.tlog{margin:0 0 4px;font-size:12px;color:var(--sub);text-align:center}
+.tm{max-width:85%;margin:0 0 6px;padding:5px 9px;border-radius:12px 12px 12px 3px;background:var(--gray-bg)}
+.tm.me{margin-left:auto;border-radius:12px 12px 3px 12px;background:var(--blue-bg)}
+.tmh{margin:0;font-size:11px;color:var(--sub)}.tmh b{color:var(--ink);margin-right:6px}
+.tmb{margin:0;font-size:15px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.talki{display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end}
+.talki textarea{-webkit-flex:1;flex:1;min-width:0;min-height:44px;margin:0 6px 0 0;font-size:15px}
+.talks{-webkit-flex:none;flex:none;min-height:44px;padding:0 14px;border:0;border-radius:8px;background:var(--blue);color:#fff;font-weight:700;font-size:15px}
+.talks:disabled{opacity:.5}
+.talkme{margin-bottom:6px}
+.talkline{min-height:36px;font-size:13px;color:var(--sub)}.talkline input{width:18px;height:18px}
+.tcnt{position:absolute;left:6px;bottom:6px;background:rgba(255,255,255,.95);color:var(--blue-ink);border:1px solid var(--blue);border-radius:999px;font-size:12px;font-weight:700;padding:0 7px;line-height:1.6}
+.dlg p{white-space:pre-wrap}
+/* 加工ID（事務用） */
+.kid{font-style:normal;font-size:12px;font-weight:700;color:var(--ink);background:#fff;border:1px solid var(--line-strong);border-radius:5px;padding:0 6px;margin-right:8px;font-variant-numeric:tabular-nums}
+</style>
+
+<div class="wrap">
+
+  <div class="top">
+    <h1 id="title">加工の依頼</h1>
+    <span class="today" id="today"></span>
+    <span class="sp"></span>
+    <span class="today" id="updated"></span>
+    <div class="viewbar" id="viewbar"></div>
+  </div>
+  <div class="who-bar" id="who"></div>
+  <div id="vt"></div>
+
+  <p class="status-line" id="line" role="status" aria-live="polite"></p>
+  <div id="list"></div>
+</div>
+
+<section class="sheet" id="detail" hidden aria-label="依頼の中身">
+  <div class="bar"><button class="btn quiet" id="back" type="button">← 一覧へ戻る</button><span class="t" id="dTitle"></span></div>
+  <div class="wrap" id="dBody"></div>
+</section>
+
+<section class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-labelledby="vTitle">
+  <div class="bar"><button class="btn quiet" id="vClose" type="button">← 戻る</button><span class="t" id="vTitle"></span><button class="btn" id="vEdit" type="button">書き込む</button></div>
+  <div class="vbody" id="vBody"></div>
+</section>
+
+<div id="live" class="sr" aria-live="polite"></div>
+
+<script>
+/* ===== サーバーの代わり（見本）。関数名とデータの形は宮本さんの GAS と同じにしてある ===== */
+(function(){
+  var today=new Date();today.setHours(0,0,0,0);
+  function d(n){var x=new Date(today);x.setDate(x.getDate()+n);var m=x.getMonth()+1,dd=x.getDate();return x.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(dd<10?'0':'')+dd;}
+  var rows=[
+    {id:'K-0001',site:'〇〇邸 新築 屋根',customer:'見本工務店',contact:'見本 担当',due:d(0),destination:'現場直送',status:'依頼案件',memo:'ケラバ水切 L=3000 ×6本。夕方積み',worker:'職人A',method:'LINE',relation:'既存工事',company:'白石工業',category:'加工のみ',rush:true,requestDate:d(-1)},
+    {id:'K-0002',site:'△△倉庫 改修 外壁',customer:'見本建設',contact:'',due:d(1),destination:'工場引取',status:'編集済',memo:'役物一式。図面の赤字を確認',worker:'職人B',method:'口頭',relation:'既存工事',company:'中嶋板金',category:'加工のみ',rush:false,requestDate:d(-2)},
+    {id:'K-0003',site:'□□アパート 雨樋',customer:'見本ハウス',contact:'',due:d(3),destination:'現場直送',status:'加工中',memo:'',worker:'職人A',method:'LINE',relation:'新規',company:'山下板金工作所',category:'外注',rush:false,requestDate:d(-3)},
+    {id:'K-0004',site:'◇◇工場 庇',customer:'見本工務店',contact:'',due:d(-2),destination:'工場引取',status:'編集済',memo:'納期を過ぎている見本',worker:'職人C',method:'電話',relation:'既存工事',company:'白石工業',category:'加工のみ',rush:false,requestDate:d(-6)},
+    {id:'K-0005',site:'☆☆ビル 笠木',customer:'見本建設',contact:'',due:d(0),destination:'現場直送',status:'加工中',memo:'笠木 W=300 ×10本',worker:'職人B',method:'LINE',relation:'既存工事',company:'中嶋板金',category:'加工のみ',rush:false,requestDate:d(-1)},
+    {id:'K-0006',site:'▽▽邸 リフォーム 水切',customer:'見本ハウス',contact:'',due:d(-1),destination:'工場引取',status:'納品済み',memo:'',worker:'職人C',method:'口頭',relation:'既存工事',company:'白石工業',category:'加工のみ',rush:false,requestDate:d(-4)}
+  ];
+  var nfiles={'K-0001':4,'K-0002':2,'K-0003':1,'K-0004':3,'K-0005':2,'K-0006':0};
+  /* 社内用の Web 版だけ：本物の加工依頼の写真を仮に入れたデータ（window.REAL_DATA）があれば、それを使う */
+  var R=window.REAL_DATA;
+  if(R){rows=R.rows.map(function(r){var o=Object.assign({},r);o.due=r.dueFixed||(r.dueOffset===null||r.dueOffset===undefined?'':d(r.dueOffset));o.requestDate=r.requestDateFixed||d(r.requestOffset||-1);if(r.deliveredAtFixed)o.deliveredAt=r.deliveredAtFixed;return o;});nfiles={};rows.forEach(function(r){nfiles[r.id]=(R.photos[r.id]||[]).length;});
+    /* 見本：1日の納期は多くて5件まで（多い日は次の日へずらす。白石さん 11/25） */
+    var perDay={};rows.forEach(function(r){if(!r.due)return;var x=r.due;while((perDay[x]||0)>=5){var xp=x.split('-'),nd=new Date(+xp[0],+xp[1]-1,+xp[2]+1),nm=nd.getMonth()+1,ndd=nd.getDate();x=nd.getFullYear()+'-'+(nm<10?'0':'')+nm+'-'+(ndd<10?'0':'')+ndd;}perDay[x]=(perDay[x]||0)+1;r.due=x;});}
+  if(!R)for(var k=1;k<=18;k++){var kid='K-09'+(k<10?'0':'')+k;rows.push({id:kid,site:'（見本）納品済み '+k,customer:'',contact:'',due:d(-k),destination:'工場引取',status:'納品済み',memo:'',worker:['職人A','職人B','職人C'][k%3],method:'LINE',relation:'既存工事',company:'白石工業',category:'加工のみ',rush:false,requestDate:d(-k-2),deliveredAt:d(-Math.ceil(k/2))});nfiles[kid]=1;}
+  rows.forEach(function(r){if(r.status==='納品済み'&&!r.deliveredAt)r.deliveredAt=r.due||d(0);});
+  var extra={},gone={},seq=200;
+  /* やりとり（見本）：宮本さん版にはまだない。依頼ごとに {at, by, text, kind}。kind＝msg（書いたこと）／log（変えた記録） */
+  var talk={};
+  function hhmm(){var x=new Date(),mi=x.getMinutes();return (x.getMonth()+1)+'/'+x.getDate()+' '+x.getHours()+':'+(mi<10?'0':'')+mi;}
+  function md2(s){return s?(+s.slice(5,7))+'/'+(+s.slice(8,10)):'なし';}
+  function logT(id,by,text,kind){(talk[id]=talk[id]||[]).push({at:hhmm(),by:by||'',text:text,kind:kind||'log'});}
+  (function(){var a=rows.filter(function(r){return r.status==='編集済';})[0],b=rows.filter(function(r){return r.status==='加工中';})[0];
+    if(a){talk[a.id]=[{at:'11/24 8:10',by:a.worker,text:'依頼を出した',kind:'log'},{at:'11/24 8:12',by:a.worker,text:'長さは全部3000でお願いします',kind:'msg'},{at:'11/24 9:30',by:'工場長',text:'了解。色はいつもの黒でいいですか？',kind:'msg'},{at:'11/24 9:41',by:a.worker,text:'黒でOKです',kind:'msg'},{at:'11/24 10:02',by:'工場長',text:'状態を「編集済」に変更',kind:'log'}];}
+    if(b){talk[b.id]=[{at:'11/24 13:20',by:'工場長',text:'状態を「加工中」に変更',kind:'log'},{at:'11/24 13:25',by:'工場長',text:'明日の朝には上がります',kind:'msg'}];}})();
+  function img(id,i,w,h){if(extra[id]&&extra[id][i])return extra[id][i];if(R&&R.photos[id]&&R.photos[id][i])return R.photos[id][i];var c=document.createElement('canvas');c.width=w;c.height=h;var g=c.getContext('2d');g.fillStyle='#fbfaf6';g.fillRect(0,0,w,h);g.strokeStyle='#222';g.lineWidth=Math.max(2,w/220);
+    g.strokeRect(w*.12,h*.22,w*.76,h*.46);g.beginPath();g.moveTo(w*.12,h*.22);g.lineTo(w*.3,h*.1);g.lineTo(w*.88,h*.1);g.lineTo(w*.88,h*.22);g.stroke();
+    g.fillStyle='#222';g.font='bold '+Math.round(w/15)+'px sans-serif';g.fillText(id+' 図面'+(i+1),w*.12,h*.86);g.font=Math.round(w/24)+'px sans-serif';g.fillText('L=3000',w*.42,h*.48);
+    return c.toDataURL('image/jpeg',.85).split(',')[1];}
+  function files(id){var n=nfiles[id]||0,out=[];for(var i=0;i<n;i++)if(!(gone[id]&&gone[id][id+'-f'+i]))out.push({id:id+'-f'+i,name:'図面_'+(i+1)+'.jpg',mime:'image/jpeg',version:'v1'});if(id==='K-0002')out.push({id:id+'-pdf',name:'加工図.pdf',mime:'application/pdf',version:'v1'});return out;}
+  function wait(){return 400+Math.random()*800;}
+  var api={
+    shiraishiListManagerRequests:function(){return rows.map(function(r){return Object.assign({},r,{imageCount:files(r.id).filter(function(x){return x.mime.indexOf('image/')===0;}).length,talkCount:(talk[r.id]||[]).filter(function(t){return t.kind==='msg';}).length});});},
+    /* やりとりを読む・書く（見本）：宮本さん版にはまだない関数 */
+    shiraishiListRequestTalk:function(id){return {items:(talk[id]||[]).slice()};},
+    shiraishiAddRequestTalk:function(p){if(!p||!p.text)throw new Error('書いてください');logT(p.caseId,p.by,String(p.text).slice(0,500),'msg');return {saved:true};},
+    /* 職人さんの依頼（見本）：宮本さんの shiraishiRegisterWorkerRequest と同じ項目を受け取り、K-番号を返す */
+    shiraishiRegisterWorkerRequest:function(p){['company','worker','requestDate','customer','site','category','method','due','memo'].forEach(function(k){if(!p[k])throw new Error('必須項目を入力してください：'+k);});
+      var id='K-0'+(++seq);rows.push({id:id,constructionId:'',site:p.site,customer:p.customer,contact:p.contact||'',due:p.due,destination:p.destination||'',status:'依頼案件',memo:p.memo,worker:p.worker,method:p.method,relation:p.relation,company:p.company,category:p.category,rush:!!p.rush,requestDate:p.requestDate});nfiles[id]=0;return {id:id};},
+    /* 依頼を直す（見本）：宮本さん版にはまだない関数。納品済みになるまではだれでも直せる（白石さん 11/25：全員同じ操作。携帯から写真も入れ替えたい） */
+    shiraishiUpdateWorkerRequest:function(p){var r=rows.filter(function(x){return x.id===p.caseId;})[0];if(!r)throw new Error('依頼が見つかりません');if(r.status==='納品済み')throw new Error('納品済みの依頼は直せません。LINEで工場に伝えてください。');
+      ['site','customer','contact','due','destination','memo','worker','method','company','category','requestDate'].forEach(function(k){if(p[k]!==undefined)r[k]=p[k];});r.rush=!!p.rush;return {id:r.id};},
+    shiraishiSaveWorkerAttachment:function(p){var n=nfiles[p.caseId]||0;(extra[p.caseId]=extra[p.caseId]||[])[n]=p.data;nfiles[p.caseId]=n+1;return {saved:true};},
+    /* 写真を外す（見本）：宮本さん版にはまだない関数。納品済みになるまで。ファイルは消さず、依頼から外すだけにする想定 */
+    shiraishiRemoveWorkerAttachment:function(p){var r=rows.filter(function(x){return x.id===p.caseId;})[0];if(!r)throw new Error('依頼が見つかりません');if(r.status==='納品済み')throw new Error('納品済みの依頼は写真を変えられません。LINEで工場に伝えてください。');(gone[p.caseId]=gone[p.caseId]||{})[p.fileId]=true;return {removed:true};},
+    /* 納期を変える（見本）：宮本さん版にはまだない関数。だれが変えたか（by）も受け取る */
+    shiraishiUpdateManagerDue:function(p){var r=rows.filter(function(x){return x.id===p.caseId;})[0];if(!r)throw new Error('依頼が見つかりません');r.due=p.due||'';r.rush=!!p.rush;logT(r.id,p.by,'納期を '+md2(r.due)+(r.rush?'（即日）':'')+' に変更');return {id:r.id,due:r.due,rush:r.rush};},
+    /* 納品日を直す（見本）：宮本さん版にはまだない関数（納品した日を残す列も要る）。by つき */
+    shiraishiUpdateDeliveredDate:function(p){var r=rows.filter(function(x){return x.id===p.caseId;})[0];if(!r)throw new Error('依頼が見つかりません');if(r.status!=='納品済み')throw new Error('納品済みの依頼だけ直せます');r.deliveredAt=p.deliveredAt||'';logT(r.id,p.by,'納品日を '+md2(r.deliveredAt)+' に変更');return {id:r.id,deliveredAt:r.deliveredAt};},
+    shiraishiUpdateManagerStatus:function(p){logT(p.caseId,p.by,'状態を「'+p.status+'」に変更');rows.forEach(function(r){if(r.id===p.caseId){r.status=p.status;r.deliveredAt=p.status==='納品済み'?d(0):'';}});return {id:p.caseId,status:p.status};},
+    shiraishiListManagerDetailPhotos:function(id){return {files:files(id)};},
+    shiraishiThumbnailManagerCardPhoto:function(p){var i=Number(p.fileId.split('-f')[1]);return {available:true,mime:'image/jpeg',version:'v1',data:img(p.caseId,i,400,300)};},
+    shiraishiReadManagerAttachment:function(p){var i=Number(p.fileId.split('-f')[1]);return {mime:'image/jpeg',data:img(p.caseId,i,1600,1200)};}
+  };
+  window.rpc=function(name,arg){return new Promise(function(ok,ng){setTimeout(function(){try{ok(api[name](arg));}catch(e){ng(e);}},name.indexOf('Thumbnail')>=0||name.indexOf('Read')>=0?wait():250);});};
+})();
+
+/* ===== 画面 ===== */
+(function(){
+  'use strict';
+  /* 職人さん用（見るだけ）：状態は札で見るだけ・写真は大きく見るだけ（書き込みなし）・自分の名前で絞れる */
+  /* 全員同じ画面・同じ操作（白石さん 11/25「iPhone と iPad はほとんど同じ仕様。同じにして端末で表示を変えるだけ」
+     「工場長が iPad がなくても操作できる」「工場長の間違いも気づけば誰かが直せる」）。並べ方だけ画面の幅で変える。
+     ?screen=worker で開いても同じ画面。職人さんは Google のアカウントがないので、だれが変えたかは端末で選んだ名前（kako-me）を送る。
+     WORKER は前の「見るだけ」の作りに戻すときのために残してある（false 固定） */
+  var WORKER=false;var me='';try{me=localStorage.getItem('kako-view')||'';}catch(e){} /* me＝［表示 ▼］で選んだ人（しぼり込み）。だれが操作したかは kako-me（依頼フォームで選んだ名前） */
+  function whoAmI(){try{return localStorage.getItem('kako-me')||'';}catch(e){return '';}}
+  if(WORKER)document.documentElement.className+=' worker';
+  var $=function(id){return document.getElementById(id);};
+  var STATES=['依頼案件','編集済','加工中','納品済み'];
+  var NEXT_LABEL={'依頼案件':'図面を確認した（編集済にする）','編集済':'加工を始める（加工中にする）','加工中':'納品した（納品済みにする）'};
+  var rows=[],thumbCache={};
+  var today=new Date();today.setHours(0,0,0,0);
+  var W='日月火水木金土';
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function parse(s){if(!s)return null;var p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+  function days(s){var x=parse(s);return x?Math.round((x-today)/864e5):null;}
+  function md(s){var x=parse(s);return x?(x.getMonth()+1)+'/'+x.getDate()+'('+W[x.getDay()]+')':'';}
+  function dueText(r){var n=days(r.due);if(n===null)return '納期なし';if(n===0)return '今日 '+md(r.due);if(n===1)return '明日 '+md(r.due);return md(r.due);}
+  function isLate(r){var n=days(r.due);return n!==null&&n<0&&r.status!=='納品済み';}
+  function tag(s){var i=STATES.indexOf(s);return '<span class="tag s'+(i<0?0:i)+'">'+esc(s||'未設定')+'</span>';}
+  function say(t){$('live').textContent=t;}
+  function toast(t){var el=document.createElement('div');el.className='toast';el.textContent=t;document.body.appendChild(el);setTimeout(function(){el.remove();},2200);}
+  function ask(text,yes,no){return new Promise(function(res){var el=document.createElement('div');el.className='dlg';el.innerHTML='<div class="in" role="alertdialog" aria-modal="true"><p>'+esc(text)+'</p><div class="row"><button class="btn quiet" type="button">'+esc(no)+'</button><button class="btn primary" type="button">'+esc(yes)+'</button></div></div>';document.body.appendChild(el);var b=el.querySelectorAll('button');b[1].focus();b[0].onclick=function(){el.remove();res(false);};b[1].onclick=function(){el.remove();res(true);};});}
+
+  $('today').textContent='今日 '+(today.getMonth()+1)+'月'+today.getDate()+'日('+W[today.getDay()]+')';
+
+  /* --- 一覧 --- */
+  var SHORT={'依頼案件':'依頼','編集済':'編集済','加工中':'加工中','納品済み':'納品'};
+  var CARD_NEXT={'依頼案件':'図面を確認した','編集済':'加工を始める','加工中':'納品した'};
+  /* カードの状態：大きいボタン［状態 加工中 ▼ 変える］を押すと、下に4つの状態が開く。選ぶとすぐ変わり、［元に戻す］が出る */
+  function cact(r){var i=STATES.indexOf(r.status),id=esc(r.id);
+    if(WORKER&&i<2){i=0;r={status:'依頼中'};}
+    if(WORKER)return '<div class="cact"><div class="stview s'+(i<0?0:i)+'"><span class="lbl">状態</span><b>'+esc(r.status||'未設定')+'</b></div></div>';
+    return '<div class="cact"><button type="button" class="stbtn s'+(i<0?0:i)+'" data-st="'+id+'" aria-expanded="false"><span class="lbl">状態</span><b>'+esc(r.status||'未設定')+'</b><span class="arr">▼ 変える</span></button>'+
+      '<div class="stmenu" data-menu="'+id+'" hidden>'+STATES.map(function(s,k){var c=s===r.status;return '<button type="button" class="stopt'+(c?' cur':'')+'" data-set="'+id+'" data-to="'+esc(s)+'"><span class="sdot s'+k+'" aria-hidden="true"></span>'+esc(s)+(c?'<small>いまの状態</small>':'')+'</button>';}).join('')+
+      '<button type="button" class="stclose" data-st="'+id+'">閉じる</button></div></div>';}
+  function card(r){
+    var late=isLate(r),n=r.imageCount||0;
+    return '<article class="card'+(late?' late':'')+'"><button type="button" class="open" data-id="'+esc(r.id)+'">'+
+      '<div class="thumb'+(n?' skel':'')+'" data-thumb="'+esc(r.id)+'"><div class="ov">'+(r.rush?'<span class="tag rush">即日</span>':'')+'</div>'+(r.talkCount?'<span class="tcnt" aria-label="やりとり'+r.talkCount+'件">💬 '+r.talkCount+'</span>':'')+(n?'':'<span class="none">写真なし</span>')+(n>1?'<span class="cnt">ほか'+(n-1)+'枚</span>':'')+'</div>'+
+      '<div class="cbody"><dl class="dates"><div><dt>依頼</dt><dd>'+esc(md(r.requestDate)||'—')+'</dd></div><div class="'+(late?'late':'')+'"><dt>納期</dt><dd>'+esc(md(r.due)||'なし')+(r.status==='納品済み'?'':days(r.due)===0?'<span class="dbg today">今日</span>':days(r.due)===1?'<span class="dbg">明日</span>':late?'<span class="dbg late">切れ</span>':'')+'</dd></div></dl>'+
+      (WORKER&&r.status==='加工中'?'<span class="wtag">加工中</span>':'')+(r.status==='納品済み'?'<span class="wtag ok">納品 '+esc(md(r.deliveredAt)||'')+'</span>':'')+'<div class="site">'+esc(r.site||'現場名なし')+'</div><div class="who">'+esc(r.company)+'　'+esc(r.worker)+'さん</div></div></button>'+(WORKER&&r.status==='依頼案件'?'<button type="button" class="wfix" data-fix="'+esc(r.id)+'">直す・写真を入れ替える</button>':'')+cact(r)+'</article>';
+  }
+  /* 一覧：依頼案件・編集済・加工中の見出しごとに並べる（見出しの中は納期の早い順）。納品済みは別の画面 */
+  var view='main',ptab=0,vmode='list';
+  function ymd(x){var m=x.getMonth()+1,dd=x.getDate();return x.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(dd<10?'0':'')+dd;}
+  /* 納品済みの小さいカード：写真・現場名・頼んだ人・納品した日、［状態を戻す ▼］ */
+  function dcard(r){var id=esc(r.id),n=r.imageCount||0;
+    return '<article class="dcard"><button type="button" class="open" data-id="'+id+'"><div class="thumb'+(n?' skel':'')+'" data-thumb="'+id+'">'+(n?'':'<span class="none">写真なし</span>')+'</div>'+
+      '<div class="dcb"><div class="dsite">'+esc(r.site)+'</div></div></button>'+
+      '<div class="drow"><div class="dwho"><span class="ddate">納品 '+esc(md(r.deliveredAt)||'—')+'</span><br>'+esc(r.worker)+'さん</div>'+'</div>'+ /* ［戻す ▼］はやめた（白石さん 11/25：状態を最初の画面で変えるのは iPad の表だけ。戻すのはカードを押した小窓から） */
+      '</article>';}
+  /* カレンダー：今週と来週（月曜始まり）の2週間。日ごとに、その日が納期の依頼。切れは上、先のものは下 */
+  /* カレンダー（月）：［◀ 2026年11月 ▶］［今日］。月曜始まり。iPad は日のマスに3件まで＋「＋n件」、携帯は件数の点。日を押すと下にその日の依頼 */
+  /* カレンダー（2週間の週の表示）：［◀ 11/23(月)〜12/6(日) ▶］［今日］、◀▶で1週ずつ。
+     iPad・PC：曜日ごとの縦の列に、その日が納期の依頼を積む（現場名と名前の2行、状態は左の色の線）。
+     携帯：同じ2週間を、依頼のある日（と今日）だけ日ごとに縦に。上に「納期が近い（2日以内・まだのもの）」 */
+  var calOff=0,calMon=0,calKind='hweek',calOpenDay='',calPop='';
+  try{var savedCal=localStorage.getItem('kako-cal');if(savedCal==='month'||savedCal==='hweek')calKind=savedCal;}catch(err){} /* 選んだ形はその端末で覚える */
+  /* カレンダーで依頼を押すと、一覧と同じカードを小窓で出す（写真を押すと書き込み・［状態 ▼ 変える］・［元に戻す］も一覧と同じ） */
+  function calPopup(){var pr=calPop?rows.filter(function(r){return r.id===calPop;})[0]:null;if(!pr)return '';
+    return '<div class="cpop" data-popx="1"><div class="cpin" role="dialog" aria-modal="true" aria-label="'+esc(pr.site)+'"><div class="cpbar"><span><i class="kid">'+esc(pr.id)+'</i>納期 '+esc(md(pr.due)||'なし')+'</span><button type="button" class="cpx" data-popx="1">× 閉じる</button></div>'+
+      card(pr)+
+      /* 日付と写真は小窓の中だけ（白石さん 11/25「iPad も携帯と同じく1回挟む。日にちと写真の入れ替え・追加はそこに」） */
+      (pr.status==='納品済み'?'<div class="cpdd"><span>納品日 <b>'+esc(md(pr.deliveredAt)||'—')+'</b></span><button type="button" class="cpddb" data-dd="'+esc(pr.id)+'">📅 納品日を直す</button></div>':
+        '<div class="cpdd due"><span>納期 <b>'+esc(md(pr.due)||'なし')+'</b>'+(pr.rush?'<i>即日</i>':'')+'</span><button type="button" class="cpddb" data-due="'+esc(pr.id)+'">📅 納期を変える</button></div>'+
+        '<div class="cpdd ph"><span>写真 <b>'+(pr.imageCount||0)+'枚</b></span><button type="button" class="cpddb" data-fix="'+esc(pr.id)+'">📷 入れ替え・追加</button></div>')+
+      /* やりとり（白石さん 11/25「カードにチャットみたいな欄」）：書いたことと、変えた記録が時刻の順に並ぶ。LINE から開いたときはグループにも送れる */
+      '<div class="talk"><p class="talkh">やりとり</p><div class="talkl" id="talkL"><p class="tlog">読み込み中…</p></div>'+
+        (whoAmI()?'':'<input class="fin talkme" id="talkMe" placeholder="あなたの名前" autocomplete="name">')+
+        '<div class="talki"><textarea class="fin" id="talkIn" rows="2" placeholder="ひとこと（例：寸法が変わりました）"></textarea><button type="button" class="talks" data-talk-send="'+esc(pr.id)+'">送る</button></div>'+
+        '<label class="fchk talkline"><input type="checkbox" id="talkLine"'+(window.KAKO_IN_LINE?' checked':'')+'>LINE のグループにも送る</label></div>'+
+      '</div></div>';}
+  function loadTalk(id){rpc('shiraishiListRequestTalk',id).then(function(res){var box=$('talkL');if(!box||calPop!==id)return;var items=(res&&res.items)||[],me=whoAmI();
+    box.innerHTML=items.length?items.map(function(t){return t.kind==='msg'?'<div class="tm'+(me&&t.by===me?' me':'')+'"><p class="tmh"><b>'+esc(t.by||'名前なし')+'</b><span>'+esc(t.at)+'</span></p><p class="tmb">'+esc(t.text)+'</p></div>':'<p class="tlog">'+esc(t.at)+'　'+esc(t.by||'')+(t.by?'：':'')+esc(t.text)+'</p>';}).join(''):'<p class="tlog">まだやりとりはありません</p>';
+    box.scrollTop=box.scrollHeight;},function(){var box=$('talkL');if(box)box.innerHTML='<p class="tlog">読めませんでした</p>';});}
+  /* LINE のグループにも送る：LINE から開いたとき（LIFF）は、その人の名前でグループに送る（シロの送る数には入らない）。見本では送る中身を出すだけ */
+  /* 加工ID も入れる（白石さん 11/25「加工番号もどこかに入ったほうが事務は分かりやすい」） */
+  function toGroup(r,name,text){var msg='【加工 '+r.id+'】'+r.site+'（'+r.worker+'さんの依頼）\n'+name+'：'+text;
+    if(window.liff&&liff.isInClient&&liff.isInClient()&&liff.sendMessages){return liff.sendMessages([{type:'text',text:msg}]).then(function(){toast('LINE のグループにも送りました');},function(){toast('LINE には送れませんでした');});}
+    return ask('（見本）LINE から開いたときは、グループにこう送ります：\n\n'+msg,'わかった','閉じる');}
+  /* iPad を縦・横に回したら、カレンダーを描き直す（月のマスに出す件数が変わるため） */
+  function isPhone(){return window.innerWidth<=600;}
+  var lastPortrait=window.innerHeight>window.innerWidth,lastPhone=isPhone();
+  window.addEventListener('resize',function(){var p=window.innerHeight>window.innerWidth,ph=isPhone();if(ph!==lastPhone){lastPhone=ph;if(ph&&view==='done')view='main';ptab=0;render();return;}if(p!==lastPortrait){lastPortrait=p;if(vmode==='cal'&&view==='main')render();}});
+  function calendar(list){var t=new Date();t.setHours(0,0,0,0);var start=new Date(t);start.setDate(t.getDate()-((t.getDay()+6)%7)+calOff*7);
+    var days=[];for(var i=0;i<14;i++){var x=new Date(start);x.setDate(start.getDate()+i);days.push(ymd(x));}
+    var undone=list.filter(function(r){return r.status!=='納品済み';});
+    function st(r){var k=STATES.indexOf(r.status);return WORKER?(r.status==='納品済み'?3:0):k;}
+    function label(r){var k=STATES.indexOf(r.status);return WORKER?(r.status==='納品済み'?'加工済み':'加工前'):(['依頼','編集','加工','納品'][k]||'');}
+    function item(r){return '<button type="button" class="citem s'+st(r)+'" data-id="'+esc(r.id)+'"><span class="cst">'+label(r)+'</span><span class="csite">'+esc(r.site)+'</span><span class="cwho">'+esc(r.worker)+'</span>'+(r.rush?'<span class="crush">即</span>':'')+'</button>';}
+    function tall(r){return '<button type="button" class="ctall s'+st(r)+'" data-id="'+esc(r.id)+'"><span class="ts">'+esc(r.site)+(r.rush?'<span class="crush">即</span>':'')+'</span>'+(r.status==='納品済み'?'<span class="zumi" aria-label="納品済み">済</span>':'')+'<span class="tw">'+esc(r.worker)+'</span></button>';}
+    var t2=new Date(t);t2.setDate(t.getDate()+2);var lim=ymd(t2);
+    var near=undone.filter(function(r){return r.due&&r.due<=lim;}).sort(byDue);
+    function item2(r){var n=Math.round((parse(r.due)-t)/864e5);return item(r).replace('</button>','<span class="cdue'+(n<0?' late':'')+'">'+(n<0?'切れ '+md(r.due):n===0?'今日':n===1?'明日':'あさって')+'</span></button>');}
+    var nodue=undone.filter(function(r){return !r.due;}).sort(byDue);
+    var CAL_ONLY=true;
+    var out=CAL_ONLY?'':'<p class="cnote top">'+(WORKER?'<span class="cst s0">加工前</span>まだできていない　<span class="cst s3">加工済み</span>できた（納品済み）':'<span class="cst s0">依頼</span>依頼案件　<span class="cst s1">編集</span>編集済　<span class="cst s2">加工</span>加工中　<span class="cst s3">納品</span>納品済み')+'</p>';
+    if(!CAL_ONLY)out+='<section class="cband late"><h3>納期が近い（2日以内・まだのもの） <b>'+near.length+'</b></h3>'+(near.length?'<div class="citems">'+near.map(item2).join('')+'</div>':'<p class="cnote">いまはありません</p>')+'</section>';
+    var phone=window.innerWidth<=600,kind=phone?'':calKind;
+    var m0=new Date(t.getFullYear(),t.getMonth()+calMon,1);
+    var ttl=phone?esc(md(days[0]).replace(/\(.\)/,''))+'〜'+esc(md(days[6]).replace(/\(.\)/,'')):kind==='month'?m0.getFullYear()+'年'+(m0.getMonth()+1)+'月':kind==='hweek'?esc(md(days[0]))+'〜'+esc(md(days[6])):esc(md(days[0]))+'〜'+esc(md(days[13]));
+    var unit=kind==='month'?'月':'週';
+    out+='<div class="cmh"><button type="button" class="cnav" data-cw="-1" aria-label="前の'+unit+'">◀</button><b>'+ttl+'</b><button type="button" class="cnav" data-cw="1" aria-label="次の'+unit+'">▶</button>'+
+      /* iPad・PC は［週］［月］で切り替え（白石さん 11/25）。最初は週 */
+      (phone?'':'<span class="ckind" role="group" aria-label="カレンダーの形">'+[['hweek','週'],['month','月']].map(function(k){return '<button type="button" data-ck="'+k[0]+'" aria-pressed="'+(kind===k[0])+'">'+k[1]+'</button>';}).join('')+'</span>')+
+      '<button type="button" class="cnav ctoday" data-cw="0">今日</button></div>';
+    /* iPad の形は「横の週・写真つき」（白石さん 11/25。iPad は縦で使う）。月・縦の2週は calKind を変えれば戻せる */
+    /* iPad・PC の月：月曜始まりのマス。マスに「現場名 名前」を1行ずつ。入りきらない日は［＋n件］で、そのマスだけ全部出す */
+    if(kind==='month'){
+      var gs=new Date(m0);gs.setDate(1-((m0.getDay()+6)%7));var weeks=[];
+      for(var wi=0;wi<6;wi++){var wk=[];for(var di=0;di<7;di++){var x=new Date(gs);x.setDate(gs.getDate()+wi*7+di);wk.push(x);}if(wi>0&&wk[0].getMonth()!==m0.getMonth())break;weeks.push(wk);}
+      var MAX=3;
+      var mitem=function(r){return '<button type="button" class="mitem s'+st(r)+'" data-pop="'+esc(r.id)+'">'+(r.status==='納品済み'?'<span class="mz" aria-label="納品済み">済</span>':'')+'<span class="ms">'+esc(r.site)+'</span>'+(r.rush?'<span class="crush">即</span>':'')+'<span class="mw">'+esc(r.worker)+'</span></button>';};
+      out+='<div class="mcal w'+weeks.length+'"><div class="mwh">'+'月火水木金土日'.split('').map(function(c,i){return '<span'+(i>4?' class="we"':'')+'>'+c+'</span>';}).join('')+'</div>'+
+        weeks.map(function(wk){return '<div class="mwk">'+wk.map(function(x,i){var dy=ymd(x),its=list.filter(function(r){return r.due===dy;}).sort(byDue),isT=dy===ymd(t),opn=calOpenDay===dy,n=opn?its.length:MAX;
+          return '<div class="mday'+(x.getMonth()!==m0.getMonth()?' other':'')+(isT?' today':'')+(dy<ymd(t)?' past':'')+(i>4?' we':'')+(opn?' opn':'')+'"><div class="mdh"><span class="mdn">'+x.getDate()+'</span>'+(isT?'<span class="ctd">今日</span>':'')+'</div>'+
+            its.slice(0,n).map(mitem).join('')+(its.length>MAX?'<button type="button" class="cmore" data-more="'+dy+'">'+(opn?'たたむ':'＋'+(its.length-MAX)+'件')+'</button>':'')+'</div>';}).join('')+'</div>';}).join('')+'</div>';
+      return out+calPopup();}
+    /* iPad・PC の横の週（白石さん 11/25「写真を入れるなら週がいい。横で」）：1週間を1日1段。その日の依頼を写真つきで横に並べる（1段に5件まで）。
+       押すと月と同じ小窓のカード（写真を押すと書き込み・状態を変える） */
+    var hchip=function(r){var n=r.imageCount||0;return '<button type="button" class="ctall hchip s'+st(r)+'" data-pop="'+esc(r.id)+'"><span class="hph'+(n?' skel':'')+'"'+(n?' data-thumb="'+esc(r.id)+'"':'')+'>'+(n?'':'<span class="hnone">写真なし</span>')+(r.rush?'<span class="hrush">即日</span>':'')+'</span>'+(r.status==='納品済み'?'<span class="zumi" aria-label="納品済み">済</span>':'')+'<span class="ts">'+esc(r.site)+'</span><span class="tw">'+esc(r.worker)+'</span></button>';};
+    if(kind==='hweek'){
+      out+='<div class="hweek">'+days.slice(0,7).map(function(dy,i){var its=list.filter(function(r){return r.due===dy;}).sort(byDue),isT=dy===ymd(t);
+        return '<div class="hrow'+(isT?' today':'')+(dy<ymd(t)?' past':'')+(i>4?' we':'')+'"><div class="hd"><span class="pw">'+'月火水木金土日'.charAt(i)+'</span><span class="hn">'+esc(md(dy).replace(/\(.\)/,''))+'</span>'+(isT?'<span class="ctd">今日</span>':'')+'</div><div class="hi">'+(its.length?its.map(hchip).join(''):'<span class="pnone">—</span>')+'</div></div>';}).join('')+'</div>';
+      return out+calPopup();}
+    if(phone){
+      /* 携帯：14日を全部、1日1行。左に曜日と日、右にその日の依頼（現場名と名前）。依頼のない日は細い行 */
+      /* 携帯は1週間（◀▶で1週ずつ） */
+      [0].forEach(function(o){var wk=days.slice(o,o+7);
+        out+='<div class="prow-h" hidden>'+esc(md(wk[0]))+' 〜 '+esc(md(wk[6]))+'</div><div class="pweek">'+wk.map(function(dy,i){var its=list.filter(function(r){return r.due===dy;}).sort(byDue),isT=dy===ymd(t);
+          return '<div class="prow'+(isT?' today':'')+(dy<ymd(t)?' past':'')+(its.length?'':' none')+'"><div class="pd'+(i>4?' we':'')+'"><span class="pw">'+'月火水木金土日'.charAt(i)+'</span><span class="pn">'+(+dy.slice(8,10))+'</span></div><div class="pi pch">'+(its.length?its.map(hchip).join(''):'<span class="pnone">—</span>')+'</div></div>';}).join('')+'</div>';});
+      /* 携帯も iPad の週と同じく写真つきで横に並べる（白石さん 11/25）。多い日は指で横に送る。押すと同じ小窓のカード */
+      out+=calPopup();
+    }else{
+      [0,7].forEach(function(o){var wk=days.slice(o,o+7);
+        out+='<div class="cweek">'+wk.map(function(dy,i){var its=list.filter(function(r){return r.due===dy;}).sort(byDue),isT=dy===ymd(t);
+          return '<div class="wcol'+(isT?' today':'')+(dy<ymd(t)?' past':'')+(i>4?' we':'')+'"><div class="wh"><span class="wd">'+'月火水木金土日'.charAt(i)+'</span><span class="wn">'+esc(md(dy).replace(/\(.\)/,''))+'</span>'+(isT?'<span class="ctd">今日</span>':'')+'</div>'+its.map(tall).join('')+'</div>';}).join('')+'</div>';});
+    }
+    if(!CAL_ONLY&&nodue.length)out+='<section class="cband"><h3>納期なし <b>'+nodue.length+'</b></h3><div class="citems">'+nodue.map(item).join('')+'</div></section>';
+    if(!CAL_ONLY)out+='<p class="cnote">'+(WORKER?'押すと写真が開きます。':'押すと写真と書き込みが開きます。')+'</p>';
+    return out;}
+  function byDue(a,b){return (a.due||'9999').localeCompare(b.due||'9999')||(b.rush-a.rush)||a.id.localeCompare(b.id);}
+  function setView(v){view=v;render();window.scrollTo(0,0);}
+  function mine(){return rows.filter(function(r){return !me||r.worker===me;});}
+  function render(){
+    var all=rows;rows=mine();
+    try{
+    var isDone=view==='done',done=rows.filter(function(r){return r.status==='納品済み';});
+    $('title').textContent=isDone?'納品済み':'加工管理';
+    /* 上の段：［＋ 加工を依頼する］（だれでも）。2段目：［表示 ▼］と［納品済みを見る］ */
+    var names=all.map(function(r){return r.worker;}).filter(function(v,i,a){return v&&a.indexOf(v)===i;}).sort();
+    $('who').innerHTML='<label for="meSel">表示</label><select id="meSel"><option value="">全員の依頼</option>'+names.map(function(n){return '<option'+(n===me?' selected':'')+' value="'+esc(n)+'">'+esc(n)+'さんの依頼</option>';}).join('')+'</select>'+
+      (isDone||isPhone()?'':'<button class="btn quiet" type="button" id="goDone">納品済み（'+done.length+'件）</button>');
+    $('meSel').onchange=function(){me=this.value;try{localStorage.setItem('kako-view',me);}catch(e){}render();};
+    $('viewbar').innerHTML=isDone?'<button class="btn quiet" type="button" id="goMain">← 加工管理に戻る</button>':'<button class="btn primary reqbtn" type="button" id="goReq">＋ 加工を依頼する</button>';
+    if(isDone)$('goMain').onclick=function(){setView('main');};else if($('goDone'))$('goDone').onclick=function(){setView('done');};
+    if(!isDone){$('vt').innerHTML='<div class="vtabs" role="tablist"><button type="button" role="tab" data-vt="list" aria-selected="'+(vmode==='list')+'">一覧</button><button type="button" role="tab" data-vt="cal" aria-selected="'+(vmode==='cal')+'">カレンダー</button></div>';}else $('vt').innerHTML='';
+    if($('goReq'))$('goReq').onclick=function(){if(window.openRequestForm)window.openRequestForm();};
+    var html;
+    /* 納品済み：納品した日の新しい順に20件 */
+    if(isDone){var list=done.slice().sort(function(a,b){return (b.deliveredAt||'').localeCompare(a.deliveredAt||'')||byDue(b,a);}).slice(0,20);
+      html=list.length?'<p class="dnote">納品した日の新しい順に'+list.length+'件'+(done.length>20?'（全部で'+done.length+'件）':'')+'</p><div class="dgrid">'+list.map(dcard).join('')+'</div>':'<p class="empty">納品済みの依頼はまだありません。</p>';}
+    /* 3列：依頼案件｜編集済｜加工中。列の上に状態の見出し（タブの形）、その下にカードを縦に積む（納期の早い順） */
+    /* 職人さん用は2つ：依頼案件と編集済は職人さんから見ると同じなので「依頼中」にまとめる */
+    /* 携帯（幅600px以下）は「加工前｜加工済み」の2つ、iPad・PC は「依頼案件｜編集済｜加工中」の3列（白石さん 11/25）。URL は1つで、画面の幅で自動 */
+    else{var groups=(WORKER||isPhone())?[['加工前',['依頼案件','編集済','加工中'],0],['加工済み',['納品済み'],3]]:STATES.slice(0,3).map(function(s,k){return [s,[s],k];});
+      /* 携帯の幅では、見出しを切り替えボタンにして、押した状態だけを出す（iPad・PC は横に並べたまま） */
+      if(ptab>=groups.length)ptab=0;
+      /* 携帯の「加工済み」：納品した日の新しい順。納品から1か月のものだけ出す（白石さん 11/25） */
+      var glist=function(g){var list=rows.filter(function(r){return g[1].indexOf(r.status)>=0;}).sort(byDue);
+        if(g[2]===3){var m=new Date();m.setHours(0,0,0,0);m.setMonth(m.getMonth()-1);var lim=ymd(m);list=list.filter(function(r){return (r.deliveredAt||'')>=lim;}).sort(function(a,b){return (b.deliveredAt||'').localeCompare(a.deliveredAt||'')||byDue(b,a);});}
+        return list;};
+      html='<div class="ptabs" role="tablist">'+groups.map(function(g,gi){var c=glist(g).length;return '<button type="button" role="tab" class="ptab s'+g[2]+'" data-ptab="'+gi+'" aria-selected="'+(gi===ptab)+'">'+g[0]+'<b>'+c+'</b></button>';}).join('')+'</div>'+
+      '<div class="board'+(WORKER?' b2':'')+'">'+groups.map(function(g,gi){var list=rows.filter(function(r){return g[1].indexOf(r.status)>=0;}).sort(byDue);
+      list=glist(g);
+      return '<section class="col'+(gi===ptab?' pon':'')+'" aria-label="'+g[0]+'"><h2 class="colh s'+g[2]+'">'+g[0]+'<b>'+list.length+'</b></h2>'+(list.length?list.map(card).join(''):'<p class="empty">いまはありません</p>')+'</section>';}).join('')+'</div>';}
+    /* カレンダーは納期の日に出す。納品済みも「済」の印つきで出す（白石さん 11/25：納期より先に納品したものも消えないように） */
+    if(!isDone&&vmode==='cal')html=calendar(rows);
+    else html+=calPopup();
+    $('list').innerHTML=html;$('line').textContent='';
+    if(calPop&&$('talkL'))loadTalk(calPop);
+    loadThumbs();
+    }finally{rows=all;}
+  }
+  /* 写真：一覧は1枚目だけ。全部まとめて同時に頼み、来たものから出す（宮本さん版は2枚ずつ順番） */
+  function loadThumbs(){
+    Array.prototype.forEach.call(document.querySelectorAll('[data-thumb]'),function(box){
+      var id=box.getAttribute('data-thumb'),r=rows.filter(function(x){return x.id===id;})[0];if(!r||!r.imageCount)return;
+      var key=id+'-f0';
+      function put(data){box.classList.remove('skel');box.insertAdjacentHTML('afterbegin','<img alt="" src="data:image/jpeg;base64,'+data+'">');}
+      if(thumbCache[key]){put(thumbCache[key]);return;}
+      rpc('shiraishiThumbnailManagerCardPhoto',{caseId:id,fileId:key}).then(function(res){thumbCache[key]=res.data;if(document.body.contains(box))put(res.data);},function(){box.classList.remove('skel');box.insertAdjacentHTML('afterbegin','<span class="none">写真を出せません</span>');});
+    });
+  }
+  /* 一覧は自動で読み直す：1分ごと（画面が見えていて、依頼を開いていないとき）・iPad の画面に戻ったとき・一覧へ戻ったとき */
+  var loading=false,first=true;
+  function hm(){var x=new Date(),m=x.getMinutes();return x.getHours()+':'+(m<10?'0':'')+m;}
+  function load(){if(loading)return Promise.resolve();loading=true;if(first)$('line').textContent='読み込み中…';
+    var before={};rows.forEach(function(r){before[r.id]=1;});
+    return rpc('shiraishiListManagerRequests').then(function(d){
+      var added=first?0:d.filter(function(r){return !before[r.id];}).length;rows=d;first=false;
+      if($('detail').hidden)render();
+      $('updated').textContent=hm()+' に更新（1分ごとに自動）';
+      if(added)toast('新しい依頼が'+added+'件来ました');
+      say(rows.length+'件の依頼を読み込みました');
+    }).catch(function(e){$('updated').textContent=hm()+' は読み込めませんでした。1分後にもう一度読みます';if(first)$('line').textContent='読み込めませんでした。少し待つと、もう一度読みます。';}).then(function(){loading=false;});}
+  setInterval(function(){if(!document.hidden&&$('detail').hidden&&$('viewer').hidden&&!calPop)load();},60000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&$('detail').hidden)load();});
+  function menu(id,open){Array.prototype.forEach.call(document.querySelectorAll('[data-menu]'),function(m){var me=m.getAttribute('data-menu')===id&&open;m.hidden=!me;});Array.prototype.forEach.call(document.querySelectorAll('.stbtn'),function(b){var me=b.getAttribute('data-st')===id&&open;b.setAttribute('aria-expanded',String(me));b.querySelector('.arr').textContent=me?'▲ 閉じる':'▼ 変える';});}
+  $('vt').onclick=function(e){var b=e.target.closest('[data-vt]');if(b){vmode=b.getAttribute('data-vt');calPop='';render();window.scrollTo(0,0);}};
+  $('list').onclick=function(e){var cw=e.target.closest('[data-cw]');if(cw){var v=+cw.getAttribute('data-cw');if(calKind==='month'&&window.innerWidth>600){calMon=v===0?0:calMon+v;}else{calOff=v===0?0:calOff+v;}calOpenDay='';calPop='';render();return;}
+    var px=e.target.closest('[data-popx]');if(px&&(px.tagName==='BUTTON'||e.target===px)){calPop='';render();return;}
+    var pp=e.target.closest('[data-pop]');if(pp){calPop=pp.getAttribute('data-pop');render();return;}
+    var ck=e.target.closest('[data-ck]');if(ck){calKind=ck.getAttribute('data-ck');calOpenDay='';calPop='';try{localStorage.setItem('kako-cal',calKind);}catch(err){}render();return;}
+    var mo=e.target.closest('[data-more]');if(mo){var dd=mo.getAttribute('data-more');calOpenDay=calOpenDay===dd?'':dd;render();return;}var pt=e.target.closest('[data-ptab]');if(pt){ptab=+pt.getAttribute('data-ptab');render();window.scrollTo(0,0);return;}var o=e.target.closest('[data-st]');if(o){var id=o.getAttribute('data-st'),m=document.querySelector('[data-menu="'+id+'"]');menu(id,m&&m.hidden);return;}
+    var ts=e.target.closest('[data-talk-send]');if(ts){var tid=ts.getAttribute('data-talk-send'),tr=rows.filter(function(x){return x.id===tid;})[0],tx=($('talkIn').value||'').trim();if(!tr||!tx){$('talkIn').focus();return;}
+      var nm=whoAmI();if(!nm){nm=(($('talkMe')||{}).value||'').trim();if(!nm){$('talkMe').focus();toast('名前を入れてください');return;}try{localStorage.setItem('kako-me',nm);}catch(err){}}
+      var line=$('talkLine').checked;ts.disabled=true;rpc('shiraishiAddRequestTalk',{caseId:tid,text:tx,by:nm}).then(function(){tr.talkCount=(tr.talkCount||0)+1;$('talkIn').value='';ts.disabled=false;loadTalk(tid);if(line)toGroup(tr,nm,tx);},function(){ts.disabled=false;toast('送れませんでした。もう一度押してください。');});return;}
+    var dq=e.target.closest('[data-dd]');if(dq){openDeliv(dq.getAttribute('data-dd'));return;}
+    var du=e.target.closest('[data-due]');if(du){var dr=rows.filter(function(x){return x.id===du.getAttribute('data-due');})[0];if(dr)careful(dr,'納期').then(function(y){if(y)openDue(dr.id);});return;}
+    var s=e.target.closest('[data-set]');if(s){setTo(s.getAttribute('data-set'),s.getAttribute('data-to'));return;}var fx=e.target.closest('[data-fix]');if(fx){var fr=rows.filter(function(x){return x.id===fx.getAttribute('data-fix');})[0];if(fr&&window.openRequestForm)careful(fr,'写真や依頼の中身').then(function(y){if(y)window.openRequestForm(fr);});return;}var b=e.target.closest('[data-id]');if(b){
+      /* 携帯の一覧：カードを押すと、まず小窓のカード（カレンダーと同じ）。状態を変える・写真を開くのは小窓から（白石さん 11/25「携帯は1つ挟む」） */
+      if((b.closest('.col')||b.closest('.dcard'))&&!b.closest('.cpop')){calPop=b.getAttribute('data-id');render();return;}
+      openCase(b.getAttribute('data-id'));}};
+  function openCase(id){var r=rows.filter(function(x){return x.id===id;})[0];if(!r)return;
+    if(!r.imageCount){openDetail(id);return;}
+    rpc('shiraishiListManagerDetailPhotos',id).then(function(res){var imgs=res.files.filter(function(f){return /^image\//.test(f.mime);});
+      if(!imgs.length){openDetail(id);return;}
+      if(imgs.length===1){openViewer(id,imgs[0].id,imgs[0].name,{site:r.site,files:imgs,index:0,viewOnly:WORKER});return;}
+      openPicker(id,r,imgs);},function(){openDetail(id);});}
+  /* 写真が2枚以上：選んだ写真を上に大きく、選んでいない写真を下に小さく並べる。下を押すと上と入れ替わり、上を押すと書き込みへ */
+  function openPicker(id,r,imgs){var sel=0;
+    var box=document.createElement('div');box.className='ed pick';box.setAttribute('role','dialog');box.setAttribute('aria-label',r.site+' の写真');
+    box.innerHTML='<div class="edbar"><button class="eb" type="button" data-close>← 戻る</button><span class="ttl"></span><span class="pidx">写真 '+imgs.length+'枚</span></div>'+
+      '<div class="pmain"><button type="button" class="pbig" id="pbig"><span class="pbox2 skel" id="pbigbox"></span><span class="pno" id="pbigno"></span><span class="hint">'+(WORKER?'押すと大きく':'押すと書き込み')+'</span></button></div>'+
+      '<div class="pstrip" id="pstrip"></div>';
+    box.querySelector('.ttl').textContent=r.site;document.body.appendChild(box);
+    box.querySelector('[data-close]').onclick=function(){box.remove();};
+    function thumb(k){var f=imgs[k];return thumbCache[f.id]?Promise.resolve(thumbCache[f.id]):rpc('shiraishiThumbnailManagerCardPhoto',{caseId:id,fileId:f.id}).then(function(res){thumbCache[f.id]=res.data;return res.data;});}
+    function put(el,k){thumb(k).then(function(d){if(!el.parentNode)return;el.classList.remove('skel');el.innerHTML='<img alt="'+(k+1)+'枚目" src="data:image/jpeg;base64,'+d+'">';});}
+    function show(){var big=document.getElementById('pbigbox');big.innerHTML='';big.classList.add('skel');document.getElementById('pbigno').textContent=(sel+1)+'枚目';put(big,sel);
+      var strip=document.getElementById('pstrip');strip.innerHTML=imgs.map(function(f,k){return k===sel?'':'<button type="button" class="pcell2" data-k="'+k+'" aria-label="'+(k+1)+'枚目を上に出す"><span class="pbox2 skel" id="ps-'+k+'"></span><span class="pno">'+(k+1)+'</span></button>';}).join('');
+      Array.prototype.forEach.call(strip.querySelectorAll('[data-k]'),function(b){var k=+b.getAttribute('data-k');put(document.getElementById('ps-'+k),k);b.onclick=function(){sel=k;show();};});}
+    document.getElementById('pbig').onclick=function(){openViewer(id,imgs[sel].id,imgs[sel].name,{site:r.site,files:imgs,index:sel,picker:box,viewOnly:WORKER});};
+    show();
+  }
+  /* カードの「次へ」：すぐ画面を変えて保存。まちがえたときは下に出る［元に戻す］で戻す（確認の小窓は出さない） */
+  function setStatus(r,to,from){return rpc('shiraishiUpdateManagerStatus',{caseId:r.id,status:to,by:whoAmI()}).then(null,function(e){r.status=from;render();toast('保存できませんでした。もう一度押してください。');throw e;});}
+  function setTo(id,to){var r=rows.filter(function(x){return x.id===id;})[0];if(!r)return;var from=r.status;if(to===from){menu(id,false);return;}
+    var dfrom=r.deliveredAt;r.status=to;r.deliveredAt=to==='納品済み'?ymd(new Date()):'';render();setStatus(r,to,from).then(function(){if(calPop===r.id)loadTalk(r.id);undoToast('「'+r.site+'」を「'+to+'」にしました',function(){r.status=from;r.deliveredAt=dfrom;render();setStatus(r,from,to).then(function(){toast('「'+from+'」に戻しました');});});},function(){});}
+  function undoToast(t,undo){Array.prototype.forEach.call(document.querySelectorAll('.toast'),function(x){x.remove();});var el=document.createElement('div');el.className='toast';el.setAttribute('role','status');el.innerHTML='<span></span><button type="button">元に戻す</button>';el.firstChild.textContent=t;document.body.appendChild(el);
+    var timer=setTimeout(function(){el.remove();},6000);el.lastChild.onclick=function(){clearTimeout(timer);el.remove();undo();};}
+
+  /* 納期を変える（白石さん 11/25「納期も変わる可能性があるから変更できるといい」）：今日・明日・あさって・日を選ぶ＋即日。
+     変えたらすぐ一覧とカレンダーに出し、下に［元に戻す］。だれが変えたかは端末の名前を送る */
+  function openDue(id){var r=rows.filter(function(x){return x.id===id;})[0];if(!r)return;
+    var t0=new Date();t0.setHours(0,0,0,0);function dd(n){var x=new Date(t0);x.setDate(x.getDate()+n);return ymd(x);}
+    var el=document.createElement('div');el.className='dlg';
+    el.innerHTML='<div class="in duein" role="dialog" aria-modal="true" aria-label="納期を変える"><p class="dueh">納期を変える</p><p class="duesub"></p>'+
+      '<div class="frad" id="dueQ">'+[[dd(0),'今日'],[dd(1),'明日'],[dd(2),'あさって']].map(function(q){return '<button type="button" data-q="'+q[0]+'" aria-checked="'+(r.due===q[0])+'">'+q[1]+'</button>';}).join('')+'</div>'+
+      '<input class="fin" type="date" id="dueIn"><label class="fchk"><input type="checkbox" id="dueRush">即日（急ぎ）</label>'+
+      '<div class="row"><button class="btn quiet" type="button" id="dueNo">やめる</button><button class="btn primary" type="button" id="dueOk">変える</button></div></div>';
+    document.body.appendChild(el);el.querySelector('.duesub').textContent=r.site+'　いまの納期 '+(md(r.due)||'なし')+(r.rush?'（即日）':'');
+    var inp=el.querySelector('#dueIn'),rush=el.querySelector('#dueRush');inp.value=r.due||'';rush.checked=!!r.rush;
+    function mark(){Array.prototype.forEach.call(el.querySelectorAll('[data-q]'),function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-q')===inp.value));});}
+    Array.prototype.forEach.call(el.querySelectorAll('[data-q]'),function(b){b.onclick=function(){inp.value=b.getAttribute('data-q');mark();};});
+    inp.onchange=mark;
+    el.querySelector('#dueNo').onclick=function(){el.remove();};
+    el.onclick=function(e){if(e.target===el)el.remove();};
+    el.querySelector('#dueOk').onclick=function(){var nd=inp.value,nr=rush.checked;el.remove();if(nd===(r.due||'')&&nr===!!r.rush)return;
+      var od=r.due,orr=r.rush;r.due=nd;r.rush=nr;render();
+      function save(d,u){return rpc('shiraishiUpdateManagerDue',{caseId:r.id,due:d,rush:u,by:whoAmI()});}
+      save(nd,nr).then(function(){if(calPop===r.id)loadTalk(r.id);undoToast('「'+r.site+'」の納期を '+(md(nd)||'なし')+(nr?'（即日）':'')+' にしました',function(){r.due=od;r.rush=orr;render();save(od,orr).then(function(){toast('納期を元に戻しました');});});},
+        function(){r.due=od;r.rush=orr;render();toast('保存できませんでした。もう一度押してください。');});};
+  }
+  /* 納品日を直す（白石さん 11/25「カードを押して開く画面で設定できるといい」）：今日・昨日・おととい・日を選ぶ。［元に戻す］つき */
+  function openDeliv(id){var r=rows.filter(function(x){return x.id===id;})[0];if(!r)return;
+    var t0=new Date();t0.setHours(0,0,0,0);function dd(n){var x=new Date(t0);x.setDate(x.getDate()+n);return ymd(x);}
+    var el=document.createElement('div');el.className='dlg';
+    el.innerHTML='<div class="in duein" role="dialog" aria-modal="true" aria-label="納品日を直す"><p class="dueh">納品日を直す</p><p class="duesub"></p>'+
+      '<div class="frad">'+[[dd(0),'今日'],[dd(-1),'昨日'],[dd(-2),'おととい']].map(function(q){return '<button type="button" data-q="'+q[0]+'" aria-checked="'+(r.deliveredAt===q[0])+'">'+q[1]+'</button>';}).join('')+'</div>'+
+      '<input class="fin" type="date" id="ddIn">'+
+      '<div class="row"><button class="btn quiet" type="button" id="ddNo">やめる</button><button class="btn primary" type="button" id="ddOk">直す</button></div></div>';
+    document.body.appendChild(el);el.querySelector('.duesub').textContent=r.site+'　いまの納品日 '+(md(r.deliveredAt)||'なし');
+    var inp=el.querySelector('#ddIn');inp.value=r.deliveredAt||'';inp.max=dd(0);
+    function mark(){Array.prototype.forEach.call(el.querySelectorAll('[data-q]'),function(b){b.setAttribute('aria-checked',String(b.getAttribute('data-q')===inp.value));});}
+    Array.prototype.forEach.call(el.querySelectorAll('[data-q]'),function(b){b.onclick=function(){inp.value=b.getAttribute('data-q');mark();};});
+    inp.onchange=mark;
+    el.querySelector('#ddNo').onclick=function(){el.remove();};
+    el.onclick=function(e){if(e.target===el)el.remove();};
+    el.querySelector('#ddOk').onclick=function(){var nd=inp.value;el.remove();if(!nd||nd===(r.deliveredAt||''))return;
+      var od=r.deliveredAt;r.deliveredAt=nd;render();
+      function save(d){return rpc('shiraishiUpdateDeliveredDate',{caseId:r.id,deliveredAt:d,by:whoAmI()});}
+      save(nd).then(function(){if(calPop===r.id)loadTalk(r.id);undoToast('「'+r.site+'」の納品日を '+md(nd)+' にしました',function(){r.deliveredAt=od;render();save(od).then(function(){toast('納品日を元に戻しました');});});},
+        function(){r.deliveredAt=od;render();toast('保存できませんでした。もう一度押してください。');});};
+  }
+  /* 加工中の依頼を直すときは、先に確かめる（白石さん 11/25「加工中です。本当に変えていいですか？みたいな注意」） */
+  function careful(r,what){if(r.status!=='加工中')return Promise.resolve(true);
+    return ask('「'+r.site+'」はいま加工中です。'+what+'を本当に変えていいですか？（工場にも声をかけてください）','変える','やめる');}
+  /* --- 詳細 --- */
+  var cur=null,saving=false;
+  function openDetail(id){cur=rows.filter(function(r){return r.id===id;})[0];if(!cur)return;$('detail').hidden=false;$('detail').scrollTop=0;drawDetail();$('back').focus();loadPhotos(cur.id);}
+  /* 加工のページ：iPad の1画面に収める（スクロールなし）。横向き＝左に大きい写真・右に状態と大事なこと。縦向き＝上に写真・下に情報 */
+  function drawDetail(){
+    var r=cur,late=isLate(r),dn=days(r.due);
+    $('dTitle').textContent=r.site+'　'+r.company+'　'+r.worker+'さん';
+    $('dBody').innerHTML='<div class="dv">'+
+      '<div class="dv-photo"><div id="phArea"><div class="hero"><div class="box skel"></div></div></div></div>'+
+      '<div class="dv-info">'+
+        '<div class="dpanel"><div class="dlab">状態（押すと変わります）</div><div class="seg">'+STATES.map(function(s,k){return '<button type="button" class="sg s'+k+'" data-to="'+esc(s)+'" aria-pressed="'+(s===r.status)+'">'+esc(s)+'</button>';}).join('')+'</div></div>'+
+        '<dl class="dates big"><div><dt>依頼日</dt><dd>'+esc(md(r.requestDate)||'—')+'</dd></div><div class="'+(late?'late':'')+'"><dt>納期'+(dn===0?'・今日':dn===1?'・明日':late?'・切れ':'')+(r.rush?'・即日':'')+'</dt><dd>'+esc(md(r.due)||'なし')+'</dd></div></dl>'+
+        '<dl class="kv2"><dt>納品先</dt><dd>'+esc(r.destination||'未設定')+'</dd><dt>頼んだ人</dt><dd>'+esc(r.company)+'　'+esc(r.worker)+'さん</dd><dt>メモ</dt><dd class="m">'+esc(r.memo||'なし')+'</dd></dl>'+
+        '<p class="phcap" id="phTitle"></p>'+
+        '<details class="more2"><summary>そのほかの情報</summary><dl class="kv2"><dt>加工ID</dt><dd>'+esc(r.id)+'</dd><dt>顧客</dt><dd>'+esc(r.customer||'未設定')+'</dd><dt>工事との関係</dt><dd>'+esc(r.relation||'未設定')+'</dd><dt>依頼の区分</dt><dd>'+esc(r.category||'未設定')+'</dd><dt>受けた方法</dt><dd>'+esc(r.method||'未設定')+'</dd></dl></details>'+
+      '</div></div>';
+    Array.prototype.forEach.call($('dBody').querySelectorAll('[data-to]'),function(b){if(WORKER){b.disabled=true;return;}b.onclick=function(){change(b.getAttribute('data-to'));};});
+  }
+  /* 状態を変える：すぐ変えて保存。まちがえたら下の［元に戻す］ */
+  function change(to){var r=cur;if(!r||saving||to===r.status)return;var from=r.status;saving=true;
+    r.status=to;drawDetail();restorePhotos();
+    setStatus(r,to,from).then(function(){saving=false;if(cur===r){drawDetail();restorePhotos();}
+      undoToast('「'+to+'」にしました',function(){r.status=from;if(cur===r){drawDetail();restorePhotos();}setStatus(r,from,to).then(function(){toast('「'+from+'」に戻しました');});});},
+      function(){saving=false;if(cur===r){drawDetail();restorePhotos();}});
+  }
+  var photoHtml='';
+  function restorePhotos(){if(photoHtml&&$('phArea')){$('phArea').innerHTML=photoHtml;bindPhotos();}}
+  function loadPhotos(id){photoHtml='';
+    rpc('shiraishiListManagerDetailPhotos',id).then(function(res){if(!cur||cur.id!==id)return;
+      var imgs=res.files.filter(function(f){return /^image\//.test(f.mime);}),pdfs=res.files.filter(function(f){return f.mime==='application/pdf';});
+      $('phTitle').textContent='写真 '+imgs.length+'枚'+(pdfs.length?'・PDF '+pdfs.length+'件':'')+'（下の小さい写真を押すと切り替わります）';
+      var f0=imgs[0];
+      var html=(imgs.length?'<button type="button" class="hero" id="hero" data-file="'+esc(f0.id)+'" data-name="'+esc(f0.name)+'"><div class="box skel" id="heroBox"></div><span class="hint">押すと書き込み（指2本で拡大）</span></button>'+
+        (imgs.length>1?'<div class="strip">'+imgs.map(function(f,k){return '<button type="button" class="ph" data-pick="'+esc(f.id)+'" data-name="'+esc(f.name)+'" aria-current="'+(k===0)+'"><div class="box skel" id="b-'+esc(f.id)+'"></div><span>'+(k+1)+'枚目</span></button>';}).join('')+'</div>':''):'<p>写真はありません。</p>')+
+        pdfs.map(function(f){return '<p class="pdf"><i>PDF</i>'+esc(f.name)+'（本物ではここから開く）</p>';}).join('');
+      $('phArea').innerHTML=html;photoHtml=html;bindPhotos();
+      imgs.forEach(function(f){var key=f.id;
+        (thumbCache[key]?Promise.resolve({data:thumbCache[key]}):rpc('shiraishiThumbnailManagerCardPhoto',{caseId:id,fileId:f.id})).then(function(res){thumbCache[key]=res.data;var b=$('b-'+f.id);if(b){b.classList.remove('skel');b.innerHTML='<img alt="" src="data:image/jpeg;base64,'+res.data+'">';}
+          if($('hero')&&$('hero').getAttribute('data-file')===f.id)showHero(f.id);photoHtml=$('phArea')?$('phArea').innerHTML:photoHtml;});});
+    });}
+  function showHero(fid){var h=$('heroBox');if(!h||!thumbCache[fid])return;h.classList.remove('skel');h.innerHTML='<img alt="" src="data:image/jpeg;base64,'+thumbCache[fid]+'">';}
+  function bindPhotos(){
+    if($('hero'))$('hero').onclick=function(){openViewer(cur.id,this.getAttribute('data-file'),this.getAttribute('data-name'));};
+    Array.prototype.forEach.call(document.querySelectorAll('#phArea [data-pick]'),function(b){b.onclick=function(){var fid=b.getAttribute('data-pick');$('hero').setAttribute('data-file',fid);$('hero').setAttribute('data-name',b.getAttribute('data-name'));
+      Array.prototype.forEach.call(document.querySelectorAll('#phArea [data-pick]'),function(x){x.setAttribute('aria-current',String(x===b));});
+      var h=$('heroBox');h.innerHTML='';h.classList.add('skel');showHero(fid);photoHtml=$('phArea').innerHTML;};});}
+  $('back').onclick=function(){$('detail').hidden=true;cur=null;render();load();};
+
+  /* --- 図面を大きく見る・書き込む ---
+     写真を画面いっぱいに出す。見るときも書くときも同じ画面で、指2本＝拡大・縮小・移動（iPad の写真と同じ）。
+     見るとき：指1本＝動かす。［書き込む］を押すと、指1本＝書く に切り替わる。ボタンは上の細い1段だけ。 */
+  var ed=null;
+  function openViewer(caseId,fileId,name,ctx){ctx=ctx||null;if(ctx)ctx.caseId=caseId;
+    var box=document.createElement('div');box.className='ed';box.setAttribute('role','dialog');box.setAttribute('aria-label',name);
+    box.innerHTML='<div class="edbar"><button class="eb" type="button" data-close>← 戻る</button><span class="ttl"></span></div><p class="edload">図面を読み込み中…</p>';
+    box.querySelector('.ttl').textContent=name;document.body.appendChild(box);
+    box.querySelector('[data-close]').onclick=function(){box.remove();};
+    rpc('shiraishiReadManagerAttachment',{caseId:caseId,fileId:fileId}).then(function(res){if(!document.body.contains(box))return;
+      var img=new Image();img.onload=function(){box.remove();openStage(img,name,ctx);};img.src='data:'+res.mime+';base64,'+res.data;},
+      function(){var p=box.querySelector('.edload');if(p)p.textContent='図面を読み込めませんでした。戻って、もう一度押してください。';});
+  }
+  function openStage(vImg,name,ctx){
+    var colors=[['黒','#000000'],['赤','#e00000'],['青','#005bdb']],widths=[['細い',1],['ふつう',2],['太い',4]],toolsDef=[['ペン','stroke'],['直線','line'],['四角','rect']];
+    var box=document.createElement('div');box.className='ed';box.setAttribute('role','dialog');box.setAttribute('aria-label',name);
+    box.innerHTML=
+      '<div class="edbar" id="vbar"><button class="eb" type="button" id="back2">← 戻る</button><span class="ttl" id="ttl"></span><button class="eb" type="button" id="fitv">全体を見る</button><span class="sp"></span><button class="eb save" type="button" id="toDraw">書き込む</button></div>'+
+      '<div class="edbar" id="dbar" hidden>'+
+        '<button class="eb" type="button" id="stop">← 戻る</button>'+
+        '<span class="ttl" id="dttl"></span>'+
+        (ctx&&ctx.files.length>1?'<button class="eb" type="button" id="prevP" aria-label="前の写真">◀</button><span class="pidx" id="pidx"></span><button class="eb" type="button" id="nextP" aria-label="次の写真">▶</button>':'')+
+        '<span class="sp"></span>'+
+        '<button class="eb icon" type="button" id="undo" aria-label="ひとつ消す">↶ ひとつ消す</button>'+
+        '<button class="eb icon" type="button" id="redo" aria-label="消したのを戻す">↷ 戻す</button>'+
+        '<button class="eb" type="button" id="fitd">全体</button>'+
+        '<span class="sp"></span>'+
+        '<button class="eb save" type="button" id="save">保存する</button></div>'+
+      '<div class="stage" id="stage"><canvas id="cv"></canvas></div>'+
+      '<p class="edmsg" id="vmsg" role="status" aria-live="polite"></p>'+
+      '<div class="tbar" id="tbar" hidden>'+
+        '<div class="tgrp">'+toolsDef.map(function(t,i){return '<button class="tk" type="button" data-tool="'+t[1]+'" aria-pressed="'+(i===0)+'">'+t[0]+'</button>';}).join('')+'<button class="tk" type="button" id="numBtn" aria-pressed="false" aria-expanded="false">番号</button></div>'+
+        '<div class="tgrp">'+colors.map(function(c,i){return '<button class="tk col" type="button" data-color="'+c[1]+'" aria-pressed="'+(i===0)+'" aria-label="'+c[0]+'"><span class="dot" style="background:'+c[1]+'"></span></button>';}).join('')+'</div>'+
+        '<div class="tgrp">'+widths.map(function(w,i){return '<button class="tk" type="button" data-w="'+w[1]+'" aria-pressed="'+(i===1)+'" aria-label="線の太さ '+w[0]+'"><span class="wl" style="height:'+(w[1]*2+1)+'px"></span>'+w[0]+'</button>';}).join('')+'</div>'+
+        '<label class="tk fill" id="fillL" hidden><input type="checkbox" id="fillW">白でぬる</label>'+
+      '</div>'+
+      '<div class="nrow" id="nrow" hidden>'+Array.from({length:10},function(_,i){return '<button class="tk num" type="button" data-num="'+(i+1)+'" aria-pressed="false" aria-label="番号'+(i+1)+'">'+String.fromCharCode(0x2460+i)+'</button>';}).join('')+'</div>';
+    document.body.appendChild(box);$('ttl').textContent=name;$('dttl').textContent=ctx?ctx.site:name;
+    if(ctx&&ctx.files.length>1){$('pidx').textContent=(ctx.index+1)+' / '+ctx.files.length+'枚';
+      var go=function(k){k=(k+ctx.files.length)%ctx.files.length;(ed&&ed.ops.length?ask('書き込んだ内容はまだ保存していません。消して次の写真に行きますか？','消して行く','やめる'):Promise.resolve(true)).then(function(y){if(!y)return;closeAll();var c={site:ctx.site,files:ctx.files,index:k,picker:ctx.picker,viewOnly:ctx.viewOnly};openViewer(ctx.caseId,ctx.files[k].id,ctx.files[k].name,c);});};
+      $('prevP').onclick=function(){go(ctx.index-1);};$('nextP').onclick=function(){go(ctx.index+1);};}
+    var stage=$('stage'),cv=$('cv'),sc=Math.min(1,2048/Math.max(vImg.naturalWidth,vImg.naturalHeight));cv.width=Math.round(vImg.naturalWidth*sc);cv.height=Math.round(vImg.naturalHeight*sc);var g=cv.getContext('2d');
+    ed={mode:'view',ops:[],redo:[],tool:'stroke',num:0,color:'#000000',w:2,pend:null,pid:null};
+    var v={s:1,tx:0,ty:0},gest=null,pan=null,ptrs={};
+    var HINT_VIEW='指2本で広げると拡大・指1本で動かす',HINT_DRAW='指1本で書く・指2本で拡大や移動';
+    function apply(){var t='translate('+v.tx+'px,'+v.ty+'px) scale('+v.s+')';cv.style.webkitTransform=t;cv.style.transform=t;}
+    function fit(){var W=stage.clientWidth,H=stage.clientHeight,b=Math.min(W/cv.width,H/cv.height);cv.style.width=Math.round(cv.width*b)+'px';cv.style.height=Math.round(cv.height*b)+'px';v.s=1;v.tx=(W-cv.width*b)/2;v.ty=(H-cv.height*b)/2;apply();}
+    function local(x,y){var r=stage.getBoundingClientRect();return {x:x-r.left,y:y-r.top};}
+    function list(){return Object.keys(ptrs).map(function(k){return ptrs[k];});}
+    function startGesture(){var p=list();if(p.length<2)return;var a=local(p[0].x,p[0].y),b=local(p[1].x,p[1].y);
+      gest={d:Math.max(1,Math.sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y))),m:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},s:v.s,tx:v.tx,ty:v.ty};}
+    function moveGesture(){var p=list();if(!gest||p.length<2)return;var a=local(p[0].x,p[0].y),b=local(p[1].x,p[1].y),d=Math.sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y)),m={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      var s=Math.max(1,Math.min(8,gest.s*d/gest.d)),cx=(gest.m.x-gest.tx)/gest.s,cy=(gest.m.y-gest.ty)/gest.s;v.s=s;v.tx=m.x-cx*s;v.ty=m.y-cy*s;apply();}
+    function pt(x,y){var r=cv.getBoundingClientRect();return {x:Math.max(0,Math.min(1,(x-r.left)/r.width)),y:Math.max(0,Math.min(1,(y-r.top)/r.height))};}
+    function inside(x,y){var r=cv.getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;}
+    function paint(o){g.strokeStyle=o.color;g.fillStyle=o.color;g.lineWidth=Math.max(1,Math.max(cv.width,cv.height)/512)*o.w;g.lineCap='round';g.lineJoin='round';
+      if(o.type==='number'){var p=o.pts[0],s=Math.max(24,cv.width/22);g.font='bold '+s+'px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(String.fromCharCode(0x245f+o.num),p.x*cv.width,p.y*cv.height);return;}
+      if(o.type==='rect'){var a=o.pts[0],b=o.pts[1]||a,x=Math.min(a.x,b.x)*cv.width,y=Math.min(a.y,b.y)*cv.height,w=Math.abs(b.x-a.x)*cv.width,h=Math.abs(b.y-a.y)*cv.height;if(o.fill){g.fillStyle='#fff';g.fillRect(x,y,w,h);}g.strokeRect(x,y,w,h);return;}
+      g.beginPath();o.pts.forEach(function(p,i){if(i)g.lineTo(p.x*cv.width,p.y*cv.height);else g.moveTo(p.x*cv.width,p.y*cv.height);});if(o.pts.length===1)g.lineTo(o.pts[0].x*cv.width+.01,o.pts[0].y*cv.height);g.stroke();}
+    function draw(){g.clearRect(0,0,cv.width,cv.height);g.drawImage(vImg,0,0,cv.width,cv.height);ed.ops.forEach(paint);if(ed.pend)paint(ed.pend);
+      $('undo').disabled=!ed.ops.length;$('redo').disabled=!ed.redo.length;
+      $('vmsg').textContent=ed.mode==='view'?HINT_VIEW:(ed.ops.length?'書き込み '+ed.ops.length+'か所（まだ保存していません）':HINT_DRAW);}
+    function setMode(m){ed.mode=m;$('vbar').hidden=m!=='view';$('dbar').hidden=m!=='draw';$('tbar').hidden=m!=='draw';$('nrow').hidden=true;draw();}
+    /* 指の動き：2本＝拡大・移動。1本＝見るときは動かす、書くときは書く（2本目が来たら書きかけは取り消す） */
+    function down(id,x,y){ptrs[id]={x:x,y:y};var n=list().length;
+      if(n===2){ed.pend=null;ed.pid=null;pan=null;draw();startGesture();return;}
+      if(n!==1)return;
+      if(ed.mode==='draw'){if(inside(x,y)){ed.pid=id;ed.pend={type:ed.tool,num:ed.num,color:ed.color,w:ed.w,fill:$('fillW').checked,pts:[pt(x,y)]};draw();}}
+      else pan={id:id,x:x,y:y,tx:v.tx,ty:v.ty};}
+    function move(id,x,y){if(!ptrs[id])return;ptrs[id]={x:x,y:y};if(gest){moveGesture();return;}
+      if(pan&&pan.id===id){v.tx=pan.tx+(x-pan.x);v.ty=pan.ty+(y-pan.y);apply();return;}
+      if(ed.pid===id&&ed.pend){var o=ed.pend;if(o.type==='stroke')o.pts.push(pt(x,y));else if(o.type!=='number')o.pts[1]=pt(x,y);draw();}}
+    function up(id){if(ed.pid===id&&ed.pend&&!gest){ed.ops.push(ed.pend);ed.redo=[];}if(ed.pid===id){ed.pend=null;ed.pid=null;}if(pan&&pan.id===id)pan=null;delete ptrs[id];if(list().length<2)gest=null;draw();}
+    if(window.PointerEvent){
+      stage.onpointerdown=function(e){e.preventDefault();try{stage.setPointerCapture(e.pointerId);}catch(err){}down(e.pointerId,e.clientX,e.clientY);};
+      stage.onpointermove=function(e){e.preventDefault();move(e.pointerId,e.clientX,e.clientY);};
+      stage.onpointerup=stage.onpointercancel=function(e){up(e.pointerId);};
+    }else{
+      var each=function(e,fn){e.preventDefault();for(var i=0;i<e.changedTouches.length;i++){var t=e.changedTouches[i];fn(t.identifier,t.clientX,t.clientY);}};
+      stage.addEventListener('touchstart',function(e){each(e,down);},{passive:false});
+      stage.addEventListener('touchmove',function(e){each(e,move);},{passive:false});
+      stage.addEventListener('touchend',function(e){each(e,function(id){up(id);});},{passive:false});
+      stage.addEventListener('touchcancel',function(e){each(e,function(id){up(id);});},{passive:false});
+    }
+    /* パソコンで試すとき：ホイールで拡大・縮小 */
+    stage.addEventListener('wheel',function(e){e.preventDefault();var p=local(e.clientX,e.clientY),s=Math.max(1,Math.min(8,v.s*(e.deltaY<0?1.15:1/1.15))),cx=(p.x-v.tx)/v.s,cy=(p.y-v.ty)/v.s;v.s=s;v.tx=p.x-cx*s;v.ty=p.y-cy*s;apply();},{passive:false});
+    var TN={stroke:'ペン',line:'直線',rect:'四角'},CN={'#000000':'黒','#e00000':'赤','#005bdb':'青'},WN={1:'細い',2:'ふつう',4:'太い'};
+    function sum(){$('fillL').hidden=ed.tool!=='rect';$('numBtn').setAttribute('aria-pressed',String(ed.tool==='number'));$('numBtn').textContent=ed.tool==='number'?'番号'+String.fromCharCode(0x245f+ed.num):'番号';}
+    $('numBtn').onclick=function(){var o=$('nrow').hidden;$('nrow').hidden=!o;this.setAttribute('aria-expanded',String(o));};
+    function press(sel,btn){Array.prototype.forEach.call(box.querySelectorAll(sel),function(b){b.setAttribute('aria-pressed',String(b===btn));});}
+    Array.prototype.forEach.call(box.querySelectorAll('[data-tool]'),function(b){b.onclick=function(){ed.tool=b.getAttribute('data-tool');press('[data-tool],[data-num]',b);$('nrow').hidden=true;sum();};});
+    Array.prototype.forEach.call(box.querySelectorAll('[data-num]'),function(b){b.onclick=function(){ed.tool='number';ed.num=+b.getAttribute('data-num');press('[data-tool],[data-num]',b);$('nrow').hidden=true;sum();};});
+    Array.prototype.forEach.call(box.querySelectorAll('[data-color]'),function(b){b.onclick=function(){ed.color=b.getAttribute('data-color');press('[data-color]',b);sum();};});
+    Array.prototype.forEach.call(box.querySelectorAll('[data-w]'),function(b){b.onclick=function(){ed.w=+b.getAttribute('data-w');press('[data-w]',b);sum();};});
+    $('undo').onclick=function(){if(ed.ops.length)ed.redo.push(ed.ops.pop());draw();};
+    $('redo').onclick=function(){if(ed.redo.length)ed.ops.push(ed.redo.pop());draw();};
+    $('fitv').onclick=fit;$('fitd').onclick=fit;
+    $('toDraw').onclick=function(){setMode('draw');};
+    function closeAll(){window.removeEventListener('resize',fit);box.remove();ed=null;}
+    $('back2').onclick=closeAll;
+    $('stop').onclick=function(){(ed.ops.length?ask('書き込んだ内容はまだ保存していません。消して戻りますか？','消して戻る','書き込みを続ける'):Promise.resolve(true)).then(function(y){if(y)closeAll();});};
+    $('save').onclick=function(){if(!ed.ops.length){$('vmsg').textContent='まだ何も書いていません。';return;}$('vmsg').textContent='見本なので保存はしません（本物では Google ドライブに保存し、もとの図面も残します）。';};
+    window.addEventListener('resize',fit);
+    if(ctx&&ctx.viewOnly){$('toDraw').hidden=true;if(ctx.files.length>1){$('ttl').textContent=ctx.site+'　'+(ctx.index+1)+' / '+ctx.files.length+'枚';}}
+    sum();fit();setMode(ctx&&ctx.viewOnly?'view':'draw');
+  }
+  window.KAKO={load:load,toast:toast,esc:esc,rows:function(){return rows;},ask:ask,ymd:function(x){return ymd(x);}};
+  load();
+})();
+/* ===== 職人さんの「加工を依頼する」（携帯） =====
+   ほかのフォーム（出面）の決まり（00_平川/フォーム作成_技術仕様書_汎用_2026-11-11.txt の4章）にそろえる：
+   ・横幅は最大430px。1項目＝「項目名（左・固定幅）＋入力（右）」。必ず入れる項目は赤い＊
+   ・会社＝ボタン（押すと名前と現場の候補を作り直す）、名前・現場＝一覧から選ぶ（現場は会社ごとに分ける）
+   ・依頼日の初期値は端末の今日。送るボタンは画面の下。空の必須は項目のすぐ下に赤い1行、いちばん上の空の項目へ動く
+   送る順：shiraishiRegisterWorkerRequest（K-番号が返る）→ 写真を1枚ずつ shiraishiSaveWorkerAttachment
+   直すとき（納品済みになるまで、だれでも）：shiraishiUpdateWorkerRequest・写真を外す shiraishiRemoveWorkerAttachment（どちらも宮本さん版にはまだない） */
+(function(){
+  'use strict';
+  var K=window.KAKO;if(!K)return;
+  var esc=K.esc,$=function(id){return document.getElementById(id);};
+  var COMPANIES=['白石工業','中嶋板金','山下板金工作所'];
+  function load(k){try{return localStorage.getItem(k)||'';}catch(e){return '';}}
+  function save(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+  function day(n){var x=new Date();x.setHours(0,0,0,0);x.setDate(x.getDate()+n);return K.ymd(x);}
+  function rid(){var s='',c='abcdefghijklmnopqrstuvwxyz0123456789';for(var i=0;i<24;i++)s+=c.charAt(Math.floor(Math.random()*c.length));return 'rq'+s;}
+  var photos=[],busy=false,editing=null;
+  /* 候補：見本では依頼のデータから作る。本番は 社員リスト（名前）と 工事管理台帳（見積中〜工事中の現場・元請・工事ID）から */
+  var BOOT=null;
+  function loadBoot(cb){if(BOOT){cb();return;}if(!(window.google&&google.script&&google.script.run)){cb();return;}
+    google.script.run.withSuccessHandler(function(b){if(b&&b.sites)BOOT=b;cb();}).withFailureHandler(function(){cb();}).getKakoBootstrap();}
+  function bootCo(co){return co==='中嶋板金'?'中嶋板金':co;}
+  function names(co){if(BOOT&&BOOT.names&&BOOT.names[co])return BOOT.names[co].slice();return K.rows().filter(function(r){return r.company===co;}).map(function(r){return r.worker;}).filter(function(v,i,a){return v&&a.indexOf(v)===i;}).sort();}
+  function sites(co){if(BOOT)return BOOT.sites.filter(function(s){return s.company===co;}).map(function(s){return {site:s.name,customer:s.customer,id:s.id,status:s.status};});var seen={},out=[];K.rows().forEach(function(r){if(r.company===co&&r.site&&!seen[r.site]){seen[r.site]=1;out.push({site:r.site,customer:r.customer||''});}});return out.sort(function(a,b){return a.site.localeCompare(b.site,'ja');});}
+  function shrink(file){return new Promise(function(ok,ng){var rd=new FileReader();rd.onerror=function(){ng(new Error('写真を読めません'));};
+    rd.onload=function(){var im=new Image();im.onerror=function(){ng(new Error('写真を読めません'));};im.onload=function(){
+      var s=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*s);c.height=Math.round(im.naturalHeight*s);
+      var g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(im,0,0,c.width,c.height);
+      ok({name:(file.name||'写真').replace(/\.[^.]+$/,'')+'.jpg',data:c.toDataURL('image/jpeg',0.82).split(',')[1]});};im.src=rd.result;};rd.readAsDataURL(file);});}
+  function radios(id,vals,cur){return '<div class="frad" id="'+id+'" role="radiogroup">'+vals.map(function(v){return '<button type="button" role="radio" data-v="'+esc(v[0])+'" aria-checked="'+(v[0]===cur)+'">'+esc(v[1]||v[0])+'</button>';}).join('')+'</div>';}
+  function val(id){var b=$(id).querySelector('[aria-checked="true"]');return b?b.getAttribute('data-v'):'';}
+  function bindRad(id,fn){Array.prototype.forEach.call($(id).querySelectorAll('[data-v]'),function(b){b.onclick=function(){Array.prototype.forEach.call($(id).querySelectorAll('[data-v]'),function(x){x.setAttribute('aria-checked',String(x===b));});clearErr(id);if(fn)fn(b.getAttribute('data-v'));};});}
+  function setRad(id,v){var hit=null;Array.prototype.forEach.call($(id).querySelectorAll('[data-v]'),function(b){if(b.getAttribute('data-v')===v)hit=b;});if(!hit)hit=$(id).querySelector('[data-v="other"]');if(hit)hit.click();}
+  function row(label,req,body,id){return '<div class="fr"><label class="fl"'+(id?' for="'+id+'"':'')+'>'+label+(req?'<b>＊</b>':'')+'</label><div class="fv">'+body+'<p class="rerr" id="e-'+(id||'')+'"></p></div></div>';}
+  function err(id,msg){var e=$('e-'+id);if(e)e.textContent=msg;var el=$(id);if(el)el.setAttribute('aria-invalid','true');}
+  function clearErr(id){var e=$('e-'+id);if(e)e.textContent='';var el=$(id);if(el)el.removeAttribute('aria-invalid');}
+  /* 依頼者（白石さん 11/25「会社と名前は出面に倣って」）：出面フォームの「報告者」と同じく、3社の人を会社ごとに分けた1つの一覧（白石が上）。
+     会社のボタンは「現場」の会社を選ぶもの。依頼者の会社は、選んだ人の会社にする */
+  function fillNames(cur){var seen={},known=!cur,html='';
+    COMPANIES.forEach(function(co){var ns=names(co).filter(function(n){if(seen[n])return false;seen[n]=1;return true;});if(!ns.length)return;if(ns.indexOf(cur)>=0)known=true;
+      html+='<optgroup label="'+esc(co)+'">'+ns.map(function(n){return '<option data-co="'+esc(co)+'"'+(n===cur?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</optgroup>';});
+    $('rqMe').innerHTML='<option value="">選んでください</option>'+html+'<option value="__other"'+(!known?' selected':'')+'>一覧にない（入れる）</option>';
+    $('rqMeT').hidden=known;$('rqMeT').value=known?'':cur;}
+  function fillSites(co,cur){var ss=sites(co),known=!cur||ss.some(function(s){return s.site===cur;});
+    var groups={};ss.forEach(function(s){var g=s.status||co;(groups[g]=groups[g]||[]).push(s);});
+    var order=['工事中','準備中','契約確定','見積完了','見積中'].filter(function(g){return groups[g];}).concat(Object.keys(groups).filter(function(g){return ['工事中','準備中','契約確定','見積完了','見積中'].indexOf(g)<0;}));
+    $('rqSite').innerHTML='<option value="">選んでください</option>'+order.map(function(g){return '<optgroup label="'+esc(g)+'">'+groups[g].map(function(s){return '<option value="'+esc(s.site)+'" data-cust="'+esc(s.customer)+'" data-id="'+esc(s.id||'')+'"'+(s.site===cur?' selected':'')+'>'+esc(s.site)+(s.customer?'　'+esc(s.customer):'')+'</option>';}).join('')+'</optgroup>';}).join('')+'<option value="__other"'+(!known?' selected':'')+'>一覧にない（入れる）</option>';
+    $('rqSiteT').hidden=known;$('rqSiteT').value=known?'':cur;
+    var o=$('rqSite').options[$('rqSite').selectedIndex];if(known&&cur&&o&&o.getAttribute('data-cust'))$('rqCust').value=o.getAttribute('data-cust');}
+  function drawPhotos(){$('rqPh').innerHTML=photos.map(function(p,i){return '<div class="rph"><img alt="写真'+(i+1)+'" src="data:image/jpeg;base64,'+p.data+'"><button type="button" data-rm="'+i+'" aria-label="写真'+(i+1)+'を外す">×</button></div>';}).join('');
+    Array.prototype.forEach.call($('rqPh').querySelectorAll('[data-rm]'),function(b){b.onclick=function(){photos.splice(+b.getAttribute('data-rm'),1);drawPhotos();};});
+    $('rqPhCnt').textContent=photos.length?photos.length+'枚':'';}
+  var oldPh=[];
+  function drawOld(){var b=$('rqOld');if(!b)return;if(!oldPh.length){b.innerHTML='';return;}
+    b.innerHTML='<p class="rhelp">いま付いている写真（×で外す）</p><div class="rphs">'+oldPh.map(function(p,i){return '<div class="rph'+(p.off?' off':'')+'">'+(p.data?'<img alt="いまの写真'+(i+1)+'" src="data:image/jpeg;base64,'+p.data+'">':'<span class="rphw">読込中</span>')+(p.off?'<button type="button" class="rback" data-ob="'+i+'" aria-label="写真'+(i+1)+'を戻す">戻す</button><span class="rofft">外す</span>':'<button type="button" data-om="'+i+'" aria-label="写真'+(i+1)+'を外す">×</button>')+'</div>';}).join('')+'</div>';
+    Array.prototype.forEach.call(b.querySelectorAll('[data-om],[data-ob]'),function(x){x.onclick=function(){var i=+(x.getAttribute('data-om')||x.getAttribute('data-ob'));oldPh[i].off=x.hasAttribute('data-om');drawOld();};});}
+  function loadOld(id){oldPh=[];drawOld();rpc('shiraishiListManagerDetailPhotos',id).then(function(res){oldPh=((res&&res.files)||[]).filter(function(x){return String(x.mime||'').indexOf('image/')===0;}).map(function(x){return {id:x.id,data:'',off:false};});drawOld();
+      oldPh.forEach(function(p){rpc('shiraishiThumbnailManagerCardPhoto',{caseId:id,fileId:p.id}).then(function(t){if(t&&t.data){p.data=t.data;drawOld();}},function(){});});},function(){});}
+  window.openRequestForm=function(edit){photos=[];oldPh=[];busy=false;editing=edit||null;
+    var me=load('kako-me'),co=load('kako-company')||COMPANIES[0];if(editing){co=editing.company||co;me=editing.worker||'';}
+    var box=document.createElement('div');box.className='ed rq';box.id='rqBox';box.setAttribute('role','dialog');box.setAttribute('aria-label','加工を依頼する');
+    box.innerHTML='<div class="fband"><button class="eb" type="button" id="rqClose">← やめる</button><span class="ttl">'+(editing?'依頼を直す（'+esc(editing.id)+'）':'加工を依頼する')+'</span></div>'+
+     '<div class="rqbody" id="rqBody"><div class="fwrap">'+
+      row('依頼日',true,'<input class="fin" type="date" id="rqDate" value="'+day(0)+'">','rqDate')+
+      row('依頼者',true,'<select class="fin" id="rqMe"></select><input class="fin" id="rqMeT" aria-label="名前を入れる" hidden>','rqMe')+
+      row('現場',true,radios('rqCo',COMPANIES.map(function(c){return [c,c.replace(/工業$|板金.*$/,'')];}),co).replace('class="frad"','class="frad eq3"'),'rqCo')+
+      row('現場名',true,'<select class="fin" id="rqSite"></select><input class="fin" id="rqSiteT" aria-label="現場名を入れる" hidden>','rqSite')+
+      row('元請',true,'<input class="fin" id="rqCust" autocomplete="off">','rqCust')+
+      row('納期',true,radios('rqDueQ',[[day(0),'今日'],[day(1),'明日'],[day(2),'あさって'],['other','日を選ぶ']],day(1))+'<input class="fin" type="date" id="rqDue" value="'+day(1)+'" hidden><label class="fchk"><input type="checkbox" id="rqRush">即日（急ぎ）</label>','rqDueQ')+
+      row('写真',false,(editing?'<div id="rqOld"></div>':'')+'<label class="rphoto"><input type="file" id="rqFile" accept="image/*" multiple>写真を撮る・選ぶ <span id="rqPhCnt"></span></label>'+(editing?'<p class="rhelp">入れ替えるときは、上の写真を×で外して、新しい写真を撮る・選ぶ。</p>':'')+'<div class="rphs" id="rqPh"></div>','rqFile')+
+      row('加工の内容',false,'<textarea class="fin" id="rqMemo" rows="2"></textarea><p class="rhelp">書かなくても送れます（写真のとおり）。足したいことがあれば、形・寸法・色・板厚・本数など</p>','rqMemo')+
+      '<details class="fmore"><summary>そのほか（ふつうは変えない）</summary>'+
+        row('依頼区分',false,radios('rqCat',[['自社'],['外注'],['卸']],'自社'),'rqCat')+
+        row('受注方法',false,'<select class="fin" id="rqMeth">'+['その他','LINE','電話','FAX','メール','手書き'].map(function(m){return '<option>'+m+'</option>';}).join('')+'</select>','rqMeth')+
+        row('取引先担当',false,'<input class="fin" id="rqContact">','rqContact')+
+      '</details>'+
+     '</div></div>'+
+     '<div class="rqfoot"><p class="rerr" id="rqErr" role="alert"></p><button class="rsend" type="button" id="rqSend">'+(editing?'直して送る':'依頼を送る')+'</button></div>';
+    document.body.appendChild(box);
+    $('rqClose').onclick=function(){if(busy)return;var dirty=photos.length||$('rqMemo').value;(dirty?K.ask('入力した内容を消して、やめますか？','消してやめる','続ける'):Promise.resolve(true)).then(function(y){if(y)box.remove();});};
+    $('rqFile').onchange=function(){var fs=Array.prototype.slice.call(this.files||[]);this.value='';if(!fs.length)return;$('rqPhCnt').textContent='読み込み中…';
+      fs.reduce(function(p,f){return p.then(function(){return shrink(f).then(function(x){photos.push(x);drawPhotos();},function(){});});},Promise.resolve()).then(drawPhotos);};
+    bindRad('rqCo',function(v){fillSites(v,'');$('rqCust').value='';});
+    bindRad('rqDueQ',function(v){$('rqDue').hidden=v!=='other';if(v!=='other')$('rqDue').value=v;});
+    bindRad('rqCat');
+    $('rqMe').onchange=function(){$('rqMeT').hidden=this.value!=='__other';clearErr('rqMe');if(this.value==='__other')$('rqMeT').focus();};
+    $('rqSite').onchange=function(){var o=this.options[this.selectedIndex];$('rqSiteT').hidden=this.value!=='__other';clearErr('rqSite');
+      if(this.value==='__other'){$('rqSiteT').focus();}else if(o&&o.getAttribute('data-cust')){$('rqCust').value=o.getAttribute('data-cust');clearErr('rqCust');}};
+    ['rqMeT','rqSiteT','rqCust','rqMemo'].forEach(function(id){$(id).oninput=function(){clearErr(id==='rqMeT'?'rqMe':id==='rqSiteT'?'rqSite':id);};});
+    fillNames(me);fillSites(co,editing?editing.site:'');
+    if(!BOOT&&window.google&&google.script&&google.script.run){$('rqSite').insertAdjacentHTML('afterend','<p class="rhelp" id="rqBootMsg">台帳から現場を読み込み中…</p>');}
+    loadBoot(function(){var m=$('rqBootMsg');if(m)m.textContent=BOOT?'台帳から読みました（'+BOOT.sites.length+'現場）':'台帳は読めませんでした（見本の一覧を出しています）';if(BOOT){var c=val('rqCo');fillNames(($('rqMe').value==='__other'?$('rqMeT').value:$('rqMe').value)||me);fillSites(c,$('rqSite').value);}});
+    if(editing){var e=editing;$('rqCust').value=e.customer||'';$('rqMemo').value=e.memo||'';$('rqContact').value=e.contact||'';if(e.requestDate)$('rqDate').value=e.requestDate;$('rqRush').checked=!!e.rush;
+      setRad('rqDueQ',e.due);$('rqDue').value=e.due||'';
+      setRad('rqCat',e.category||'自社');if(e.method)$('rqMeth').value=e.method;}
+    if(editing)loadOld(editing.id);
+    $('rqSend').onclick=send;
+  };
+  function send(){if(busy)return;
+    var me=($('rqMe').value==='__other'?$('rqMeT').value:$('rqMe').value).trim(),site=($('rqSite').value==='__other'?$('rqSiteT').value:$('rqSite').value).trim(),
+      cust=$('rqCust').value.trim(),memo=$('rqMemo').value.trim(),due=$('rqDue').value,date=$('rqDate').value,first=null;
+    function need(ok,id,msg){if(!ok){err(id,msg);if(!first)first=id;}}
+    need(me,'rqMe','＊依頼者を選んでください。');need(/^\d{4}-\d{2}-\d{2}$/.test(date),'rqDate','＊依頼日を選んでください。');need(site,'rqSite','＊現場を選んでください。');
+    need(cust,'rqCust','＊元請を入れてください。');need(/^\d{4}-\d{2}-\d{2}$/.test(due),'rqDueQ','＊納期を選んでください。');
+    if(first){$('rqErr').textContent='';var el=$(first);if(el&&el.scrollIntoView)el.scrollIntoView({block:'center'});if(el&&el.focus)el.focus();return;}
+    var dest=editing?(editing.destination||''):''; /* 納品先は職人さんの依頼では聞かない（白石さん 11/25） */
+    var so=$('rqSite').options[$('rqSite').selectedIndex],cid=so&&so.getAttribute('data-id')||'';
+    var mo=$('rqMe').options[$('rqMe').selectedIndex],meCo=mo&&mo.getAttribute('data-co')||val('rqCo'); /* 依頼者の会社＝選んだ人の会社（一覧にない人は現場の会社） */
+    if(!memo)memo='写真のとおり'; /* 加工の内容は任意（白石さん 11/25）。宮本さん版は必須なので、空なら「写真のとおり」を送る */
+    var input={requestId:rid(),relation:'未紐付け',constructionIdFromDaicho:cid,company:meCo,siteCompany:val('rqCo'),worker:me,contact:$('rqContact').value.trim(),requestDate:date,customer:cust,site:site,
+      category:val('rqCat'),method:$('rqMeth').value,due:due,destination:dest,memo:memo,constructionId:'',rush:$('rqRush').checked};
+    busy=true;$('rqSend').disabled=true;$('rqErr').textContent='';$('rqSend').textContent='送っています…';
+    save('kako-me',me);save('kako-company',input.siteCompany);
+    (editing?rpc('shiraishiUpdateWorkerRequest',Object.assign({caseId:editing.id},input)):rpc('shiraishiRegisterWorkerRequest',input)).then(function(res){var id=(res&&res.id)||(editing&&editing.id);var n=0,list=photos.slice(),offs=editing?oldPh.filter(function(p){return p.off;}):[];
+      return offs.reduce(function(p,ph){return p.then(function(){$('rqSend').textContent='写真を外しています…';return rpc('shiraishiRemoveWorkerAttachment',{caseId:id,fileId:ph.id});});},Promise.resolve()).then(function(){return list.reduce(function(p,ph){return p.then(function(){$('rqSend').textContent='写真を送っています… '+(++n)+' / '+list.length;return rpc('shiraishiSaveWorkerAttachment',{caseId:id,name:ph.name,mime:'image/jpeg',data:ph.data});});},Promise.resolve());}).then(function(){return id;});
+    }).then(function(id){busy=false;done(id,input);},function(e){busy=false;$('rqSend').disabled=false;$('rqSend').textContent=editing?'もう一度直して送る':'もう一度送る';$('rqErr').textContent='送れませんでした。電波のよい所で、もう一度押してください。（'+(e&&e.message||'')+'）';});
+  }
+  /* 送ったあと：見出し、送った内容の一覧、［続けて依頼する］［一覧に戻る］（出面フォームの完了画面と同じ形） */
+  function done(id,input){var box=$('rqBox');if(!box)return;
+    $('rqBody').innerHTML='<div class="fwrap rdone"><p class="rok">'+(editing?'直しました':'受け付けました')+'</p><p class="rid">'+esc(id||'')+'</p><dl class="kv2"><dt>会社</dt><dd>'+esc(input.company)+'</dd><dt>名前</dt><dd>'+esc(input.worker)+'</dd><dt>現場</dt><dd>'+esc(input.site)+'</dd><dt>元請</dt><dd>'+esc(input.customer)+'</dd><dt>納期</dt><dd>'+esc(input.due)+(input.rush?'（即日）':'')+'</dd><dt>写真</dt><dd>'+(editing?'外した写真 '+oldPh.filter(function(p){return p.off;}).length+'枚、足した写真 '+photos.length+'枚':photos.length+'枚')+'</dd></dl><p class="rhelp">工場で確認して加工が終わると、一覧の「加工済み」に移ります。</p></div>';
+    box.querySelector('.rqfoot').innerHTML='<div class="rdbtn"><button class="btn quiet" type="button" id="rqAgain">続けて依頼する</button><button class="rsend" type="button" id="rqEnd">一覧に戻る</button></div>';
+    $('rqAgain').onclick=function(){box.remove();window.openRequestForm();};$('rqEnd').onclick=function(){box.remove();};
+    K.load();
+  }
+})();
+
+</script>
+
+</body></html>
