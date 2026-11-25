@@ -896,6 +896,7 @@ textarea.fin{min-height:64px;line-height:1.5}
 }
 /* 新しい依頼をグループに送るときの中身（左寄せ） */
 .rgrp{margin-top:8px}.rgrp .npre{text-align:left}
+.rgmsg{max-width:720px;margin:0 auto 6px;font-size:12px;color:var(--sub)}
 </style>
 
 <div class="wrap">
@@ -1095,20 +1096,38 @@ textarea.fin{min-height:64px;line-height:1.5}
      ① グループに貼ったリンクから開いたとき（LIFF）＝そのグループへ直接送る
      ② それ以外（個人のトーク・Keep・Safari・iPad など）＝LINE の「送る」画面を開いて、送り先を選んでもらう（line.me/R/share）
      送れなかったときは理由を出して、②に切り替える */
-  function lineShare(msg){var u='https://line.me/R/share?text='+encodeURIComponent(msg);
-    if(window.liff&&liff.isInClient&&liff.isInClient()&&liff.openWindow){try{liff.openWindow({url:u,external:false});return;}catch(e){}}
+  /* LINE の中では画面を切り替えない（白石さん 11/25「グループへ送るを押すと真っ白になる」：LINE の中で「送る」画面に飛ぶと白くなる）。
+     送れないときは、送る文を出して［文をコピー］→ LINE に貼って送ってもらう */
+  function copyBox(msg,why){var el=document.createElement('div');el.className='dlg';
+    el.innerHTML='<div class="in duein" role="dialog" aria-modal="true" aria-label="LINE に送る文"><p class="dueh">ここからは直接送れませんでした</p><p class="duesub"></p><pre class="npre"></pre>'+
+      '<div class="row"><button class="btn quiet" type="button" data-x>閉じる</button><button class="btn primary nsend" type="button" data-c>文をコピー</button></div></div>';
+    el.querySelector('.duesub').textContent=(why||'')+'　文をコピーして、LINE のグループに貼って送ってください。（グループに貼ったリンクから開き直すと、次からは直接送れます）';
+    el.querySelector('.npre').textContent=msg;document.body.appendChild(el);
+    el.querySelector('[data-x]').onclick=function(){el.remove();};
+    el.querySelector('[data-c]').onclick=function(){var b=this,done=function(){b.textContent='コピーしました';};
+      try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(msg).then(done,function(){old();});return;}}catch(e){}old();
+      function old(){var t=document.createElement('textarea');t.value=msg;t.setAttribute('readonly','');t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();try{t.setSelectionRange(0,msg.length);}catch(e){}try{document.execCommand('copy');done();}catch(e){b.textContent='長押しでコピーしてください';}t.remove();}};}
+  function lineShare(msg,why){var u='https://line.me/R/share?text='+encodeURIComponent(msg);
+    if(window.liff&&liff.isInClient&&liff.isInClient()){sendNote('LINE の中なので、文のコピーに切り替えました');copyBox(msg,why);return;}
     /* 新しいタブは開かない（白石さん 11/25「Safari を押しても LINE の画面になる」：残ったタブがまた LINE に飛ぶため）。今の画面のまま LINE アプリに渡す */
     var a=document.createElement('a');a.href=u;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();}
   /* 送り先を、画面の上に重なる窓で選ぶ（シェアターゲットピッカー。白石さん 11/25「オンにしよう」）。送ったあとも元の画面のまま。
      LIFF の設定でオンになっていないときは使えないので、そのときは LINE の「送る」画面に切り替える */
   function canPicker(){try{return !!(window.liff&&liff.isApiAvailable&&liff.isApiAvailable('shareTargetPicker'));}catch(e){return false;}}
-  function pickAndSend(msgs,msg){return liff.shareTargetPicker(msgs).then(function(res){toast(res?'LINE に送りました':'送るのをやめました');},function(e){toast('送り先を選べませんでした（'+((e&&e.message)||'')+'）');lineShare(msg);});}
+  function pickAndSend(msgs,msg){return liff.shareTargetPicker(msgs).then(function(res){sendNote(res?'送り先を選んで送りました':'送り先を選ぶ窓で、送るのをやめました');toast(res?'LINE に送りました':'送るのをやめました');},function(e){var w='送り先を選ぶ窓が使えませんでした（'+((e&&(e.code||'')+' '+(e.message||''))||'')+'）。';sendNote(w);lineShare(msg,w);});}
   function lineSend(msg){return lineSendX([{type:'text',text:msg}],msg);}
   /* msgs＝LINE に送る中身（文やカード）、msg＝「送る」画面に渡すときの文（カードは渡せないので文だけ） */
-  function lineSendX(msgs,msg){
-    if(window.liff&&liff.isInClient&&liff.isInClient()&&liff.sendMessages&&window.KAKO_IN_LINE){
-      return liff.sendMessages(msgs).then(function(){toast('LINE のグループに送りました');},function(e){if(canPicker())return pickAndSend(msgs,msg);toast('グループに直接は送れませんでした（'+((e&&e.message)||'')+'）。送り先を選んでください');lineShare(msg);});}
-    if(canPicker())return pickAndSend(msgs,msg);
+  /* どこで止まったか分かるように、最後の送り方と結果を残す（白石さん 11/25「携帯のカードが来ない」の調べ用。完了の画面に出す） */
+  function sendNote(s){window.KAKO_LAST_SEND=s;}
+  window.kakoSendDiag=function(){var c=null;try{c=window.liff&&liff.getContext?liff.getContext():null;}catch(e){}
+    return 'LINE の中：'+(window.liff&&liff.isInClient&&liff.isInClient()?'はい':'いいえ')+'／開いた場所：'+((c&&c.type)||'不明')+'／グループ直送：'+(window.KAKO_IN_LINE?'できる':'できない')+'／送り先を選ぶ窓：'+(canPicker()?'使える':'使えない');};
+  function lineSendX(msgs,msg){sendNote('送る準備中');
+    if(window.liff&&liff.isInClient&&liff.isInClient()&&liff.sendMessages&&window.KAKO_IN_LINE){sendNote('グループへ直接送っています');
+      return liff.sendMessages(msgs).then(function(){sendNote('グループへ直接送りました');toast('LINE のグループに送りました');},function(e){var w='グループへ直接は送れませんでした（'+((e&&(e.code||'')+' '+(e.message||''))||'')+'）。';sendNote(w);if(liff.shareTargetPicker)return pickAndSend(msgs,msg);lineShare(msg,w);});}
+    /* LINE の中（グループのリンク以外から開いた）：送り先を選ぶ窓を必ず試す */
+    if(window.liff&&liff.isInClient&&liff.isInClient()&&liff.shareTargetPicker){sendNote('送り先を選ぶ窓を出しました');return pickAndSend(msgs,msg);}
+    if(canPicker()){sendNote('送り先を選ぶ窓を出しました');return pickAndSend(msgs,msg);}
+    sendNote('LINE の「送る」画面に切り替えました');
     /* Safari など LINE の外：LIFF が使えるページ（GitHub の外枠）なら、最初の1回だけ「LINE でログイン」すると、次からはこの画面のまま送り先を選んで送れる */
     if(window.liff&&liff.isInClient&&!liff.isInClient()&&liff.isLoggedIn&&!liff.isLoggedIn()&&liff.login){
       return ask('LINE にログインすると、次からはこの画面のまま送り先を選んで送れます（最初の1回だけ）。\n今回は LINE アプリに切り替えて送ることもできます。','LINE でログイン','LINE アプリで送る').then(function(y){if(y){try{liff.login({redirectUri:location.href.split('#')[0]});}catch(e){lineShare(msg);}}else lineShare(msg);});}
@@ -1645,7 +1664,9 @@ textarea.fin{min-height:64px;line-height:1.5}
       var rr={id:id,site:input.site,worker:input.worker};
       $('rqBody').insertAdjacentHTML('beforeend','<div class="fwrap rdone rgrp"><p class="rhelp">この内容でグループに送れます'+(urls.length?'（写真 '+urls.length+'枚つき）':'')+'</p><pre class="npre">'+esc(window.kakoLineText(rr,content))+'</pre></div>');
       var f=box.querySelector('.rqfoot');f.insertAdjacentHTML('afterbegin','<button class="rsend rline" type="button" id="rqGrp">グループに送る</button>');
-      $('rqGrp').onclick=function(){var b=this;b.disabled=true;window.kakoLineCard(rr,content,urls).then(function(){b.textContent='グループに送りました';},function(){b.disabled=false;});};
+      f.insertAdjacentHTML('afterbegin','<p class="rhelp rgmsg" id="rqGrpMsg"></p>');
+      $('rqGrp').onclick=function(){var b=this;b.disabled=true;var m=$('rqGrpMsg');var show=function(){if(m&&window.kakoSendDiag)m.textContent=(window.KAKO_LAST_SEND||'')+'（'+window.kakoSendDiag()+'）';};
+        window.kakoLineCard(rr,content,urls).then(function(){show();b.textContent=/送りました/.test(window.KAKO_LAST_SEND||'')?'グループに送りました':'もう一度送る';b.disabled=!/送りました/.test(window.KAKO_LAST_SEND||'');},function(e){show();b.disabled=false;});setTimeout(show,1500);};
     }
     $('rqAgain').onclick=function(){box.remove();window.openRequestForm();};$('rqEnd').onclick=function(){box.remove();};
     K.load();
