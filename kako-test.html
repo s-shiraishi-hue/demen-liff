@@ -869,6 +869,15 @@ textarea.fin{min-height:64px;line-height:1.5}
 .dlg p{white-space:pre-wrap}
 /* 加工ID（事務用） */
 .kid{font-style:normal;font-size:12px;font-weight:700;color:var(--ink);background:#fff;border:1px solid var(--line-strong);border-radius:5px;padding:0 6px;margin-right:8px;font-variant-numeric:tabular-nums}
+/* トーストの［LINE で知らせる］ */
+.toast .tline{background:#06c755;color:#fff}
+/* 依頼を直したあとの［LINE で知らせる］ */
+.rsend.rline{background:#06c755;max-width:720px;margin:0 auto 8px}
+/* iPhone（Safari・LINE の中）で日付の欄が枠からはみ出すのを防ぐ（白石さん 11/25「納期変更の小窓が携帯で枠がずれてる」） */
+.fin[type="date"]{-webkit-appearance:none;appearance:none;display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;min-height:48px;line-height:1.4;text-align:left;background:#fff}
+.fin[type="date"]::-webkit-date-and-time-value{text-align:left;margin:0}
+.dlg .in{min-width:0;box-sizing:border-box}.dlg .in>*{min-width:0;max-width:100%}
+.duein .frad{-webkit-flex-wrap:wrap;flex-wrap:wrap}
 </style>
 
 <div class="wrap">
@@ -1043,9 +1052,22 @@ textarea.fin{min-height:64px;line-height:1.5}
     box.scrollTop=box.scrollHeight;},function(){var box=$('talkL');if(box)box.innerHTML='<p class="tlog">読めませんでした</p>';});}
   /* LINE のグループにも送る：LINE から開いたとき（LIFF）は、その人の名前でグループに送る（シロの送る数には入らない）。見本では送る中身を出すだけ */
   /* 加工ID も入れる（白石さん 11/25「加工番号もどこかに入ったほうが事務は分かりやすい」） */
-  function toGroup(r,name,text){var msg='【加工 '+r.id+'】'+r.site+'（'+r.worker+'さんの依頼）\n'+name+'：'+text;
-    if(window.liff&&liff.isInClient&&liff.isInClient()&&liff.sendMessages){return liff.sendMessages([{type:'text',text:msg}]).then(function(){toast('LINE のグループにも送りました');},function(){toast('LINE には送れませんでした');});}
-    return ask('（見本）LINE から開いたときは、グループにこう送ります：\n\n'+msg,'わかった','閉じる');}
+  /* LINE へ送る文の形（白石さん 11/25）：加工番号／案件名／名前（頼んだ人）／内容 の4行 */
+  function lineMsg(r,content){return '【加工】'+r.id+'\n案件：'+r.site+'\n名前：'+r.worker+'\n内容：'+content;}
+  window.kakoLine=function(r,content){return lineSend(lineMsg(r,content));}; /* 依頼フォーム（別のかたまり）からも使う */
+  function toGroup(r,name,text){return lineSend(lineMsg(r,(name?name+'「':'「')+text+'」'));}
+  /* LINE へ送る（シロの送る数は使わない。送るのは本人の名前）（白石さん 11/25）：
+     ① グループに貼ったリンクから開いたとき（LIFF）＝そのグループへ直接送る
+     ② それ以外（個人のトーク・Keep・Safari・iPad など）＝LINE の「送る」画面を開いて、送り先を選んでもらう（line.me/R/share）
+     送れなかったときは理由を出して、②に切り替える */
+  function lineShare(msg){var u='https://line.me/R/share?text='+encodeURIComponent(msg);
+    if(window.liff&&liff.isInClient&&liff.isInClient()&&liff.openWindow){try{liff.openWindow({url:u,external:false});return;}catch(e){}}
+    var w=null;try{w=window.open(u,'_blank');}catch(e){}if(!w)location.href=u;}
+  function lineSend(msg){
+    if(window.liff&&liff.isInClient&&liff.isInClient()&&liff.sendMessages&&window.KAKO_IN_LINE){
+      return liff.sendMessages([{type:'text',text:msg}]).then(function(){toast('LINE のグループに送りました');},function(e){toast('グループに直接は送れませんでした（'+((e&&e.message)||'')+'）。送り先を選んでください');lineShare(msg);});}
+    if(window.liff&&liff.isInClient&&liff.isInClient())toast('グループに貼ったリンクから開くと、そのグループへ直接送れます。今回は送り先を選んでください');
+    lineShare(msg);return Promise.resolve();}
   /* iPad を縦・横に回したら、カレンダーを描き直す（月のマスに出す件数が変わるため） */
   function isPhone(){return window.innerWidth<=600;}
   var lastPortrait=window.innerHeight>window.innerWidth,lastPhone=isPhone();
@@ -1215,9 +1237,13 @@ textarea.fin{min-height:64px;line-height:1.5}
   /* カードの「次へ」：すぐ画面を変えて保存。まちがえたときは下に出る［元に戻す］で戻す（確認の小窓は出さない） */
   function setStatus(r,to,from){return rpc('shiraishiUpdateManagerStatus',{caseId:r.id,status:to,by:whoAmI()}).then(null,function(e){r.status=from;render();toast('保存できませんでした。もう一度押してください。');throw e;});}
   function setTo(id,to){var r=rows.filter(function(x){return x.id===id;})[0];if(!r)return;var from=r.status;if(to===from){menu(id,false);return;}
-    var dfrom=r.deliveredAt;r.status=to;r.deliveredAt=to==='納品済み'?ymd(new Date()):'';render();setStatus(r,to,from).then(function(){if(calPop===r.id)loadTalk(r.id);undoToast('「'+r.site+'」を「'+to+'」にしました',function(){r.status=from;r.deliveredAt=dfrom;render();setStatus(r,from,to).then(function(){toast('「'+from+'」に戻しました');});});},function(){});}
-  function undoToast(t,undo){Array.prototype.forEach.call(document.querySelectorAll('.toast'),function(x){x.remove();});var el=document.createElement('div');el.className='toast';el.setAttribute('role','status');el.innerHTML='<span></span><button type="button">元に戻す</button>';el.firstChild.textContent=t;document.body.appendChild(el);
-    var timer=setTimeout(function(){el.remove();},6000);el.lastChild.onclick=function(){clearTimeout(timer);el.remove();undo();};}
+    var dfrom=r.deliveredAt;r.status=to;r.deliveredAt=to==='納品済み'?ymd(new Date()):'';render();setStatus(r,to,from).then(function(){if(calPop===r.id)loadTalk(r.id);
+      /* 納品済みにしたときだけ、［LINE で知らせる］も出す（白石さん 11/25「納品だけで」） */
+      var extra=to==='納品済み'?{label:'LINE で知らせる',fn:function(){lineSend(lineMsg(r,'納品しました（'+md(r.deliveredAt)+'）'));}}:null;
+      undoToast('「'+r.site+'」を「'+to+'」にしました',function(){r.status=from;r.deliveredAt=dfrom;render();setStatus(r,from,to).then(function(){toast('「'+from+'」に戻しました');});},extra);},function(){});}
+  function undoToast(t,undo,extra){Array.prototype.forEach.call(document.querySelectorAll('.toast'),function(x){x.remove();});var el=document.createElement('div');el.className='toast';el.setAttribute('role','status');el.innerHTML='<span></span><button type="button">元に戻す</button>'+(extra?'<button type="button" class="tline">'+esc(extra.label)+'</button>':'');el.firstChild.textContent=t;document.body.appendChild(el);
+    var timer=setTimeout(function(){el.remove();},extra?12000:6000);el.children[1].onclick=function(){clearTimeout(timer);el.remove();undo();};
+    if(extra)el.children[2].onclick=function(){clearTimeout(timer);el.remove();extra.fn();};}
 
   /* 納期を変える（白石さん 11/25「納期も変わる可能性があるから変更できるといい」）：今日・明日・あさって・日を選ぶ＋即日。
      変えたらすぐ一覧とカレンダーに出し、下に［元に戻す］。だれが変えたかは端末の名前を送る */
@@ -1227,6 +1253,7 @@ textarea.fin{min-height:64px;line-height:1.5}
     el.innerHTML='<div class="in duein" role="dialog" aria-modal="true" aria-label="納期を変える"><p class="dueh">納期を変える</p><p class="duesub"></p>'+
       '<div class="frad" id="dueQ">'+[[dd(0),'今日'],[dd(1),'明日'],[dd(2),'あさって']].map(function(q){return '<button type="button" data-q="'+q[0]+'" aria-checked="'+(r.due===q[0])+'">'+q[1]+'</button>';}).join('')+'</div>'+
       '<input class="fin" type="date" id="dueIn"><label class="fchk"><input type="checkbox" id="dueRush">即日（急ぎ）</label>'+
+      '<label class="fchk"><input type="checkbox" id="dueLine"'+(window.KAKO_IN_LINE?' checked':'')+'>LINE のグループにも知らせる</label>'+
       '<div class="row"><button class="btn quiet" type="button" id="dueNo">やめる</button><button class="btn primary" type="button" id="dueOk">変える</button></div></div>';
     document.body.appendChild(el);el.querySelector('.duesub').textContent=r.site+'　いまの納期 '+(md(r.due)||'なし')+(r.rush?'（即日）':'');
     var inp=el.querySelector('#dueIn'),rush=el.querySelector('#dueRush');inp.value=r.due||'';rush.checked=!!r.rush;
@@ -1235,7 +1262,9 @@ textarea.fin{min-height:64px;line-height:1.5}
     inp.onchange=mark;
     el.querySelector('#dueNo').onclick=function(){el.remove();};
     el.onclick=function(e){if(e.target===el)el.remove();};
-    el.querySelector('#dueOk').onclick=function(){var nd=inp.value,nr=rush.checked;el.remove();if(nd===(r.due||'')&&nr===!!r.rush)return;
+    el.querySelector('#dueOk').onclick=function(){var nd=inp.value,nr=rush.checked,toLine=el.querySelector('#dueLine').checked;el.remove();if(nd===(r.due||'')&&nr===!!r.rush)return;
+      /* 納期を変えたら、チェックがあれば LINE にも知らせる（白石さん 11/25「携帯は納期・メモを送れるように」） */
+      if(toLine)lineSend(lineMsg(r,'納期を '+(md(r.due)||'なし')+' → '+(md(nd)||'なし')+(nr?'（即日）':'')+' に変更'+(whoAmI()?'（'+whoAmI()+'）':'')));
       var od=r.due,orr=r.rush;r.due=nd;r.rush=nr;render();
       function save(d,u){return rpc('shiraishiUpdateManagerDue',{caseId:r.id,due:d,rush:u,by:whoAmI()});}
       save(nd,nr).then(function(){if(calPop===r.id)loadTalk(r.id);undoToast('「'+r.site+'」の納期を '+(md(nd)||'なし')+(nr?'（即日）':'')+' にしました',function(){r.due=od;r.rush=orr;render();save(od,orr).then(function(){toast('納期を元に戻しました');});});},
@@ -1542,7 +1571,10 @@ textarea.fin{min-height:64px;line-height:1.5}
   /* 送ったあと：見出し、送った内容の一覧、［続けて依頼する］［一覧に戻る］（出面フォームの完了画面と同じ形） */
   function done(id,input){var box=$('rqBox');if(!box)return;
     $('rqBody').innerHTML='<div class="fwrap rdone"><p class="rok">'+(editing?'直しました':'受け付けました')+'</p><p class="rid">'+esc(id||'')+'</p><dl class="kv2"><dt>会社</dt><dd>'+esc(input.company)+'</dd><dt>名前</dt><dd>'+esc(input.worker)+'</dd><dt>現場</dt><dd>'+esc(input.site)+'</dd><dt>元請</dt><dd>'+esc(input.customer)+'</dd><dt>納期</dt><dd>'+esc(input.due)+(input.rush?'（即日）':'')+'</dd><dt>写真</dt><dd>'+(editing?'外した写真 '+oldPh.filter(function(p){return p.off;}).length+'枚、足した写真 '+photos.length+'枚':photos.length+'枚')+'</dd></dl><p class="rhelp">工場で確認して加工が終わると、一覧の「加工済み」に移ります。</p></div>';
-    box.querySelector('.rqfoot').innerHTML='<div class="rdbtn"><button class="btn quiet" type="button" id="rqAgain">続けて依頼する</button><button class="rsend" type="button" id="rqEnd">一覧に戻る</button></div>';
+    /* 写真を足した・外したときは［LINE で知らせる］を出す（白石さん 11/25「写真の追加も通知を飛ばしたい」） */
+    var nAdd=photos.length,nOff=editing?oldPh.filter(function(p){return p.off;}).length:0,phMsg=editing&&(nAdd||nOff)?'写真を'+(nAdd?nAdd+'枚追加':'')+(nAdd&&nOff?'・':'')+(nOff?nOff+'枚外した':''):'';
+    box.querySelector('.rqfoot').innerHTML=(phMsg&&window.kakoLine?'<button class="rsend rline" type="button" id="rqLine">LINE で知らせる（'+esc(phMsg)+'）</button>':'')+'<div class="rdbtn"><button class="btn quiet" type="button" id="rqAgain">続けて依頼する</button><button class="rsend" type="button" id="rqEnd">一覧に戻る</button></div>';
+    if($('rqLine'))$('rqLine').onclick=function(){window.kakoLine({id:id,site:input.site,worker:input.worker},phMsg);this.disabled=true;this.textContent='LINE に送りました';};
     $('rqAgain').onclick=function(){box.remove();window.openRequestForm();};$('rqEnd').onclick=function(){box.remove();};
     K.load();
   }
