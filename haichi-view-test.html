@@ -76,7 +76,13 @@
   .memo{margin-top:8px;font-size:12px;line-height:1.6;padding:6px 10px;border-radius:6px;background:var(--memo-bg);color:var(--memo-fg);font-weight:700}
   .upd{font-size:11px;color:var(--sub);text-align:right;margin-top:6px}
 
-  .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  /* 表は自分の中で縦横にずらす。日付の行と合計の行は上に、現場の列は左に止める（11/26） */
+  .tblwrap{overflow:auto;-webkit-overflow-scrolling:touch;margin:-14px -14px 0;max-height:calc(100dvh - var(--bandH,150px));border-bottom:1px solid var(--line)}
+  .tbl thead th,.tbl thead td{position:sticky;z-index:3}
+  .tbl thead tr:first-child th{top:0;height:38px;box-sizing:border-box}
+  .tbl thead tr.tot th,.tbl thead tr.tot td{top:38px}
+  .tbl thead .c0{z-index:4;left:0}
+  .tbl-mode .upd{margin-right:2px}
   .tbl{border-collapse:separate;border-spacing:0;font-size:11px;min-width:100%}
   .tbl th,.tbl td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);vertical-align:top;padding:4px;background:var(--ground)}
   .tbl thead th{font-weight:500;text-align:left;padding:5px 6px;white-space:nowrap}
@@ -253,7 +259,10 @@ function drawSite(){
   main.innerHTML = h;
 }
 
-function draw(){ drawBand(); if (view==='site') drawSite(); else drawDay(); }
+function draw(){ drawBand(); if (view==='site') drawSite(); else drawDay(); setBandH(); }
+// 表の高さ＝画面の高さ − 上の帯の高さ（帯の下に表がぴったり入るように）
+function setBandH(){ var b = document.getElementById('band'); if (b) document.documentElement.style.setProperty('--bandH', (b.offsetHeight + 30) + 'px'); }
+window.addEventListener('resize', setBandH);
 function go(){
   document.getElementById('main').innerHTML = '<div class="msg">配置表を読んでいます…</div>';
   drawBand();
