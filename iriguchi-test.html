@@ -24,8 +24,6 @@
     --bg:#F2F2F7; --ink:#000; --ink2:#3C3C43; --sub:rgba(60,60,67,.6); --sep:rgba(60,60,67,.28); --wg1:#E9EEFF; --wg2:#F4F0FF; --field:#FFFFFF; --navy:#0B1A48;
     color-scheme:light;
   }
-  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#000; --ink:#FFF; --ink2:#EBEBF5; --sub:rgba(235,235,245,.6); --sep:rgba(84,84,88,.6); --wg1:#16213F; --wg2:#221A3A; --field:#1C1C1E; color-scheme:dark } }
-  :root[data-theme="dark"]{ --bg:#000; --ink:#FFF; --ink2:#EBEBF5; --sub:rgba(235,235,245,.6); --sep:rgba(84,84,88,.6); --wg1:#16213F; --wg2:#221A3A; --field:#1C1C1E; color-scheme:dark }
   html{background:var(--navy)}   /* 上に引っぱったときも帯の色 */
   html,body{margin:0;min-height:100%;-webkit-text-size-adjust:100%}
   body{font-family:"Inter","Noto Sans JP","Hiragino Sans",sans-serif;font-feature-settings:"palt";-webkit-font-smoothing:antialiased;color:var(--ink);
@@ -86,14 +84,10 @@
   .gform button{width:100%;margin-top:12px;padding:14px;border:0;border-radius:14px;background:linear-gradient(135deg,#1D4CB4,#0B1A48);color:#fff;font:700 16px/1 inherit;font-family:inherit;cursor:pointer}
   .gerr{color:#FF453A;font-size:13px;min-height:1.6em;margin-top:8px}
   /* ライトでは白い地に溶けて薄く見えるので、色を透かさずはっきり出す。Coming soon は薄いまま（11/26） */
-  @media (prefers-color-scheme: light){
-    :root:not([data-theme="dark"]) .tile svg.sh .b{stop-opacity:1}
-    :root:not([data-theme="dark"]) .tile svg.sh{filter:drop-shadow(0 4px 10px rgba(16,32,96,.22))}
-    :root:not([data-theme="dark"]) .app.soon .tile{filter:saturate(0);opacity:.3}
-  }
-  :root[data-theme="light"] .tile svg.sh .b{stop-opacity:1}
-  :root[data-theme="light"] .tile svg.sh{filter:drop-shadow(0 4px 10px rgba(16,32,96,.22))}
-  :root[data-theme="light"] .app.soon .tile{filter:saturate(0);opacity:.3}
+  /* ライトだけで使う（11/26）：アイコンは透かさずはっきり、Coming soon は薄く */
+  .tile svg.sh .b{stop-opacity:1}
+  .tile svg.sh{filter:drop-shadow(0 4px 10px rgba(16,32,96,.22))}
+  .app.soon .tile{filter:saturate(0);opacity:.3}
   /* 明るさの切り替え（帯の右上、すりガラス） */
   /* 帯（11/26 見本どおり）：左に業務管理と日付、右に天気。2行の高さをそろえ、間に細い縦線 */
   .hgrid{display:grid;grid-template-columns:auto auto;justify-content:space-between;align-items:center;column-gap:20px;padding:0 10px}
@@ -103,6 +97,20 @@
   .wtop{grid-row:1;align-self:end;justify-content:center;gap:8px;opacity:.9;font:600 24px/1.1 "Inter",sans-serif;letter-spacing:-.01em}
   .wsub{grid-row:2;align-self:start;padding-top:10px;gap:4px;opacity:.75;font:500 12px/1 "Inter","Noto Sans JP",sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
   .wsub .dot{opacity:.6}
+  /* ===== 上の地図（11/26 白石さん：上3分の1を地図だけ、写真で固定、地名を入れる、ライトだけ） ===== */
+  .hero.map{height:36vh;min-height:220px;max-height:360px;padding:0;background:#0B1A48;overflow:hidden;position:relative;animation:none}
+  .hero.map::before{z-index:2;background:linear-gradient(180deg,rgba(7,12,31,.5) 0%,rgba(7,12,31,0) 26%,rgba(7,12,31,0) 72%,var(--bg) 100%);-webkit-mask-image:none;mask-image:none;pointer-events:none}
+  .hero.map::after{display:none}
+  #tiles{position:absolute;left:0;top:0;transform-origin:0 0}
+  #tiles img{position:absolute;width:256px;height:256px;display:block}
+  #labels,#pins{position:absolute;inset:0;z-index:3;pointer-events:none}
+  .area{position:absolute;transform:translate(-50%,-50%);color:#fff;font:700 12px/1 "Noto Sans JP",sans-serif;letter-spacing:.24em;text-shadow:0 1px 4px rgba(0,0,0,.7);white-space:nowrap}
+  .area.big{font-size:15px}
+  .pin{position:absolute;transform:translate(-50%,calc(-100% - 6px));display:flex;align-items:center;gap:6px;padding:5px 6px 5px 9px;border-radius:999px;background:rgba(255,206,64,.96);color:#1A1A1A;font:700 11px/1 "Noto Sans JP",sans-serif;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+  .pin b{font:700 10.5px/1 "Inter",sans-serif;background:#14192B;color:#fff;border-radius:999px;padding:3px 6px}
+  .pin::after{content:"";position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);border:6px solid transparent;border-top-color:rgba(255,206,64,.96);border-bottom:0}
+  .dotp{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#FFCE40;box-shadow:0 0 0 3px rgba(255,206,64,.35)}
+  .credit{position:absolute;right:10px;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:4;font-size:9px;color:rgba(255,255,255,.75)}
   /* 明るさの切り替え：帯のすぐ下の右上 */
   .tb{display:flex;justify-content:flex-end;margin-top:-14px;margin-bottom:8px;width:100%;box-sizing:border-box;align-self:stretch}   /* 右上に寄せる（真ん中に出ていたのを直す 11/26） */
   .seg{display:flex;padding:2px;border-radius:10px;background:var(--sep)}
@@ -118,21 +126,14 @@
 </head>
 <body>
 <div class="bar" id="bar">業務管理</div>
-<header class="hero"><div class="wrap hgrid">
-  <h1>業務管理</h1>
-  <div class="dt" id="dt"></div>
-  <div class="wtop" id="wtop" hidden></div>
-  <div class="wsub" id="wsub" hidden></div>
-</div></header>
+<header class="hero map" id="map">
+  <div id="tiles" aria-hidden="true"></div>
+  <div id="labels" aria-hidden="true"></div>
+  <div id="pins"></div>
+  <div class="credit">出典：国土地理院</div>
+</header>
 
 <main>
-  <div class="wrap tb">
-  <div class="seg" role="radiogroup" aria-label="表示の明るさ">
-    <button type="button" data-t="auto" role="radio">自動</button>
-    <button type="button" data-t="light" role="radio" aria-label="ライト"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg></button>
-    <button type="button" data-t="dark" role="radio" aria-label="ダーク"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.8 8.8 0 0 1 9.4 3.5a.8.8 0 0 0-1-1A10.5 10.5 0 1 0 21.5 15.6a.8.8 0 0 0-1-1Z"/></svg></button>
-  </div>
-  </div>
   <div class="wrap" id="menu" hidden>
     <div id="groups"></div>
     <p class="addhint" id="addhint" hidden></p>
@@ -198,41 +199,36 @@ document.getElementById('groups').innerHTML = GROUPS.map(function(g, gi){
   }).join('')+'</div></section>';
 }).join('');
 
-// 明るさの切り替え
-function setTheme(t){
-  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme');
-  [].forEach.call(document.querySelectorAll('.seg button'), function(b){ b.setAttribute('aria-checked', b.dataset.t === (t || 'auto') ? 'true' : 'false'); });
-  try { localStorage.setItem('iriguchi-theme', t || 'auto'); } catch (e) {}
-}
-document.querySelector('.seg').onclick = function(e){ var b = e.target.closest('button'); if (b) setTheme(b.dataset.t); };
-(function(){ var t = 'auto'; try { t = localStorage.getItem('iriguchi-theme') || 'auto'; } catch (e) {} setTheme(t); })();
 
-// ===== 天気（北九州。11/26 白石さん。Open-Meteo の無料の天気の情報。送るのは決まった場所の数字だけで、会社や人の情報は送らない。30分は覚えておく） =====
-(function(){
-  var KEY = 'gyomu-wx-kk';
-  function icon(code){
-    var sun = '<circle cx="18" cy="18" r="8" fill="#FFC53D"/>', cloud = '<path d="M20 38h18a7 7 0 0 0 0-14 9 9 0 0 0-17 3 6 6 0 0 0-1 11z" fill="#DCE3F0"/>';
-    var rain = '<path d="M14 34h22a8 8 0 0 0 0-16 11 11 0 0 0-21 3 7 7 0 0 0-1 13z" fill="#DCE3F0"/><g stroke="#7FB2FF" stroke-width="2.6" stroke-linecap="round"><path d="M17 39l-2 5M25 39l-2 5M33 39l-2 5"/></g>';
-    var b = code <= 1 ? '<circle cx="24" cy="24" r="9" fill="#FFC53D"/>' : code <= 3 ? sun + cloud : code >= 51 ? rain : cloud;
-    return '<svg width="28" height="28" viewBox="0 0 48 48" aria-hidden="true">' + b + '</svg>';
-  }
-  function draw(w){
-    var t = document.getElementById('wtop'), u = document.getElementById('wsub');
-    t.innerHTML = icon(w.code) + '<span>' + Math.round(w.temp) + '°</span>';
-    u.innerHTML = '<span>' + Math.round(w.max) + '° / ' + Math.round(w.min) + '°</span><span class="dot">・</span>' +
-      (w.rain != null ? '<span><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z" fill="#7FB2FF"/></svg>' + w.rain + '時〜雨</span>' : '<span>雨なし</span>');
-    t.hidden = false; u.hidden = false;
-  }
-  try { var c = JSON.parse(localStorage.getItem(KEY) || 'null'); if (c && Date.now() - c.at < 1800000) { draw(c); return; } if (c) draw(c); } catch (e) {}
-  fetch('https://api.open-meteo.com/v1/forecast?latitude=33.88&longitude=130.88&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&hourly=precipitation_probability&timezone=Asia%2FTokyo&forecast_days=1')
-    .then(function(r){ return r.json(); }).then(function(j){
-      var h = new Date().getHours(), rain = null;
-      (j.hourly && j.hourly.precipitation_probability || []).some(function(p, i){ if (i >= h && p >= 50) { rain = i; return true; } return false; });
-      var w = { at: Date.now(), temp: j.current.temperature_2m, code: j.current.weather_code, max: j.daily.temperature_2m_max[0], min: j.daily.temperature_2m_min[0], rain: rain };
-      try { localStorage.setItem(KEY, JSON.stringify(w)); } catch (e) {}
-      draw(w);
-    }).catch(function(){});
-})();
+// ===== 地図（国土地理院の写真の地図。北九州〜古賀・行橋を1枚に。今日の現場の印は合言葉のあとに読む 11/26） =====
+var MAPV = { lat: 33.82, lon: 130.72, span: 0.72, z: 11 };
+var AREAS = [ ['北九州',33.875,130.86,1], ['古賀',33.73,130.47], ['宗像',33.805,130.54], ['直方',33.745,130.73], ['行橋',33.73,130.985], ['中間',33.82,130.71] ];
+function mx(lon,z){ return (lon+180)/360*Math.pow(2,z)*256; }
+function my(lat,z){ var r=lat*Math.PI/180; return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*Math.pow(2,z)*256; }
+var PINS = []; try { PINS = JSON.parse(localStorage.getItem('gyomu-pins')||'[]') || []; } catch(e){}
+function drawMap(){
+  var box = document.getElementById('map'), W = box.clientWidth, H = box.clientHeight, z = MAPV.z;
+  var ww = mx(MAPV.lon+MAPV.span/2,z) - mx(MAPV.lon-MAPV.span/2,z), s = W/ww;
+  var cx = mx(MAPV.lon,z), cy = my(MAPV.lat,z), left = cx - W/s/2, top = cy - H/s/2;
+  var tiles = document.getElementById('tiles'), h = '';
+  for (var tx=Math.floor(left/256); tx<=Math.floor((left+W/s)/256); tx++) for (var ty=Math.floor(top/256); ty<=Math.floor((top+H/s)/256); ty++)
+    h += '<img alt="" src="https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/'+z+'/'+tx+'/'+ty+'.jpg" style="left:'+(tx*256-left)+'px;top:'+(ty*256-top)+'px">';
+  tiles.innerHTML = h; tiles.style.transform = 'scale('+s+')';
+  var pos = function(lat,lon){ return [ (mx(lon,z)-left)*s, (my(lat,z)-top)*s ]; };
+  document.getElementById('labels').innerHTML = AREAS.map(function(a){ var p = pos(a[1],a[2]); return '<span class="area'+(a[3]?' big':'')+'" style="left:'+p[0]+'px;top:'+p[1]+'px">'+a[0]+'</span>'; }).join('');
+  document.getElementById('pins').innerHTML = PINS.filter(function(p){ return p.lat && p.lon; }).map(function(p){
+    var q = pos(p.lat,p.lon); if (q[0]<-40||q[0]>W+40||q[1]<0||q[1]>H) return '';
+    return '<span class="dotp" style="left:'+q[0]+'px;top:'+q[1]+'px"></span><span class="pin" style="left:'+q[0]+'px;top:'+q[1]+'px">'+String(p.name).replace(/[<>&]/g,'')+'<b>'+p.n+'人</b></span>';
+  }).join('');
+}
+function loadPins(){
+  if (!getPass()) return;
+  fetch(CHECK_API + '?pins=1&p=' + encodeURIComponent(getPass())).then(function(r){ return r.json(); }).then(function(j){
+    if (!j.ok) return; PINS = j.pins || []; try { localStorage.setItem('gyomu-pins', JSON.stringify(PINS)); } catch(e){} drawMap();
+  }).catch(function(){});
+}
+drawMap();
+window.addEventListener('resize', drawMap);
 
 // 下に送ったら上に小さいタイトル
 window.addEventListener('scroll', function(){ document.getElementById('bar').classList.toggle('on', window.scrollY > 80); }, { passive:true });
@@ -279,7 +275,7 @@ function openDyn(k){
 // ===== 合言葉（1回入れて携帯が覚える。確かめは人員配置の読み取りの仕組みで） =====
 function getPass(){ try { return localStorage.getItem(PASS_KEY) || ''; } catch(e){ return ''; } }
 function setPass(v){ try { if (v) localStorage.setItem(PASS_KEY, v); else localStorage.removeItem(PASS_KEY); } catch(e){} }
-function showMenu(){ document.getElementById('gform').hidden = true; document.getElementById('menu').hidden = false; loadLinks().catch(function(){}); }
+function showMenu(){ document.getElementById('gform').hidden = true; document.getElementById('menu').hidden = false; loadLinks().catch(function(){}); loadPins(); }
 function askPass(err){
   document.getElementById('menu').hidden = true; document.getElementById('gform').hidden = false;
   document.getElementById('gerr').textContent = err || '';
@@ -300,7 +296,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-8";
+var BUILD_ID = "20261126-9";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
