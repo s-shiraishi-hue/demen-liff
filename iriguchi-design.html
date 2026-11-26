@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>入口デザイン案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+  /* 11/26 入口の見た目の案（地図の左上に SHIRAISHI ／ アイコンの部分は明るく） */
+  :root{--ink:#14192B}
+  html,body{margin:0;background:#1b1f2e;font-family:"Inter","Noto Sans JP",sans-serif;-webkit-font-smoothing:antialiased}
+  .intro{color:#fff;padding:22px 18px 6px;font-size:13px;line-height:1.7;opacity:.85}
+  .opt{margin:18px auto 34px;max-width:430px}
+  .opt > h2{color:#fff;font:700 15px/1.3 "Noto Sans JP";margin:0 16px 8px}
+  .opt > p{color:rgba(255,255,255,.7);font-size:12px;margin:0 16px 10px;line-height:1.6}
+  .phone{position:relative;margin:0 12px;border-radius:30px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.45);display:flex;flex-direction:column}
+  /* 地図（見本は写真を平らに置いたもの。本物は立体で回る） */
+  .map{position:relative;height:250px;flex:none;background:#070F2E url(m3d-photo.jpg) 58% 36%/220% auto no-repeat}
+  .map::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,15,46,.55),rgba(7,15,46,0) 35%,rgba(7,15,46,0) 70%,rgba(7,15,46,.25))}
+  .views{position:absolute;left:0;right:0;bottom:10px;z-index:3;display:flex;gap:6px;justify-content:center}
+  .views span{padding:9px 12px;border-radius:999px;background:rgba(10,18,48,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;font:600 11.5px/1 "Noto Sans JP";box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+  .views span.on{background:rgba(255,255,255,.92);color:#0B1A48}
+  .pin{position:absolute;z-index:2;display:flex;align-items:center;gap:6px;padding:4px 4px 4px 10px;border-radius:999px;background:#ffd43d;color:#16204a;font:700 11px/1 "Noto Sans JP";box-shadow:0 6px 16px rgba(4,9,32,.55),0 0 0 2px #fff}
+  .pin em{font-style:normal;background:#16204a;color:#fff;border-radius:999px;padding:3px 7px;font:600 11px/1 Inter}
+
+  /* ===== ロゴ（左上・透け） ===== */
+  .logo{position:absolute;z-index:3;left:18px;top:44px;color:#fff;pointer-events:none}
+  .lg1 b{display:block;font:200 26px/1 Inter;letter-spacing:.42em;opacity:.78;text-shadow:0 1px 12px rgba(0,0,0,.35)}
+  .lg1 small{display:block;margin-top:7px;font:600 8.5px/1 Inter;letter-spacing:.62em;opacity:.6}
+  .lg2 b{display:block;font:800 34px/1 Inter;letter-spacing:.06em;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.75)}
+  .lg2 small{display:block;margin-top:5px;font:600 9px/1 Inter;letter-spacing:.5em;color:rgba(255,255,255,.7)}
+  .lg3{display:flex;align-items:center;gap:8px;padding:8px 13px 8px 9px;border-radius:999px;background:rgba(255,255,255,.14);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
+  .lg3 i{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,#fff,rgba(255,255,255,.55));display:grid;place-items:center;font:800 12px/1 Inter;font-style:normal;color:#0B1A48}
+  .lg3 b{font:700 12px/1 Inter;letter-spacing:.32em}
+  .lg4 b{display:block;font:300 15px/1 Inter;letter-spacing:.5em;opacity:.85}
+  .lg4::before{content:"";display:block;width:26px;height:2px;background:#ffd43d;margin-bottom:9px;border-radius:2px}
+  .lg4 small{display:block;margin-top:6px;font:500 9px/1 "Noto Sans JP";letter-spacing:.3em;opacity:.65}
+  .lg5 b{display:block;font:800 44px/.9 Inter;letter-spacing:-.02em;color:rgba(255,255,255,.18);mix-blend-mode:screen}
+  .lg5 small{display:block;margin-top:2px;font:600 9px/1 Inter;letter-spacing:.55em;color:rgba(255,255,255,.75)}
+
+  /* ===== 下（アイコン） ===== */
+  .low{flex:1;padding:18px 18px 22px;display:flex;flex-direction:column}
+  .g{margin-bottom:12px}
+  .g h3{margin:0 2px 9px;font:700 14px/1 "Noto Sans JP";letter-spacing:.08em;color:#3a4160}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);row-gap:12px}
+  .app{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .t{width:58px;height:58px;border-radius:16px;display:grid;place-items:center;position:relative}
+  .t svg{width:28px;height:28px;stroke:#fff;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .lb{font:700 11.5px/1.2 "Noto Sans JP";color:var(--ink);white-space:nowrap}
+  .soon .t{filter:saturate(0);opacity:.35}.soon .lb{opacity:.45}
+  .c1{background:linear-gradient(160deg,#5B8CFF,#1E46E0)}.c2{background:linear-gradient(160deg,#52DB8C,#14904E)}.c3{background:linear-gradient(160deg,#43D3C1,#0C8073)}.c4{background:linear-gradient(160deg,#A88BFF,#5B34D6)}
+  .c5{background:linear-gradient(160deg,#FFB061,#E2620F)}.c6{background:linear-gradient(160deg,#FFD266,#D9822B)}.c7{background:linear-gradient(160deg,#6FD0FA,#1680C9)}.c8{background:linear-gradient(160deg,#FF8C7E,#D9363E)}
+
+  /* A：白いシートが地図の上にかぶさる（角丸・影） */
+  .A .views{bottom:32px}
+  .A .low{padding-top:26px;background:#fff;border-radius:26px 26px 0 0;margin-top:-22px;position:relative;z-index:4;box-shadow:0 -10px 30px rgba(7,15,46,.25)}
+  .A .low::before{content:"";position:absolute;left:50%;top:8px;width:38px;height:5px;margin-left:-19px;border-radius:5px;background:#D8DCE8}
+  .A .t{box-shadow:0 6px 14px rgba(30,50,120,.18),inset 0 1px 0 rgba(255,255,255,.35)}
+  .A .g h3 span{font:600 9px/1 Inter;letter-spacing:.3em;color:#9aa3bf;margin-left:8px}
+
+  /* B：グループごとに白いカード（iPhone の設定の形） */
+  .B .low{background:#EEF1F7}
+  .B .g{background:#fff;border-radius:20px;padding:12px 10px 12px;box-shadow:0 1px 2px rgba(20,30,70,.06),0 8px 20px rgba(20,30,70,.06)}
+  .B .g h3{font-size:12px;color:#7b84a3;margin:0 6px 10px}
+
+  /* C：空のグラデーション（地図の空からつながる明るい青） */
+  .C .low{background:linear-gradient(180deg,#DCE6FF 0%,#F4F7FF 45%,#FFFFFF 100%)}
+  .C .t{box-shadow:0 8px 18px rgba(40,70,170,.22)}
+  .C .t::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 50%)}
+  .C .g h3{color:#2b3a75}
+
+  /* D：よく使う2つを大きく */
+  .D .low{background:#F6F7FB}
+  .D .big{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .D .bt{border-radius:20px;padding:14px;color:#fff;height:86px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 10px 22px rgba(30,50,120,.2)}
+  .D .bt svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .D .bt b{font:700 15px/1 "Noto Sans JP"}
+  .D .bt small{display:block;font:500 10px/1 "Noto Sans JP";opacity:.85;margin-top:4px}
+
+  /* E：線だけのアイコン＋色の点（いちばんシンプル） */
+  .E .low{background:#FBFBFD}
+  .E .t{background:#fff;box-shadow:0 0 0 1px #E3E6EF,0 4px 10px rgba(20,30,70,.06)}
+  .E .t svg{stroke:var(--k)}
+  .E .g h3{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;color:#8a92ad}
+  .E .g h3::after{content:"";flex:1;height:1px;background:#E3E6EF}
+</style>
+</head>
+<body>
+<p class="intro">入口の見た目の案です（11/26）。上は地図、左上に SHIRAISHI の英字を透かして入れています。下のアイコンの部分は明るい色です。<br>地図は見本のため平らな写真です。本物は今と同じく立体で回ります。気に入った案の「記号」と「ロゴの番号」を教えてください（例：A の 3）。</p>
+
+<script>
+const GL = {
+  dem:'<rect x="5.5" y="4.5" width="13" height="16" rx="2.2"/><path d="M8.8 10.2h6.4M8.8 13.4h6.4M8.8 16.6h3.6"/>',
+  gch:'<path d="M3.8 8.6c0-.9.7-1.6 1.6-1.6h2.1l1.3-2h6.4l1.3 2h2.1c.9 0 1.6.7 1.6 1.6v9.2c0 .9-.7 1.6-1.6 1.6H5.4c-.9 0-1.6-.7-1.6-1.6z"/><circle cx="12" cy="13" r="3.4"/>',
+  hai:'<circle cx="9" cy="8.2" r="2.9"/><path d="M3.8 19c.5-3 2.6-5 5.2-5s4.7 2 5.2 5"/><circle cx="16.6" cy="9.2" r="2.2"/><path d="M15.6 14.2c2.2.2 3.9 1.8 4.6 4.8"/>',
+  dai:'<path d="M6 3.8h9l3 3v13.4H6z"/><path d="M15 3.8v3h3"/><path d="M9 12h6M9 15.5h6M9 8.5h3"/>',
+  kak:'<path d="M14.6 6.4a4 4 0 0 0-5.3 5.3l-5.6 5.6a1.4 1.4 0 0 0 0 2l1 1a1.4 1.4 0 0 0 2 0l5.6-5.6a4 4 0 0 0 5.3-5.3l-2.4 2.4-2.3-.6-.6-2.3z"/>',
+  req:'<rect x="5.5" y="4.5" width="13" height="16" rx="2.2"/><path d="M12 9v6M9 12h6"/>',
+  alc:'<path d="M9.2 3.2h5.6M10.2 3.2v5.2l-4.1 8.7a2.1 2.1 0 0 0 1.9 3h8a2.1 2.1 0 0 0 1.9-3l-4.1-8.7V3.2"/><path d="M7.6 14.2h8.8"/>',
+  kin:'<circle cx="12" cy="13.2" r="7.6"/><path d="M12 9.4v3.8l2.6 1.7M9.4 2.6h5.2"/>'
+};
+const COL = { dem:['c1','#1E46E0'], gch:['c2','#14904E'], hai:['c3','#0C8073'], dai:['c4','#5B34D6'], kak:['c5','#E2620F'], req:['c6','#D9822B'], alc:['c7','#1680C9'], kin:['c8','#D9363E'] };
+const NAME = { dem:'出面報告', gch:'現調・打合せ', hai:'人員配置', dai:'台帳登録', kak:'加工管理', req:'加工依頼', alc:'アルコール', kin:'勤怠' };
+const G = [['現場','SITE',['dem','gch','hai','dai']],['加工','FACTORY',['kak','req']],['その他','OTHER',['alc','kin']]];
+const svg = k => '<svg viewBox="0 0 24 24">' + GL[k] + '</svg>';
+const app = (k, opt) => '<div class="app' + ((k==='alc'||k==='kin')?' soon':'') + '"><div class="t ' + (opt==='E' ? '' : COL[k][0]) + '" style="--k:' + COL[k][1] + '">' + svg(k) + '</div><div class="lb">' + NAME[k] + '</div></div>';
+const LOGOS = [
+  '<div class="logo lg1"><b>SHIRAISHI</b><small>GROUP</small></div>',
+  '<div class="logo lg2"><b>SHIRAISHI</b><small>GROUP · 業務管理</small></div>',
+  '<div class="logo lg3"><i>S</i><b>SHIRAISHI</b></div>',
+  '<div class="logo lg4"><b>SHIRAISHI</b><small>業務管理</small></div>',
+  '<div class="logo lg5"><b>SHIRAISHI</b><small>GROUP</small></div>'
+];
+const MAP = (logo) => '<div class="map">' + logo + '<span class="pin" style="left:46%;top:44%">ネグロス電工<em>6</em></span><span class="pin" style="left:8%;top:64%">LP福岡古賀<em>4</em></span><div class="views"><span class="on">全体</span><span>北九州</span><span>筑豊</span><span>福岡</span><span>↻ 回る</span></div></div>';
+const OPTS = [
+  ['A','A：白いシートが地図にかぶさる','地図の上に白い板がせり上がっている形。角を丸くして影をつけ、アプリらしく。見出しに小さく英字。', 0],
+  ['B','B：グループごとに白いカード','iPhone の設定画面のように、現場・加工・その他をそれぞれ白いカードに。整っていて見やすい。', 2],
+  ['C','C：空からつながる明るい青','地図の空の色から、下に向かって白くなるグラデーション。アイコンにつやを足して少し立体に。', 1],
+  ['D','D：よく使う2つを大きく','出面報告と人員配置を大きいボタンに。ほかは小さいアイコン。毎日使うものがすぐ押せる。', 3],
+  ['E','E：線のアイコンでいちばんシンプル','白い四角に色の線だけのアイコン。上品で落ち着いた感じ。', 4]
+];
+let html = '';
+OPTS.forEach(([k, title, desc, logoNo]) => {
+  let low = '';
+  if (k === 'D') {
+    low += '<div class="big"><div class="bt c1">' + svg('dem') + '<div><b>出面報告</b><small>今日の出面を送る</small></div></div><div class="bt c3">' + svg('hai') + '<div><b>人員配置</b><small>今週の配置を見る</small></div></div></div>';
+    G.forEach(([jp, en, ks]) => { const rest = ks.filter(x => x !== 'dem' && x !== 'hai'); if (rest.length) low += '<div class="g"><h3>' + jp + '</h3><div class="grid">' + rest.map(x => app(x, k)).join('') + '</div></div>'; });
+  } else {
+    G.forEach(([jp, en, ks]) => { low += '<div class="g"><h3>' + jp + (k === 'A' ? '<span>' + en + '</span>' : '') + '</h3><div class="grid">' + ks.map(x => app(x, k)).join('') + '</div></div>'; });
+  }
+  html += '<section class="opt"><h2>' + title + '</h2><p>' + desc + '　ロゴは ' + (logoNo + 1) + ' 番</p><div class="phone ' + k + '">' + MAP(LOGOS[logoNo]) + '<div class="low">' + low + '</div></div></section>';
+});
+html += '<section class="opt"><h2>ロゴの5つ（どの案とも組み合わせられます）</h2><p>1：細い字を広くあける　2：ふちだけの太字　3：すりガラスの札　4：黄色の線＋細い字　5：大きく透ける字</p>' +
+  LOGOS.map((l, i) => '<div class="phone" style="height:150px;margin-bottom:12px"><div class="map" style="height:150px">' + l + '<span style="position:absolute;right:14px;bottom:10px;z-index:3;color:#fff;font:700 18px Inter;opacity:.8">' + (i + 1) + '</span></div></div>').join('') + '</section>';
+document.write(html);
+</script>
+</body>
+</html>
