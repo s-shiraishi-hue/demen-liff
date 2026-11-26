@@ -1,0 +1,23 @@
+{
+  "name": "業務管理",
+  "short_name": "業務管理",
+  "lang": "ja",
+  "start_url": "iriguchi-test.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#070F2E",
+  "theme_color": "#070F2E",
+  "icons": [
+    {
+      "src": "icon-gyomu-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-gyomu-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
