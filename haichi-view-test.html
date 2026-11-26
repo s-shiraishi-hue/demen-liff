@@ -197,11 +197,21 @@ function saveWeeks(){
     localStorage.setItem('haichi-weeks', JSON.stringify(o));
   } catch(e){}
 }
+// 11/26 速くする：まず Supabase（写し・約0.2秒）から読む。写していない日があるとき・読めないときは今の Apps Script から（?src=gas でいつも Apps Script）
+var SB_URL = 'https://smhyelpqubglqaqvxtcd.supabase.co', SB_KEY = 'sb_publishable_3uPK9GbdsCVsOnJUjGae1g_c6Pdn510';   // 公開してよい鍵。表は直接読めず、合言葉の窓口 get_days だけ
+var USE_SB = !/[?&]src=gas/.test(location.search);
+function getWeekGas(key){ return fetch(API+'?p='+encodeURIComponent(getPass())+'&w='+key+'&n=7').then(function(r){ return r.json(); }); }
+function getWeek(key){
+  if (!USE_SB) return getWeekGas(key);
+  return fetch(SB_URL + '/rest/v1/rpc/get_days', { method:'POST', headers:{ 'apikey':SB_KEY, 'Content-Type':'application/json' }, body: JSON.stringify({ pass:getPass(), w:key, n:7 }) })
+    .then(function(r){ return r.json(); })
+    .then(function(j){ if (j && j.ok && j.days && j.days.length === 7 && !(j.missing||[]).length) return j; if (j && j.bad) return j; return getWeekGas(key); }, function(){ return getWeekGas(key); });
+}
 var inflight = {};
 function fetchWeek(ws){
   var key = ymd(ws);
   if (inflight[key]) return inflight[key];
-  return inflight[key] = fetch(API+'?p='+encodeURIComponent(getPass())+'&w='+key+'&n=7').then(function(r){ return r.json(); }).then(function(j){
+  return inflight[key] = getWeek(key).then(function(j){
     delete inflight[key];
     if (!j.ok){ var e = new Error(j.error||'読めませんでした'); e.bad = j.bad; throw e; }
     var changed = !weeks[key] || JSON.stringify(weeks[key].days) !== JSON.stringify(j.days);
@@ -417,7 +427,7 @@ if (getPass()) go(); else askPass();
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-2";
+var BUILD_ID = "20261126-3";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
