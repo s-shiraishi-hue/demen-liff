@@ -619,6 +619,31 @@ textarea.fin{min-height:64px;line-height:1.5}
 .rq .dhint{white-space:nowrap}
 .rq .ib>.ir:only-of-type .iv,.rq #rqDueV{white-space:nowrap}
 .rq .rsend{min-height:54px;font-size:18px}
+/* 現場名の札と、下から出る一覧（1行＝現場名｜元請。元請の列は幅をそろえる） */
+.rq .sitebtn{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;width:100%;min-height:54px;border:0;padding:0 20px 0 0;text-align:left;font-size:17px;color:var(--ink);background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='13' viewBox='0 0 8 13'%3E%3Cpath d='M1 1l5.5 5.5L1 12' fill='none' stroke='%23c4c4c7' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 2px center}
+.rq .sitebtn .spk-n{-webkit-flex:1 1 auto;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rq .sitebtn .spk-c{-webkit-flex:0 1 auto;flex:0 1 auto;max-width:42%;margin-left:8px;font-size:13px;color:#8e8e93;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rq .sitebtn.bad .spk-n{color:var(--red)}
+.spk{position:fixed;left:0;top:0;right:0;bottom:0;z-index:80;background:rgba(0,0,0,.35);display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;-webkit-justify-content:center;justify-content:center}
+.spk .spk-pn{background:#f2f2f7;width:100%;max-width:560px;height:86%;border-radius:14px 14px 0 0;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;overflow:hidden;box-shadow:0 -4px 20px rgba(0,0,0,.15)}
+.spk .spk-hd{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;padding:14px 16px 10px}
+.spk .spk-hd h2{-webkit-flex:1;flex:1;margin:0;font-size:18px;font-weight:700}
+.spk .spk-cl{border:0;background:none;color:var(--blue);font-size:16px;min-height:40px;padding:0 4px}
+.spk .spk-q{display:block;margin:0 16px 8px;height:40px;border-radius:10px;border:0;background:#e3e3e8;padding:0 12px;font-size:16px;-webkit-appearance:none;appearance:none}
+.spk .spk-cols{display:-webkit-flex;display:flex;margin:4px 30px 0;font-size:12px;color:#8e8e93}
+.spk .spk-cols span:first-child{-webkit-flex:1;flex:1}.spk .spk-cols span:last-child{width:38%;text-align:right}
+.spk .spk-ls{-webkit-flex:1;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px 24px}
+.spk .spk-gh{font-size:13px;color:#6d6d72;margin:14px 4px 6px}
+.spk .spk-gb{background:#fff;border-radius:10px;overflow:hidden}
+.spk .spk-r{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;width:100%;min-height:50px;margin:0;padding:0 14px;border:0;border-radius:0;background:#fff;text-align:left;font-size:16px;font-weight:400;color:var(--ink)}
+.spk .spk-r+.spk-r{border-top:.5px solid #c6c6c8}
+.spk .spk-r:active{background:#e9eefc}
+.spk .spk-r .spk-n{-webkit-flex:1 1 auto;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spk .spk-r .spk-c{-webkit-flex:0 0 38%;flex:0 0 38%;margin-left:10px;font-size:14px;color:#6d6d72;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.spk .spk-r.on{color:var(--blue);font-weight:700;background:#f2f6ff}
+.spk .spk-r.on .spk-c{font-weight:400}
+.spk .spk-none{padding:24px;text-align:center;color:#6d6d72}
+.spk :focus-visible{outline:2px solid var(--blue);outline-offset:-2px;box-shadow:none}
 .rq .iv{-webkit-flex-wrap:wrap;flex-wrap:wrap}.rq .iv>.fin{width:100%;-webkit-flex:none;flex:none}.rq .iv>.frad.seg{-webkit-flex:1 1 100%;flex:1 1 100%}
 .rq .ival:empty{display:none}
 .rq .ib>.rhelp{margin:0;padding:0 14px 8px 104px}
@@ -1766,7 +1791,29 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
     var order=['工事中','準備中','契約確定','見積完了','見積中'].filter(function(g){return groups[g];}).concat(Object.keys(groups).filter(function(g){return ['工事中','準備中','契約確定','見積完了','見積中'].indexOf(g)<0;}));
     $('rqSite').innerHTML='<option value="">選んでください</option>'+order.map(function(g){return '<optgroup label="'+esc(g)+'">'+groups[g].map(function(s){return '<option value="'+esc(s.site)+'" data-cust="'+esc(s.customer)+'" data-id="'+esc(s.id||'')+'"'+(s.site===cur?' selected':'')+'>'+esc(s.site)+(s.customer?'　'+esc(s.customer):'')+'</option>';}).join('')+'</optgroup>';}).join('')+'<option value="__other"'+(!known?' selected':'')+'>一覧にない（入れる）</option>';
     $('rqSiteT').hidden=known;$('rqSiteT').value=known?'':cur;
-    var o=$('rqSite').options[$('rqSite').selectedIndex];if(known&&cur&&o&&o.getAttribute('data-cust'))$('rqCust').value=o.getAttribute('data-cust');}
+    var o=$('rqSite').options[$('rqSite').selectedIndex];if(known&&cur&&o&&o.getAttribute('data-cust'))$('rqCust').value=o.getAttribute('data-cust');siteBtnUI();}
+  /* 現場名（白石さん 11/26「改行されて選びにくい。現場名と元請を1行できれいに並べたい」）：
+     ふつうのプルダウンをやめ、押すと下から一覧が出る。1行＝左に現場名・右に元請（右の列は幅をそろえる）。上に探す欄。値は隠した select に入れて、今までの処理をそのまま使う */
+  function siteBtnUI(){var b=$('rqSiteB');if(!b)return;var s=$('rqSite'),v=s.value,o=s.options[s.selectedIndex];
+    var sn=b.querySelector('.spk-n'),sc=b.querySelector('.spk-c');sn.textContent=v==='__other'?'一覧にない（入れる）':(v||'選んでください');
+    sc.textContent=(v&&v!=='__other'&&o)?(o.getAttribute('data-cust')||''):'';b.className='sitebtn'+(s.getAttribute('aria-invalid')==='true'?' bad':'');}
+  function openSitePicker(){var s=$('rqSite');if(!s)return;var cur=s.value,html='',gh='',gb='';
+    function row(o){var v=o.value,c=o.getAttribute('data-cust')||'';return '<button type="button" class="spk-r'+(v===cur?' on':'')+'" data-v="'+esc(v)+'" data-k="'+esc((v+' '+c).toLowerCase())+'"><span class="spk-n">'+esc(v==='__other'?'一覧にない（入れる）':v)+'</span><span class="spk-c">'+esc(c)+'</span></button>';}
+    Array.prototype.forEach.call(s.children,function(el){
+      if(el.tagName==='OPTGROUP'){html+='<div class="spk-g"><p class="spk-gh">'+esc(el.label)+'</p><div class="spk-gb">'+Array.prototype.map.call(el.children,row).join('')+'</div></div>';}
+      else if(el.value==='__other'){html+='<div class="spk-g"><p class="spk-gh">&nbsp;</p><div class="spk-gb">'+row(el)+'</div></div>';}});
+    var w=document.createElement('div');w.className='spk';w.setAttribute('role','dialog');w.setAttribute('aria-label','現場名を選ぶ');
+    w.innerHTML='<div class="spk-pn"><div class="spk-hd"><h2>現場名を選ぶ</h2><button type="button" class="spk-cl">閉じる</button></div>'+
+      '<input class="spk-q" type="search" placeholder="現場名・元請で探す" aria-label="現場名・元請で探す" autocomplete="off">'+
+      '<div class="spk-cols"><span>現場名</span><span>元請</span></div><div class="spk-ls">'+html+'<p class="spk-none" hidden>見つかりません</p></div></div>';
+    document.body.appendChild(w);
+    function close(){if(w.parentNode)w.parentNode.removeChild(w);var b=$('rqSiteB');if(b&&b.focus)b.focus();}
+    w.onclick=function(e){if(e.target===w)close();};w.querySelector('.spk-cl').onclick=close;
+    Array.prototype.forEach.call(w.querySelectorAll('.spk-r'),function(b){b.onclick=function(){s.value=b.getAttribute('data-v');if(s.onchange)s.onchange();close();};});
+    w.querySelector('.spk-q').oninput=function(){var q=this.value.trim().toLowerCase(),any=false;
+      Array.prototype.forEach.call(w.querySelectorAll('.spk-g'),function(g){var vis=0;Array.prototype.forEach.call(g.querySelectorAll('.spk-r'),function(b){var ok=!q||b.getAttribute('data-k').indexOf(q)>=0||b.getAttribute('data-v')==='__other';b.hidden=!ok;if(ok)vis++;});g.hidden=!vis;if(vis)any=true;});
+      w.querySelector('.spk-none').hidden=any;};
+    var on=w.querySelector('.spk-r.on');if(on&&on.scrollIntoView)on.scrollIntoView({block:'center'});}
   /* 写真はタイル。［足す］のタイル（中に file の欄）は作り直さず、その前に写真のタイルを入れ直す */
   function drawPhotos(){var box=$('rqPh'),add=$('rqAdd');
     Array.prototype.slice.call(box.querySelectorAll('.rtile.ph')).forEach(function(x){x.parentNode.removeChild(x);});
@@ -1801,7 +1848,7 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
       '<p class="ih">依頼する現場</p><div class="ib">'+
        irow('会社',true,radios('rqCo',COMPANIES.map(function(c){return [c,c.replace(/工業$|板金.*$/,'')];}),co).replace('class="frad"','class="frad seg"'),'rqCo','co')+
        irow('依頼者',true,'<select class="fin" id="rqMe" aria-label="依頼者（3社全員。押した会社が上）"></select><input class="fin" id="rqMeT" aria-label="名前を入れる" placeholder="名前を入れる" hidden>','rqMe','me')+
-       irow('現場名',true,'<select class="fin" id="rqSite"></select><input class="fin" id="rqSiteT" aria-label="現場名を入れる" placeholder="現場名を入れる" hidden>','rqSite','site')+
+       irow('現場名',true,'<button type="button" class="sitebtn" id="rqSiteB" aria-haspopup="dialog"><span class="spk-n">選んでください</span><span class="spk-c"></span></button><select class="fin" id="rqSite" hidden></select><input class="fin" id="rqSiteT" aria-label="現場名を入れる" placeholder="現場名を入れる" hidden>','rqSite','site')+
        /* 元請は出さない（白石さん 11/26「どうせ出てくる」）。現場名から自動で入れて送る */
        '<div hidden>'+irow('元請',false,'<span class="ival" id="rqCustV"></span><button type="button" class="lnk" id="rqCustE" hidden>直す</button><input class="fin" id="rqCust" autocomplete="off" aria-label="元請" placeholder="元請を入れる" hidden>','rqCust','cust')+'</div>'+
       '</div>'+
@@ -1841,6 +1888,7 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
     $('rqMe').onchange=function(){$('rqMeT').hidden=this.value!=='__other';clearErr('rqMe');if(this.value==='__other')$('rqMeT').focus();};
     $('rqSite').onchange=function(){var o=this.options[this.selectedIndex];$('rqSiteT').hidden=this.value!=='__other';clearErr('rqSite');clearErr('rqCust');
       if(this.value==='__other'){setCust('');$('rqSiteT').focus();}else setCust(o&&o.getAttribute('data-cust')||'');};
+    var _siteCh=$('rqSite').onchange;$('rqSite').onchange=function(){_siteCh.call(this);siteBtnUI();};$('rqSiteB').onclick=openSitePicker;
     ['rqMeT','rqSiteT','rqCust','rqMemo'].forEach(function(id){$(id).oninput=function(){clearErr(id==='rqMeT'?'rqMe':id==='rqSiteT'?'rqSite':id);if(id==='rqSiteT')sumUp();};});
     fillNames(me,co);fillSites(co,editing?editing.site:'');custUI();dateUI();
     if(!BOOT&&window.google&&google.script&&google.script.run){$('e-rqSite').insertAdjacentHTML('beforebegin','<p class="rhelp" id="rqBootMsg">台帳から現場を読み込み中…</p>');}
@@ -1864,6 +1912,7 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){$('rqDateL').hidden=true;$('rqDate').hidden=false;} /* たたんでいる欄は、空なら開いて見せる */
     if(!cust&&site){custEdit=true;custUI();}
     if(first==='rqDueQ'&&!$('rqDue').hidden)first='rqDue';
+    siteBtnUI();if(first==='rqSite')first='rqSiteB';
     if(first){$('rqErr').textContent='';var el=$(first);if(el&&el.scrollIntoView)el.scrollIntoView({block:'center'});if(el&&el.focus)el.focus();return;}
     var dest=editing?(editing.destination||''):''; /* 納品先は職人さんの依頼では聞かない（白石さん 11/25） */
     var so=$('rqSite').options[$('rqSite').selectedIndex],cid=so&&so.getAttribute('data-id')||'';
