@@ -83,7 +83,7 @@
   .tbl thead tr.tot th,.tbl thead tr.tot td{top:38px}
   .tbl thead .c0{z-index:4;left:0}
   .tbl-mode .upd{margin-right:2px}
-  .tbl{border-collapse:separate;border-spacing:0;font-size:11px;min-width:100%}
+  .tbl{zoom:var(--tz,1);border-collapse:separate;border-spacing:0;font-size:11px;min-width:100%}
   .tbl th,.tbl td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);vertical-align:top;padding:4px;background:var(--ground)}
   .tbl thead th{font-weight:500;text-align:left;padding:5px 6px;white-space:nowrap}
   .tbl thead th span{display:block;font-size:9.5px;color:var(--sub)}
@@ -108,6 +108,10 @@
   .pass input{width:100%;box-sizing:border-box;font-size:24px;letter-spacing:.4em;text-align:center;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--ground);color:var(--ink)}
   .pass button{width:100%;margin-top:12px;padding:13px;border:0;border-radius:10px;background:var(--band);color:#fff;font-size:16px;font-weight:700;cursor:pointer}
   .pass .err{color:#D63031;font-size:13px;min-height:1.6em;margin-top:8px}
+  /* 押したらすぐ反応（ダブルタップ待ちをなくす） */
+  button,a,.dy,.views button{touch-action:manipulation}
+  .zoomhint{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);background:rgba(17,19,24,.82);color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;pointer-events:none;opacity:0;transition:opacity .2s}
+  .zoomhint.on{opacity:1}
   [hidden]{display:none!important}
 </style>
 </head>
@@ -161,14 +165,33 @@ function count(s){ return s.m.reduce(function(k,p){ return k+(p.co==='gk'?(p.n||
 function ownOf(s){ return s.kakou ? 'kakou' : (s.own||'sh'); }
 
 // ===== 読み込み（1週間ずつ。5分は覚えておく） =====
+// ===== 読み込み（アプリのように速く：覚えている週はすぐ出して、裏で読み直す 11/26） =====
+// 携帯に最近の週を覚えておく（次に開いたときもすぐ出る）。新しい中身が来たら描き直す
+try { var saved = JSON.parse(localStorage.getItem('haichi-weeks') || '{}'); if (saved && typeof saved === 'object') weeks = saved; } catch(e){}
+function saveWeeks(){
+  try {
+    var keys = Object.keys(weeks).sort().slice(-6), o = {};
+    keys.forEach(function(k){ o[k] = weeks[k]; });
+    localStorage.setItem('haichi-weeks', JSON.stringify(o));
+  } catch(e){}
+}
+var inflight = {};
+function fetchWeek(ws){
+  var key = ymd(ws);
+  if (inflight[key]) return inflight[key];
+  return inflight[key] = fetch(API+'?p='+encodeURIComponent(getPass())+'&w='+key+'&n=7').then(function(r){ return r.json(); }).then(function(j){
+    delete inflight[key];
+    if (!j.ok){ var e = new Error(j.error||'読めませんでした'); e.bad = j.bad; throw e; }
+    var changed = !weeks[key] || JSON.stringify(weeks[key].days) !== JSON.stringify(j.days);
+    weeks[key] = { t:Date.now(), days:j.days, at:j.at };
+    saveWeeks();
+    return changed;
+  }, function(e){ delete inflight[key]; throw e; });
+}
 function load(ws){
   var key = ymd(ws);
-  if (weeks[key] && Date.now()-weeks[key].t < 300000) return Promise.resolve(weeks[key].days);
-  return fetch(API+'?p='+encodeURIComponent(getPass())+'&w='+key+'&n=7').then(function(r){ return r.json(); }).then(function(j){
-    if (!j.ok){ var e = new Error(j.error||'読めませんでした'); e.bad = j.bad; throw e; }
-    weeks[key] = { t:Date.now(), days:j.days, at:j.at };
-    return j.days;
-  });
+  if (weeks[key] && Date.now()-weeks[key].t < 60000) return Promise.resolve(false);
+  return fetchWeek(ws);
 }
 function dayData(d){ var w = weeks[ymd(monday(d))]; if (!w) return null; return w.days.filter(function(x){ return x.date===ymd(d); })[0] || null; }
 
@@ -259,15 +282,57 @@ function drawSite(){
   main.innerHTML = h;
 }
 
+// ===== 現場別の表：指2本で拡大・縮小（50%〜160%。大きさは携帯が覚える 11/26） =====
+var TZ = 1; try { TZ = Math.min(1.6, Math.max(.5, parseFloat(localStorage.getItem('haichi-zoom')) || 1)); } catch(e){}
+document.documentElement.style.setProperty('--tz', TZ);
+(function(){
+  var d0 = 0, z0 = 1, hint = null, ht = 0, wrap = null, ax = 0, ay = 0, sl0 = 0, st0 = 0;
+  function dist(t){ var dx = t[0].clientX-t[1].clientX, dy = t[0].clientY-t[1].clientY; return Math.sqrt(dx*dx+dy*dy); }
+  function showHint(){
+    if (!hint){ hint = document.createElement('div'); hint.className = 'zoomhint'; document.body.appendChild(hint); }
+    hint.textContent = Math.round(TZ*100) + '%'; hint.classList.add('on');
+    clearTimeout(ht); ht = setTimeout(function(){ hint.classList.remove('on'); }, 700);
+  }
+  document.addEventListener('touchstart', function(e){
+    wrap = e.target.closest && e.target.closest('.tblwrap');
+    if (!wrap || e.touches.length !== 2) return;
+    d0 = dist(e.touches); z0 = TZ;
+    var r = wrap.getBoundingClientRect();
+    ax = (e.touches[0].clientX+e.touches[1].clientX)/2 - r.left; ay = (e.touches[0].clientY+e.touches[1].clientY)/2 - r.top;
+    sl0 = wrap.scrollLeft; st0 = wrap.scrollTop;
+  }, { passive:true });
+  document.addEventListener('touchmove', function(e){
+    if (!wrap || !d0 || e.touches.length !== 2) return;
+    e.preventDefault();                              // 画面全体の拡大にしない
+    var z = Math.min(1.6, Math.max(.5, z0 * dist(e.touches) / d0));
+    if (Math.abs(z-TZ) < .01) return;
+    TZ = z; document.documentElement.style.setProperty('--tz', TZ.toFixed(3));
+    // 指の真ん中を中心に拡大する
+    var k = TZ / z0; wrap.scrollLeft = (sl0 + ax) * k - ax; wrap.scrollTop = (st0 + ay) * k - ay;
+    showHint();
+  }, { passive:false });
+  document.addEventListener('touchend', function(e){
+    if (d0 && e.touches.length < 2){ d0 = 0; try { localStorage.setItem('haichi-zoom', TZ.toFixed(3)); } catch(er){} }
+  }, { passive:true });
+  // iPhone の Safari が画面ごと拡大するのを止める（表の上だけ）
+  document.addEventListener('gesturestart', function(e){ if (e.target.closest && e.target.closest('.tblwrap')) e.preventDefault(); });
+})();
+
 function draw(){ drawBand(); if (view==='site') drawSite(); else drawDay(); setBandH(); }
 // 表の高さ＝画面の高さ − 上の帯の高さ（帯の下に表がぴったり入るように）
 function setBandH(){ var b = document.getElementById('band'); if (b) document.documentElement.style.setProperty('--bandH', (b.offsetHeight + 30) + 'px'); }
 window.addEventListener('resize', setBandH);
 function go(){
-  document.getElementById('main').innerHTML = '<div class="msg">配置表を読んでいます…</div>';
-  drawBand();
-  load(weekStart).then(function(){ draw(); load(addDays(weekStart,7)).catch(function(){}); }).catch(function(e){   // 次の週も先に読んでおく
-    if (e.bad){ setPass(''); askPass('合言葉が違うか、変わりました。もう一度入れてください'); return; }
+  var key = ymd(weekStart), have = !!weeks[key];
+  if (have) draw(); else { document.getElementById('main').innerHTML = '<div class="msg">配置表を読んでいます…</div>'; drawBand(); }
+  load(weekStart).then(function(changed){
+    if (ymd(weekStart) !== key) return;            // 読んでいるうちに週を移った
+    if (!have || changed) draw();
+    // 前後の週も先に読んでおく（‹ › がすぐ切り替わるように）
+    load(addDays(weekStart,7)).catch(function(){}); load(addDays(weekStart,-7)).catch(function(){});
+  }).catch(function(e){
+    if (e.bad){ setPass(''); weeks = {}; saveWeeks(); askPass('合言葉が違うか、変わりました。もう一度入れてください'); return; }
+    if (have) return;                              // 覚えている中身を出したまま
     document.getElementById('main').innerHTML = '<div class="msg">配置を読めませんでした。<br>'+esc(e.message||e)+'<br><button type="button" onclick="go()" style="margin-top:12px;padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:var(--ground);color:var(--ink)">もう一度</button></div>';
   });
 }
