@@ -277,14 +277,36 @@
     const raycaster = new THREE.Raycaster(), groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitPoint = new THREE.Vector3();
     // 操作はグーグルマップと同じ：左ドラッグで移動、右ドラッグかCtrl+ドラッグで回転、ホイールで寄る・離れる、ダブルクリックで寄る
     let dragMode = 'pan';
+    // 指の操作（11/26 携帯の入口）：1本指で回す、2本指でつまんで拡大・縮小／ひねって回す
+    const touchPts = new Map();
+    let pinchD = 0, pinchA = 0;
+    const pinchOf = () => { const [a, b] = [...touchPts.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x) }; };
     const onDown = e => {
       if ((e.button !== 0 && e.button !== 2) || e.target.closest('[data-pin], #h-card, a, button')) return;
+      if (e.pointerType === 'touch' && window.M3D_LITE) {
+        touchPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        stopIntro(); touched = true;
+        if (touchPts.size === 2) { const p = pinchOf(); pinchD = p.d; pinchA = p.ang; dragging = false; return; }
+        if (touchPts.size > 2) return;
+      }
       stopIntro();
       dragging = true; touched = true; moved = 0; px = e.clientX; py = e.clientY; pointerKind = e.pointerType;
-      dragMode = e.button === 2 || e.ctrlKey || e.metaKey ? 'rotate' : 'pan';
+      dragMode = e.button === 2 || e.ctrlKey || e.metaKey || (e.pointerType === 'touch' && window.M3D_LITE) ? 'rotate' : 'pan';
       stage.classList.add('is-grabbing');
     };
     const onPointerMove = e => {
+      if (touchPts.has(e.pointerId)) {
+        touchPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (touchPts.size >= 2) {
+          const p = pinchOf();
+          if (pinchD > 0 && p.d > 0) goal.dist = clamp(goal.dist * pinchD / p.d, 6, MAX_DIST);
+          let da = p.ang - pinchA; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI;
+          goal.az -= da; now.az = goal.az;
+          pinchD = p.d; pinchA = p.ang;
+          onMove?.(); onView?.();
+          return;
+        }
+      }
       if (!dragging) return;
       const dx = e.clientX - px, dy = e.clientY - py;
       px = e.clientX; py = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
@@ -295,7 +317,7 @@
         spinPitch = clamp(spinPitch + dy * step, -1.3, 1.3);
       } else if (dragMode === 'rotate') {
         goal.az -= dx * 0.005;
-        goal.pol = clamp(goal.pol - dy * 0.004, 0.25, 1.32);
+        goal.pol = clamp(goal.pol - dy * (e.pointerType === 'touch' ? 0.002 : 0.004), 0.25, 1.32);
         now.az = goal.az; now.pol = goal.pol;
       } else {
         const unit = 2 * now.dist * Math.tan(camera.fov * Math.PI / 360) / Math.max(1, stage.clientHeight);
@@ -307,7 +329,7 @@
       }
       if (moved > 4) { onMove?.(); onView?.(); }
     };
-    const onUp = () => { dragging = false; stage.classList.remove('is-grabbing'); };
+    const onUp = e => { if (e && touchPts.has(e.pointerId)) { touchPts.delete(e.pointerId); pinchD = 0; } dragging = false; stage.classList.remove('is-grabbing'); };
     const pointHit = e => {
       const r = stage.getBoundingClientRect();
       raycaster.setFromCamera({ x: (e.clientX - r.left) / r.width * 2 - 1, y: -((e.clientY - r.top) / r.height) * 2 + 1 }, camera);
@@ -493,7 +515,7 @@
       last = t;
       const hold = paused?.() || dragging;
       // 入口の［回る］：触っていない間、ぐるっと回り続ける（11/26）
-      if (orbitOn && !dragging) goal.az += dt * 0.07;
+      if (orbitOn && !dragging && !touchPts.size) goal.az += dt * 0.07;
       const ease = reduced ? 1 : 1 - Math.pow(0.02, dt);
       if (introAnim) {
         if (introAnim.t0 == null) introAnim.t0 = t;

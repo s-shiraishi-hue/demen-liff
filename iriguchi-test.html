@@ -125,7 +125,7 @@
   /* ===== 立体の地図（11/26 PC の業務管理と同じ作り。three.js＋m3d.js） ===== */
   .hero.map.is-3d{height:30vh;min-height:200px;max-height:300px;background:#070f2e}   /* 11/26 前の7割くらい */
   .hero.map.is-3d::before{background:linear-gradient(180deg,rgba(7,12,31,.45) 0%,rgba(7,12,31,0) 22%)}   /* 下はぼかさず、アイコンとはっきり分ける */
-  .m3-stage{position:absolute;inset:0;z-index:1;overflow:hidden;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+  .m3-stage{position:absolute;inset:0;z-index:1;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
   .m3-stage .h-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   .m3-plane{position:absolute;inset:0;pointer-events:none}
   .m3-plane .h-town{position:absolute;left:0;top:0;margin:-.6rem 0 0 -1.5rem;font:700 11px/1 "Noto Sans JP",sans-serif;letter-spacing:.22em;white-space:nowrap;color:#eef3ff;text-shadow:0 1px 4px rgba(5,12,40,.95),0 0 2px rgba(5,12,40,.95)}
@@ -144,6 +144,19 @@
   .m3-views{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;display:flex;gap:6px;justify-content:center}
   .m3-views button{flex:none;border:0;border-radius:999px;padding:7px 11px;background:rgba(10,18,48,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;font:600 11.5px/1 "Noto Sans JP",sans-serif;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);cursor:pointer}
   .m3-views button.on{background:rgba(255,255,255,.92);color:#0B1A48}
+  .m3-plane .h-pin{pointer-events:auto;cursor:pointer}
+  .m3-plane .h-pin.is-other::after{content:"";position:absolute;left:-14px;bottom:-6px;width:28px;height:calc(var(--h) + 22px)}   /* 小さい点でも指で押しやすく */
+  .h-pin.is-open .h-pin-head{background:#fff}
+  .m3-card{position:absolute;left:12px;right:12px;bottom:48px;z-index:5;display:grid;gap:6px;padding:12px 14px 12px 16px;border-radius:16px;background:rgba(255,255,255,.95);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#14192B;box-shadow:0 10px 30px rgba(4,9,32,.45);border-left:5px solid var(--co,#ffd43d);animation:cardin .22s ease both}
+  @keyframes cardin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .m3-card h3{margin:0;padding-right:26px;font:700 15px/1.35 "Noto Sans JP",sans-serif}
+  .m3-card .row{display:flex;flex-wrap:wrap;gap:6px;font:600 11.5px/1 "Noto Sans JP",sans-serif}
+  .m3-card .row span{padding:5px 8px;border-radius:999px;background:#EEF1F8;color:#3A4466}
+  .m3-card .row span.today{background:#ffd43d;color:#16204a}
+  .m3-card .go{display:flex;gap:8px;margin-top:2px}
+  .m3-card .go a{flex:1;text-align:center;padding:9px 0;border-radius:10px;background:#0B1A48;color:#fff;text-decoration:none;font:700 12.5px/1 "Noto Sans JP",sans-serif}
+  .m3-card .go a.sub{background:#EEF1F8;color:#0B1A48}
+  .m3-card .x{position:absolute;right:8px;top:6px;width:28px;height:28px;border:0;background:none;font-size:18px;color:#8A93AE;cursor:pointer}
   .m3-stage.is-space .h-pin,.m3-stage.is-space .h-town{opacity:0}
   #toast{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);z-index:30;padding:14px 16px;border-radius:14px;background:rgba(20,25,43,.94);color:#fff;font:600 14px/1.5 "Noto Sans JP",sans-serif;text-align:center;opacity:0;transform:translateY(10px);transition:opacity .2s,transform .2s;pointer-events:none}
   #toast.on{opacity:1;transform:none}
@@ -155,6 +168,7 @@
 <div class="bar" id="bar">業務管理</div>
 <header class="hero map" id="map">
   <div class="m3-stage" id="m3stage" hidden><div class="m3-plane" id="m3plane"></div></div>
+  <div class="m3-card" id="m3card" hidden role="dialog" aria-live="polite"></div>
   <div class="m3-views" id="m3views" hidden role="group" aria-label="地図の見る場所"><button type="button" data-view="iri" class="on">全体</button><button type="button" data-view="kita">北九州</button><button type="button" data-view="chiku">筑豊</button><button type="button" data-view="fuku">福岡</button><button type="button" data-orbit="1" aria-pressed="true" class="on">↻ 回る</button></div>
   <div id="tiles" aria-hidden="true"></div>
   <div id="labels" aria-hidden="true"></div>
@@ -178,7 +192,7 @@
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>window.M3D_LITE = true; window.M3D_START = 'iri'; window.MAP_PATCHES = [];</script>
-<script src="m3d.js?v=3"></script>
+<script src="m3d.js?v=4"></script>
 <script>
 var LIFF = '2011897591-HBBipfnN';
 var PASS_KEY = 'gyomu-pass';
@@ -269,12 +283,32 @@ function draw3d(){
   if (M3) { try { M3.destroy(); } catch(e){} M3 = null; var c = stage.querySelector('canvas'); if (c) c.remove(); }
   var esc = function(t){ return String(t).replace(/[<>&"]/g,''); };
   plane.innerHTML = AREAS.map(function(a){ return '<span class="h-town'+(a[3]?' big':'')+'" data-lng="'+a[2]+'" data-lat="'+a[1]+'">'+a[0]+'</span>'; }).join('')
-    + PINS.filter(function(p){ return p.lat && p.lon; }).map(function(p, i){
+    + (PIN_LIST = PINS.filter(function(p){ return p.lat && p.lon; })).map(function(p, i){
       if (p.other) return '<span class="h-pin is-other co-'+(p.own||'sh')+'" data-pin="'+i+'" data-lng="'+p.lon+'" data-lat="'+p.lat+'" style="--h:10px"><span class="h-pin-stem"></span><span class="h-pin-head"></span><span class="h-pin-name">'+esc(p.name)+'</span></span>';
-      return '<span class="h-pin is-today" data-lng="'+p.lon+'" data-lat="'+p.lat+'" style="--h:'+Math.round(26+Math.min(p.n||1,20)*1.6)+'px"><span class="h-pin-stem"></span><span class="h-pin-head"><b>'+esc(p.name)+'</b><em>'+(p.n||0)+'</em></span></span>';
+      return '<span class="h-pin is-today co-'+(p.own||'sh')+'" data-pin="'+i+'" data-lng="'+p.lon+'" data-lat="'+p.lat+'" style="--h:'+Math.round(26+Math.min(p.n||1,20)*1.6)+'px"><span class="h-pin-stem"></span><span class="h-pin-head"><b>'+esc(p.name)+'</b><em>'+(p.n||0)+'</em></span></span>';
     }).join('');
-  M3 = window.Map3D.create({ stage: stage, plane: plane, layer: 'photo', base: 'm3d-' });
+  closeCard();
+  M3 = window.Map3D.create({ stage: stage, plane: plane, layer: 'photo', base: 'm3d-', paused: function(){ return !!openPin; }, onMove: closeCard });
   if (orbiting) M3.orbit(true);
+}
+// ===== ピンを押すと現場の情報（11/26 PC と同じ考え。個人の名前は出さない） =====
+var openPin = null, PIN_LIST = [];
+var CO_NAME = { sh: '白石工業', nk: '中嶋板金工業', ym: '山下板金工作所', kakou: '加工' };
+function closeCard(){ var c = document.getElementById('m3card'); if (c) c.hidden = true; if (openPin) openPin.classList.remove('is-open'); openPin = null; }
+function showCard(el){
+  var p = PIN_LIST[Number(el.dataset.pin)]; if (!p) return;
+  if (openPin) openPin.classList.remove('is-open');
+  openPin = el; el.classList.add('is-open');
+  var esc = function(t){ return String(t == null ? '' : t).replace(/[<>&"]/g, ''); };
+  var c = document.getElementById('m3card');
+  c.className = 'm3-card co-' + (p.own || 'sh');
+  var tags = p.other ? '<span>' + esc(p.st || '工事中') + '</span>' : '<span class="today">今日 ' + (p.n || 0) + '人</span>';
+  c.innerHTML = '<button type="button" class="x" aria-label="閉じる">×</button><h3>' + esc(p.name) + '</h3>' + (p.title && p.title !== p.name ? '<p style="margin:-2px 0 2px;font:500 12px/1.4 Noto Sans JP,sans-serif;color:#5A6385">' + esc(p.title) + '</p>' : '')
+    + '<div class="row">' + tags + '<span>' + (CO_NAME[p.own] || '') + '</span></div>'
+    + '<div class="go"><a href="https://www.google.com/maps/search/?api=1&query=' + p.lat + ',' + p.lon + '" target="_blank" rel="noopener">地図で開く</a>'
+    + (p.other ? '' : '<a class="sub" href="haichi-view-test.html">人員配置を見る</a>') + '</div>';
+  c.hidden = false;
+  c.querySelector('.x').onclick = function(e){ e.stopPropagation(); closeCard(); };
 }
 function mapStart(){
   if (window.Map3D && window.Map3D.supported()) {
@@ -282,6 +316,11 @@ function mapStart(){
     document.getElementById('m3stage').hidden = false;
     document.getElementById('tiles').hidden = true; document.getElementById('labels').hidden = true; document.getElementById('pins').hidden = true;
     draw3d();
+    document.getElementById('m3stage').addEventListener('click', function(e){
+      var el = e.target.closest('[data-pin]');
+      if (el) { if (openPin === el) closeCard(); else showCard(el); return; }
+      if (!e.target.closest('#m3card')) closeCard();
+    });
     var vb = document.getElementById('m3views'); vb.hidden = false;
     vb.addEventListener('click', function(e){
       var b = e.target.closest('button'); if (!b || !M3) return;
@@ -368,7 +407,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-17";
+var BUILD_ID = "20261126-18";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
