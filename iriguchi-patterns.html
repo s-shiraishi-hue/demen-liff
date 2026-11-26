@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>入口の10案</title>
+<style>
+  /* 入口のデザイン・配置 10案（2026-11-26・見るだけ。押しても何も開かない） */
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;-webkit-text-size-adjust:100%;background:#000}
+  /* 案を切り替える帯 */
+  #picker{position:sticky;top:0;z-index:50;background:rgba(20,20,24,.92);backdrop-filter:blur(12px);padding:8px 10px calc(8px);color:#fff}
+  #picker .row{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  #picker .row::-webkit-scrollbar{display:none}
+  #picker button{flex:0 0 auto;border:0;border-radius:999px;padding:7px 12px;font:600 13px inherit;font-family:inherit;background:#2C2C30;color:#ddd}
+  #picker button.on{background:#fff;color:#000}
+  #picker .name{font-size:12px;opacity:.75;margin-top:6px;text-align:center}
+  #stage{min-height:calc(100vh - 70px);position:relative}
+  a{color:inherit;text-decoration:none}
+  svg{display:block}
+  .ic{display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .tbadge{font-size:10px;font-weight:700;background:#F5A524;color:#3A2600;border-radius:999px;padding:1px 6px}
+</style>
+</head>
+<body>
+<div id="picker"><div class="row" id="btns"></div><div class="name" id="pname"></div></div>
+<div id="stage"></div>
+
+<script>
+// ===== アプリの一覧（並べ方だけ変えて、中身は同じ）=====
+var P = {
+  alc: '<path d="M9 3h6M10 3v5l-4 9a2 2 0 0 0 1.8 3h8.4A2 2 0 0 0 18 17l-4-9V3"/><path d="M7.5 14h9"/>',
+  kin: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>',
+  dem: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M8.5 10h7M8.5 13.5h7M8.5 17h4"/>',
+  kak: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3.5 17.5l3 3 5.8-5.8a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+  hai: '<circle cx="9" cy="8" r="3"/><path d="M3.5 19c.6-3 2.8-5 5.5-5s4.9 2 5.5 5"/><circle cx="17" cy="9" r="2.3"/><path d="M15.8 14.2c2.3.2 4 1.9 4.7 4.8"/>',
+  gen: '<path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/>',
+  sin: '<path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 9h6M9 13h6"/>'
+};
+var APPS = [
+  { k: 'alc', name: 'アルコール', sub: '運転の前と後', c1: '#30D158', c2: '#13A03B', daily: 1, when: '朝', state: '済', done: 1 },
+  { k: 'kin', name: '勤怠', sub: '出勤・退勤', c1: '#FF6B6B', c2: '#D63031', daily: 1, when: '朝', state: '出勤 7:42', done: 1 },
+  { k: 'dem', name: '出面・現調', sub: '今日の作業の報告', c1: '#2F6BFF', c2: '#0017C1', daily: 1, when: '夕', state: 'まだ', done: 0 },
+  { k: 'kak', name: '加工依頼', sub: '工場への依頼', c1: '#FF9F43', c2: '#E8590C', test: 1 },
+  { k: 'hai', name: '人員配置', sub: '明日の現場と人', c1: '#34C7B5', c2: '#0E8F80', test: 1 },
+  { k: 'gen', name: '現場一覧', sub: '住所・担当・写真', c1: '#8E7CFF', c2: '#5B3FD6' },
+  { k: 'sin', name: '申請', sub: '休み・経費など', c1: '#5AC8FA', c2: '#1C8BD6' }
+];
+var DAILY = APPS.filter(function (a) { return a.daily; });
+var OTHER = APPS.filter(function (a) { return !a.daily; });
+var DATE = (function () { var d = new Date(); return (d.getMonth() + 1) + '月' + d.getDate() + '日（' + '日月火水木金土'[d.getDay()] + '）'; })();
+var WHO = '白石 周';
+
+function svg(k, s, col) { return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="' + (col || '#fff') + '" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + P[k] + '</svg>'; }
+function icon(a, size, rad, isz, flat) {
+  var bg = flat ? a.c2 : 'linear-gradient(180deg,' + a.c1 + ',' + a.c2 + ')';
+  return '<span class="ic" style="width:' + size + 'px;height:' + size + 'px;border-radius:' + rad + 'px;background:' + bg + ';box-shadow:0 2px 6px rgba(0,0,0,.18)">' + svg(a.k, isz || Math.round(size * .52)) + '</span>';
+}
+function tb(a) { return a.test ? ' <span class="tbadge">試験</span>' : ''; }
+
+// ===== 10案 =====
+var PATTERNS = [
+  { name: '① iPhoneのホーム＋下の段（今の案）', css: 'background:linear-gradient(160deg,#1E3A8A,#14264F 45%,#0B1430);color:#fff;padding:20px 22px 130px', render: function () {
+    var h = '<div style="border-radius:22px;padding:16px 18px;margin-bottom:24px;background:rgba(255,255,255,.14)"><div style="font-size:13px;font-weight:600;opacity:.85">' + DATE + '</div><div style="font-size:22px;font-weight:700;margin-top:4px">' + WHO + ' さん</div>' +
+      '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">' + DAILY.map(function (a) { return '<span style="font-size:12px;padding:4px 10px;border-radius:999px;background:' + (a.done ? 'rgba(6,199,85,.35)' : 'rgba(255,255,255,.18)') + '">' + a.name.replace('・現調', '') + ' ' + a.state + '</span>'; }).join('') + '</div></div>';
+    h += '<div style="font-size:12px;font-weight:700;opacity:.7;margin:0 2px 10px">依頼・確認</div><div style="display:flex;flex-wrap:wrap;margin:0 -6px">' + OTHER.map(function (a) { return '<a style="width:25%;padding:0 6px;margin-bottom:20px;display:flex;flex-direction:column;align-items:center;position:relative">' + icon(a, 62, 15) + '<span style="font-size:12px;margin-top:6px">' + a.name + '</span>' + (a.test ? '<span class="tbadge" style="position:absolute;top:-6px;right:2px">試験</span>' : '') + '</a>'; }).join('') + '</div>';
+    h += '<div style="position:fixed;left:50%;transform:translateX(-50%);bottom:18px;width:calc(100% - 28px);max-width:370px;border-radius:30px;padding:12px 8px 10px;background:rgba(255,255,255,.2);backdrop-filter:blur(24px);display:flex;justify-content:space-around">' + DAILY.map(function (a) { return '<a style="display:flex;flex-direction:column;align-items:center">' + icon(a, 62, 15) + '<span style="font-size:11px;margin-top:6px">' + a.name + '</span></a>'; }).join('') + '</div>';
+    return h; } },
+
+  { name: '② 白の画面・iPhoneのアイコン4列', css: 'background:#F2F2F7;color:#111;padding:22px 22px 40px', render: function () {
+    var h = '<div style="font-size:13px;color:#8E8E93;font-weight:600">' + DATE + '</div><div style="font-size:28px;font-weight:800;margin:2px 0 22px">業務報告</div>';
+    h += '<div style="display:flex;flex-wrap:wrap;margin:0 -6px">' + APPS.map(function (a) { return '<a style="width:25%;padding:0 6px;margin-bottom:22px;display:flex;flex-direction:column;align-items:center">' + icon(a, 62, 15) + '<span style="font-size:12px;margin-top:6px;color:#1C1C1E;white-space:nowrap">' + a.name + '</span></a>'; }).join('') + '</div>';
+    h += '<div style="margin-top:6px;padding:14px 16px;border-radius:16px;background:#fff;font-size:13px;color:#555;line-height:1.6">送ると最後に、カードを出すグループを選びます。</div>';
+    return h; } },
+
+  { name: '③ 大きいボタン2列（手袋でも押しやすい）', css: 'background:#F4F5F7;color:#14264F;padding:18px 14px 40px', render: function () {
+    var h = '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 14px"><b style="font-size:20px">' + WHO + ' さん</b><span style="font-size:13px;color:#666">' + DATE + '</span></div>';
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' + APPS.map(function (a, i) { return '<a style="' + (i === 2 ? 'grid-column:1/3;' : '') + 'background:#fff;border-radius:18px;padding:18px 14px;min-height:' + (i === 2 ? 110 : 128) + 'px;display:flex;' + (i === 2 ? 'flex-direction:row;align-items:center;gap:16px' : 'flex-direction:column;justify-content:space-between') + ';box-shadow:0 1px 3px rgba(0,0,0,.08)">' + icon(a, i === 2 ? 64 : 48, 14) + '<div><div style="font-size:' + (i === 2 ? 22 : 18) + 'px;font-weight:800">' + a.name + tb(a) + '</div><div style="font-size:12px;color:#777;margin-top:3px">' + a.sub + '</div></div></a>'; }).join('') + '</div>';
+    return h; } },
+
+  { name: '④ 一覧（iPhoneの「設定」風）', css: 'background:#F2F2F7;color:#111;padding:20px 16px 40px', render: function () {
+    function group(title, list) { return '<div style="font-size:13px;color:#6D6D72;margin:18px 16px 6px">' + title + '</div><div style="background:#fff;border-radius:12px;overflow:hidden">' + list.map(function (a, i) { return '<a style="display:flex;align-items:center;gap:12px;padding:10px 14px;' + (i ? 'border-top:1px solid #E5E5EA;' : '') + '">' + icon(a, 34, 8, 20, 1) + '<div style="flex:1"><div style="font-size:16px">' + a.name + tb(a) + '</div><div style="font-size:12px;color:#8E8E93">' + a.sub + '</div></div>' + (a.state ? '<span style="font-size:13px;color:' + (a.done ? '#34C759' : '#FF3B30') + '">' + a.state + '</span>' : '') + '<span style="color:#C7C7CC;font-size:20px">›</span></a>'; }).join('') + '</div>'; }
+    return '<div style="font-size:30px;font-weight:800;margin:4px 6px 0">業務報告</div><div style="font-size:13px;color:#8E8E93;margin:2px 6px">' + DATE + '　' + WHO + ' さん</div>' + group('毎日', DAILY) + group('依頼・確認', OTHER);
+  } },
+
+  { name: '⑤ 時間で変わる（今やるものを大きく）', css: 'background:linear-gradient(180deg,#FFF4E0,#FFE3B8);color:#3A2600;padding:20px 18px 40px', render: function () {
+    var now = DAILY[2];
+    var h = '<div style="font-size:14px;font-weight:700;opacity:.7">' + DATE + '　夕方</div><div style="font-size:24px;font-weight:800;margin:4px 0 16px">おつかれさまです。<br>今日の報告がまだです</div>';
+    h += '<a style="display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,' + now.c1 + ',' + now.c2 + ');color:#fff;border-radius:22px;padding:22px;box-shadow:0 8px 20px rgba(0,23,193,.3)">' + svg(now.k, 46) + '<div><div style="font-size:24px;font-weight:800">' + now.name + '</div><div style="font-size:13px;opacity:.85">押して報告する</div></div></a>';
+    h += '<div style="font-size:12px;font-weight:700;opacity:.6;margin:22px 4px 10px">ほかのもの</div><div style="display:flex;flex-wrap:wrap;margin:0 -6px">' + APPS.filter(function (a) { return a !== now; }).map(function (a) { return '<a style="width:25%;padding:0 6px;margin-bottom:16px;display:flex;flex-direction:column;align-items:center">' + icon(a, 54, 14) + '<span style="font-size:11px;margin-top:5px;white-space:nowrap">' + a.name + '</span></a>'; }).join('') + '</div>';
+    return h; } },
+
+  { name: '⑥ 今日のやること（チェックリスト）', css: 'background:#fff;color:#111;padding:20px 18px 40px', render: function () {
+    var left = DAILY.filter(function (a) { return !a.done; }).length;
+    var h = '<div style="font-size:13px;color:#888">' + DATE + '</div><div style="font-size:24px;font-weight:800;margin:2px 0 4px">今日のやること</div><div style="font-size:14px;color:' + (left ? '#D63031' : '#13A03B') + ';font-weight:700;margin-bottom:14px">あと ' + left + ' つ</div>';
+    h += DAILY.slice().sort(function (a, b) { return a.done - b.done; }).map(function (a) { return '<a style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;margin-bottom:10px;border:2px solid ' + (a.done ? '#E6E6E6' : a.c2) + ';' + (a.done ? 'opacity:.55' : '') + '">' + '<span style="width:28px;height:28px;border-radius:50%;border:2px solid ' + (a.done ? '#13A03B' : '#C8C8C8') + ';background:' + (a.done ? '#13A03B' : '#fff') + ';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900">' + (a.done ? '✓' : '') + '</span>' + icon(a, 40, 10, 22) + '<div style="flex:1"><div style="font-size:17px;font-weight:700">' + a.name + '</div><div style="font-size:12px;color:#888">' + (a.done ? a.state : a.sub) + '</div></div></a>'; }).join('');
+    h += '<div style="font-size:13px;color:#888;font-weight:700;margin:20px 2px 10px">そのほか</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + OTHER.map(function (a) { return '<a style="display:flex;align-items:center;gap:8px;padding:8px 12px 8px 8px;border-radius:999px;background:#F2F2F7;font-size:14px">' + icon(a, 26, 13, 15) + a.name + '</a>'; }).join('') + '</div>';
+    return h; } },
+
+  { name: '⑦ 下にタブ（LINEアプリ風）', css: 'background:#fff;color:#111;padding:0 0 90px', render: function () {
+    var h = '<div style="padding:16px 18px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px"><span style="width:36px;height:36px;border-radius:50%;background:#14264F;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">白</span><div><div style="font-weight:700">' + WHO + ' さん</div><div style="font-size:12px;color:#888">' + DATE + '</div></div></div>';
+    h += '<div style="padding:16px 18px"><div style="font-size:13px;color:#888;margin-bottom:10px">よく使う</div><div style="display:flex;justify-content:space-between">' + APPS.slice(0, 4).map(function (a) { return '<a style="display:flex;flex-direction:column;align-items:center;width:25%">' + icon(a, 56, 18) + '<span style="font-size:12px;margin-top:6px;white-space:nowrap">' + a.name + '</span></a>'; }).join('') + '</div>';
+    h += '<div style="font-size:13px;color:#888;margin:22px 0 10px">お知らせ</div><div style="padding:12px 14px;border-radius:12px;background:#F6F7F9;font-size:14px;line-height:1.6">明日の配置が出ました（2現場）<br><span style="color:#888;font-size:12px">人員配置 ・ 17:05</span></div></div>';
+    var tabs = [['ホーム', 'gen', 1], ['報告', 'dem'], ['依頼', 'kak'], ['確認', 'hai'], ['申請', 'sin']];
+    h += '<div style="position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #e5e5e5;display:flex;padding:8px 0 calc(10px + env(safe-area-inset-bottom,0px))">' + tabs.map(function (t) { return '<a style="flex:1;display:flex;flex-direction:column;align-items:center;font-size:10px;color:' + (t[2] ? '#06C755' : '#8E8E93') + '">' + svg(t[1], 24, t[2] ? '#06C755' : '#8E8E93') + '<span style="margin-top:3px">' + t[0] + '</span></a>'; }).join('') + '</div>';
+    return h; } },
+
+  { name: '⑧ 大小のタイル（iPhoneのウィジェット風）', css: 'background:#1C1C1E;color:#fff;padding:20px 16px 40px', render: function () {
+    var a = APPS;
+    function tile(x, span, rows, inner) { return '<a style="grid-column:span ' + span + ';grid-row:span ' + rows + ';border-radius:22px;padding:14px;background:linear-gradient(160deg,' + x.c1 + ',' + x.c2 + ');display:flex;flex-direction:column;justify-content:space-between;min-height:' + (rows * 78) + 'px">' + inner + '</a>'; }
+    var h = '<div style="font-size:13px;opacity:.6">' + DATE + '</div><div style="font-size:24px;font-weight:800;margin:2px 0 14px">' + WHO + ' さん</div>';
+    h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:78px;gap:12px">';
+    h += tile(a[2], 4, 2, svg('dem', 36) + '<div><div style="font-size:26px;font-weight:800">' + a[2].name + '</div><div style="font-size:13px;opacity:.85">今日の報告：まだ</div></div>');
+    h += tile(a[0], 2, 2, svg('alc', 30) + '<div><div style="font-size:17px;font-weight:800">アルコール</div><div style="font-size:12px;opacity:.85">✓ 済</div></div>');
+    h += tile(a[1], 2, 2, svg('kin', 30) + '<div><div style="font-size:17px;font-weight:800">勤怠</div><div style="font-size:12px;opacity:.85">出勤 7:42</div></div>');
+    OTHER.forEach(function (x) { h += tile(x, 1, 1, svg(x.k, 22) + '<div style="font-size:11px;font-weight:700;white-space:nowrap">' + x.name + '</div>'); });
+    return h + '</div>'; } },
+
+  { name: '⑨ 横にめくるカード（Wallet風）', css: 'background:#0B1430;color:#fff;padding:20px 0 40px', render: function () {
+    var h = '<div style="padding:0 20px"><div style="font-size:13px;opacity:.6">' + DATE + '</div><div style="font-size:24px;font-weight:800;margin:2px 0 14px">' + WHO + ' さん</div></div>';
+    h += '<div style="display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:0 20px 8px;-webkit-overflow-scrolling:touch">' + DAILY.map(function (a) { return '<a style="scroll-snap-align:center;flex:0 0 82%;height:180px;border-radius:24px;padding:20px;background:linear-gradient(135deg,' + a.c1 + ',' + a.c2 + ');display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 10px 24px rgba(0,0,0,.4)">' + '<div style="display:flex;justify-content:space-between;align-items:flex-start">' + svg(a.k, 34) + '<span style="font-size:13px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.25)">' + a.state + '</span></div><div><div style="font-size:28px;font-weight:800">' + a.name + '</div><div style="font-size:13px;opacity:.85">' + a.sub + '</div></div></a>'; }).join('') + '</div>';
+    h += '<div style="text-align:center;font-size:12px;opacity:.5;margin:4px 0 18px">← 横にめくる →</div>';
+    h += '<div style="padding:0 20px;display:flex;flex-wrap:wrap;margin:0 -6px">' + OTHER.map(function (a) { return '<a style="width:25%;padding:0 6px;display:flex;flex-direction:column;align-items:center">' + icon(a, 54, 14) + '<span style="font-size:11px;margin-top:5px;white-space:nowrap">' + a.name + '</span></a>'; }).join('') + '</div>';
+    return h; } },
+
+  { name: '⑩ 会社の色・文字だけ（いちばんシンプル）', css: 'background:#fff;color:#14264F;padding:24px 18px 40px', render: function () {
+    var h = '<div style="border-left:6px solid #0017C1;padding-left:12px;margin-bottom:22px"><div style="font-size:12px;color:#666">白石グループ</div><div style="font-size:26px;font-weight:800">業務報告</div></div>';
+    h += APPS.map(function (a, i) { return '<a style="display:flex;align-items:center;justify-content:space-between;padding:18px 18px;margin-bottom:10px;border-radius:12px;' + (i < 3 ? 'background:#0017C1;color:#fff' : 'background:#fff;border:2px solid #D9DCE2') + '"><span style="font-size:19px;font-weight:800">' + a.name + (a.test ? '<span style="font-size:11px;font-weight:700;margin-left:8px;opacity:.7">試験</span>' : '') + '</span><span style="font-size:13px;' + (i < 3 ? 'opacity:.85' : 'color:#888') + '">' + (a.state || a.sub) + ' ›</span></a>'; }).join('');
+    return h; } }
+];
+
+// ===== 切り替え =====
+var cur = 0;
+function show(i) {
+  cur = i;
+  var p = PATTERNS[i];
+  var st = document.getElementById('stage');
+  st.style.cssText = p.css + ';min-height:calc(100vh - 70px)';
+  st.innerHTML = p.render();
+  document.getElementById('pname').textContent = p.name;
+  [].forEach.call(document.querySelectorAll('#btns button'), function (b, j) { b.className = j === i ? 'on' : ''; });
+  try { history.replaceState(null, '', '#' + (i + 1)); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+document.getElementById('btns').innerHTML = PATTERNS.map(function (p, i) { return '<button type="button" data-i="' + i + '">' + (i + 1) + '</button>'; }).join('');
+document.getElementById('btns').onclick = function (e) { var b = e.target.closest('button'); if (b) show(+b.dataset.i); };
+show(Math.max(0, Math.min(9, (parseInt(location.hash.slice(1), 10) || 1) - 1)));
+</script>
+</body>
+</html>
