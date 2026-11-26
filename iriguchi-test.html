@@ -35,7 +35,7 @@
 
   /* 上の帯：紺のグラデーション＋屋根の波板のような細い縦線＋右下の光 */
   .hero{position:relative;color:#fff;overflow:hidden;background:linear-gradient(180deg,#0B1A48 0%,#0F2360 30%,#163A98 75%,#1D4CB4 100%);
-    padding:calc(env(safe-area-inset-top,0px) + 64px) max(24px,env(safe-area-inset-right,0px)) 28px max(24px,env(safe-area-inset-left,0px))}
+    padding:calc(env(safe-area-inset-top,0px) + 30px) max(24px,env(safe-area-inset-right,0px)) 28px max(24px,env(safe-area-inset-left,0px))}
   /* 縦線は上を消して下から右へうっすら（上がぼやけて見えないように 11/26） */
   .hero::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,rgba(255,255,255,0) 1px 12px);
     -webkit-mask-image:linear-gradient(to bottom,transparent 0%,transparent 35%,#000 100%);mask-image:linear-gradient(to bottom,transparent 0%,transparent 35%,#000 100%)}
@@ -55,7 +55,7 @@
   .bar.on{opacity:1;transform:none}
 
   /* アイコン：iPhone のホーム画面と同じ並び。グループは見出しと細い線だけ */
-  main{padding:30px max(20px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 40px) max(20px,env(safe-area-inset-left,0px))}
+  main{padding:24px max(20px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 40px) max(20px,env(safe-area-inset-left,0px))}
   .grp{padding:4px 0 18px;margin-bottom:16px;border-bottom:1px solid var(--sep)}   /* 区切りの線を少し濃く（11/26） */
   .grp:last-child{border-bottom:0}
   .grp h2{margin:0 2px 14px;font-size:17px;font-weight:700;color:var(--ink2);letter-spacing:.06em}   /* 現場・加工・その他を大きく（11/26） */
@@ -95,28 +95,44 @@
   :root[data-theme="light"] .tile svg.sh{filter:drop-shadow(0 4px 10px rgba(16,32,96,.22))}
   :root[data-theme="light"] .app.soon .tile{filter:saturate(0);opacity:.3}
   /* 明るさの切り替え（帯の右上、すりガラス） */
-  .hero .wrap{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-  .seg{display:flex;padding:2px;border-radius:10px;background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);flex:0 0 auto}
-  .seg button{border:0;background:transparent;color:rgba(255,255,255,.85);font:600 11px/1 "Inter","Noto Sans JP",sans-serif;min-width:30px;height:26px;padding:0 8px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-  .seg button[aria-checked="true"]{background:rgba(255,255,255,.95);color:#0B1A48}
+  /* 帯（11/26 見本どおり）：左に業務管理と日付、右に天気。2行の高さをそろえ、間に細い縦線 */
+  .hgrid{display:grid;grid-template-columns:auto auto;justify-content:space-between;align-items:center;column-gap:20px;padding:0 10px}
+  .hero h1{grid-column:1;grid-row:1;align-self:end;font-size:26px}
+  .hero .dt{grid-column:1;grid-row:2;align-self:start;margin:0;padding-top:10px;opacity:.85}
+  .wtop,.wsub{grid-column:2;justify-self:stretch;padding-left:18px;border-left:1px solid rgba(255,255,255,.22);color:#fff;display:flex;align-items:center}
+  .wtop{grid-row:1;align-self:end;justify-content:center;gap:8px;opacity:.9;font:600 24px/1.1 "Inter",sans-serif;letter-spacing:-.01em}
+  .wsub{grid-row:2;align-self:start;padding-top:10px;gap:4px;opacity:.75;font:500 12px/1 "Inter","Noto Sans JP",sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .wsub .dot{opacity:.6}
+  /* 明るさの切り替え：帯のすぐ下の右上 */
+  .tb{display:flex;justify-content:flex-end;margin-top:-14px;margin-bottom:8px}
+  .seg{display:flex;padding:2px;border-radius:10px;background:var(--sep)}
+  .seg button{border:0;background:transparent;color:var(--sub);font:600 11px/1 "Inter","Noto Sans JP",sans-serif;min-width:30px;height:26px;padding:0 8px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .seg button[aria-checked="true"]{background:var(--field);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  /* アイコンは画面の下のほうにそろえる（親指の届く高さ）。多いときは上から並ぶ */
+  body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+  main{flex:1;display:flex;flex-direction:column}
+  #menu{margin-top:auto;width:100%}
+  .gform{margin-top:6vh}
   [hidden]{display:none!important}
 </style>
 </head>
 <body>
 <div class="bar" id="bar">業務管理</div>
-<header class="hero"><div class="wrap">
-  <div>
+<header class="hero"><div class="wrap hgrid">
   <h1>業務管理</h1>
   <div class="dt" id="dt"></div>
-  </div>
+  <div class="wtop" id="wtop" hidden></div>
+  <div class="wsub" id="wsub" hidden></div>
+</div></header>
+
+<main>
+  <div class="wrap tb">
   <div class="seg" role="radiogroup" aria-label="表示の明るさ">
     <button type="button" data-t="auto" role="radio">自動</button>
     <button type="button" data-t="light" role="radio" aria-label="ライト"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg></button>
     <button type="button" data-t="dark" role="radio" aria-label="ダーク"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.8 8.8 0 0 1 9.4 3.5a.8.8 0 0 0-1-1A10.5 10.5 0 1 0 21.5 15.6a.8.8 0 0 0-1-1Z"/></svg></button>
   </div>
-</div></header>
-
-<main>
+  </div>
   <div class="wrap" id="menu" hidden>
     <div id="groups"></div>
     <p class="addhint" id="addhint" hidden></p>
@@ -191,6 +207,33 @@ function setTheme(t){
 document.querySelector('.seg').onclick = function(e){ var b = e.target.closest('button'); if (b) setTheme(b.dataset.t); };
 (function(){ var t = 'auto'; try { t = localStorage.getItem('iriguchi-theme') || 'auto'; } catch (e) {} setTheme(t); })();
 
+// ===== 天気（北九州。11/26 白石さん。Open-Meteo の無料の天気の情報。送るのは決まった場所の数字だけで、会社や人の情報は送らない。30分は覚えておく） =====
+(function(){
+  var KEY = 'gyomu-wx-kk';
+  function icon(code){
+    var sun = '<circle cx="18" cy="18" r="8" fill="#FFC53D"/>', cloud = '<path d="M20 38h18a7 7 0 0 0 0-14 9 9 0 0 0-17 3 6 6 0 0 0-1 11z" fill="#DCE3F0"/>';
+    var rain = '<path d="M14 34h22a8 8 0 0 0 0-16 11 11 0 0 0-21 3 7 7 0 0 0-1 13z" fill="#DCE3F0"/><g stroke="#7FB2FF" stroke-width="2.6" stroke-linecap="round"><path d="M17 39l-2 5M25 39l-2 5M33 39l-2 5"/></g>';
+    var b = code <= 1 ? '<circle cx="24" cy="24" r="9" fill="#FFC53D"/>' : code <= 3 ? sun + cloud : code >= 51 ? rain : cloud;
+    return '<svg width="28" height="28" viewBox="0 0 48 48" aria-hidden="true">' + b + '</svg>';
+  }
+  function draw(w){
+    var t = document.getElementById('wtop'), u = document.getElementById('wsub');
+    t.innerHTML = icon(w.code) + '<span>' + Math.round(w.temp) + '°</span>';
+    u.innerHTML = '<span>' + Math.round(w.max) + '° / ' + Math.round(w.min) + '°</span><span class="dot">・</span>' +
+      (w.rain != null ? '<span><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3s-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z" fill="#7FB2FF"/></svg>' + w.rain + '時〜雨</span>' : '<span>雨なし</span>');
+    t.hidden = false; u.hidden = false;
+  }
+  try { var c = JSON.parse(localStorage.getItem(KEY) || 'null'); if (c && Date.now() - c.at < 1800000) { draw(c); return; } if (c) draw(c); } catch (e) {}
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=33.88&longitude=130.88&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&hourly=precipitation_probability&timezone=Asia%2FTokyo&forecast_days=1')
+    .then(function(r){ return r.json(); }).then(function(j){
+      var h = new Date().getHours(), rain = null;
+      (j.hourly && j.hourly.precipitation_probability || []).some(function(p, i){ if (i >= h && p >= 50) { rain = i; return true; } return false; });
+      var w = { at: Date.now(), temp: j.current.temperature_2m, code: j.current.weather_code, max: j.daily.temperature_2m_max[0], min: j.daily.temperature_2m_min[0], rain: rain };
+      try { localStorage.setItem(KEY, JSON.stringify(w)); } catch (e) {}
+      draw(w);
+    }).catch(function(){});
+})();
+
 // 下に送ったら上に小さいタイトル
 window.addEventListener('scroll', function(){ document.getElementById('bar').classList.toggle('on', window.scrollY > 80); }, { passive:true });
 
@@ -254,7 +297,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-3";
+var BUILD_ID = "20261126-4";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
