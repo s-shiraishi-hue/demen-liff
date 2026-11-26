@@ -365,5 +365,19 @@ setTheme(sv);
 
 if (getPass()) go(); else askPass();
 </script>
+<script>
+// 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
+var BUILD_ID = "20261126-1";
+(function(){
+  function check(){
+    fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
+      var m = /BUILD_ID = "([^"]+)"/.exec(t);
+      if (m && m[1] !== BUILD_ID) { var q = location.search.replace(/([?&])v=[^&]*&?/, "$1").replace(/[?&]$/, ""); location.replace(location.pathname + (q ? q + "&" : "?") + "v=" + m[1] + location.hash); }
+    }).catch(function(){});
+  }
+  check();
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) check(); });   // アプリに戻ったときも
+})();
+</script>
 </body>
 </html>
