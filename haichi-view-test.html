@@ -113,6 +113,28 @@
   .zoomhint{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);background:rgba(17,19,24,.82);color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;pointer-events:none;opacity:0;transition:opacity .2s}
   .zoomhint.on{opacity:1}
   [hidden]{display:none!important}
+  /* 11/26 白石さん「現場別は枠を押したらポコッと全員分出ないかな。LP古賀は多くて全員のりきらない」：枠を押すと、その日のその現場の全員を下から出す（名前は hvp- で始めて、ほかとぶつけない） */
+  .cell{cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .cell:active{filter:brightness(.94)}
+  .hvp{position:fixed;left:0;top:0;right:0;bottom:0;z-index:50;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;animation:hvpbg .15s ease-out}
+  .hvp-in{background:var(--ground);color:var(--ink);width:100%;max-width:520px;max-height:82vh;max-height:82dvh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;box-shadow:0 -6px 24px rgba(0,0,0,.25);animation:hvpup .2s ease-out}
+  .hvp-hd{display:flex;align-items:center;gap:10px;padding:16px 16px 12px;border-bottom:1px solid var(--line)}
+  .hvp-dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .hvp-tt{margin:0;font-size:17px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hvp-dt{display:block;font-size:12.5px;font-weight:500;color:var(--sub);margin-top:2px}
+  .hvp-cnt{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}.hvp-cnt small{font-size:12px;font-weight:500;margin-left:1px}
+  .hvp-x{border:0;background:var(--head-bg);color:var(--ink);width:32px;height:32px;border-radius:50%;font-size:17px;line-height:32px;padding:0;flex:none}
+  .hvp-ls{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 16px calc(18px + env(safe-area-inset-bottom))}
+  .hvp-gh{font-size:12px;color:var(--sub);margin:14px 0 2px;display:flex;justify-content:space-between}
+  .hvp-pr{display:flex;align-items:center;min-height:42px;border-bottom:1px solid var(--line);font-size:15.5px}
+  .hvp-pr:last-child{border-bottom:0}
+  .hvp-nm{flex:1;min-width:0}
+  .hvp-tg{font-size:12px;color:var(--sub);margin-left:8px}
+  .hvp-n{font-weight:700;font-variant-numeric:tabular-nums}
+  .hvp-chief .hvp-nm{font-weight:700}
+  .hvp-chief .hvp-nm::before{content:"職";display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:var(--chief);color:#fff;font-size:10.5px;margin-right:7px;vertical-align:1px}
+  @keyframes hvpup{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
+  @keyframes hvpbg{from{background:rgba(0,0,0,0)}}
 </style>
 </head>
 <body>
@@ -271,7 +293,7 @@ function drawSite(){
       if (!s || !s.m.length) return '<td class="'+cls+'"></td>';
       tot += count(s);
       var txt = people(s).map(function(p){ return p.co==='gk' ? esc(p.name)+p.n+'人' : (p.chief?'<em>★'+esc(p.name)+'</em>':esc(p.name)); }).join('、');
-      return '<td class="'+cls+'"><div class="cell" style="--g:'+BAND[ownOf(s)]+'"><b>'+count(s)+'<small>人</small></b><p>'+txt+'</p></div></td>';
+      return '<td class="'+cls+'"><div class="cell" role="button" tabindex="0" data-nm="'+esc(nm)+'" data-d="'+ymd(x.d)+'" style="--g:'+BAND[ownOf(s)]+'"><b>'+count(s)+'<small>人</small></b><p>'+txt+'</p></div></td>';
     }).join('');
     h += '<tr><th class="c0"><i style="background:'+BAND[own[nm]]+'"></i>'+esc(nm)+'<small>'+tot+'人日</small></th>'+cells+'</tr>';
   });
@@ -281,6 +303,34 @@ function drawSite(){
   h += '<div class="upd">配置表を読んだ時刻 '+esc(w&&w.at||'')+'</div>';
   main.innerHTML = h;
 }
+
+// ===== 現場別の枠を押すと、その日のその現場の全員（11/26 白石さん「LP古賀は多くて全員のりきらない」） =====
+var CO_NAME = { sh:'白石工業', nk:'中嶋板金', ym:'山下板金', gk:'協力会社' };
+function showSite(nm, ds){
+  var p = ds.split('-'), d = new Date(+p[0], +p[1]-1, +p[2]), x = dayData(d);
+  var s = (x&&x.sites||[]).filter(function(q){ return (q.kakou?'加工':q.name)===nm; })[0];
+  if (!s || !s.m.length) return;
+  var ps = people(s), h = '';
+  h += '<div class="hvp-in" role="dialog" aria-modal="true" aria-label="'+esc(nm)+'の人"><div class="hvp-hd"><i class="hvp-dot" style="background:'+BAND[ownOf(s)]+'"></i><h2 class="hvp-tt">'+esc(nm)+'<span class="hvp-dt">'+(d.getMonth()+1)+'/'+d.getDate()+'（'+WD[d.getDay()]+'）</span></h2><span class="hvp-cnt">'+count(s)+'<small>人</small></span><button type="button" class="hvp-x" aria-label="閉じる">×</button></div><div class="hvp-ls">';
+  ['sh','nk','ym','gk'].forEach(function(c){
+    var g = ps.filter(function(q){ return q.co===c; }); if (!g.length) return;
+    var k = g.reduce(function(a,q){ return a+(q.co==='gk'?(q.n||1):1); },0);
+    h += '<p class="hvp-gh"><span>'+CO_NAME[c]+'</span><span>'+k+'人</span></p>';
+    g.forEach(function(q){
+      if (q.co==='gk') h += '<div class="hvp-pr"><span class="hvp-nm">'+esc(q.name)+'</span><span class="hvp-n">'+(q.n||1)+'人</span></div>';
+      else h += '<div class="hvp-pr'+(q.chief?' hvp-chief':'')+'"><span class="hvp-nm">'+esc(q.name)+'</span>'+(q.half?'<span class="hvp-tg">'+esc(q.half)+'</span>':'')+(q.chief?'<span class="hvp-tg">職長</span>':'')+'</div>';
+    });
+  });
+  h += '</div></div>';
+  var w = document.createElement('div'); w.className = 'hvp'; w.innerHTML = h; document.body.appendChild(w);
+  function close(){ if (w.parentNode) w.parentNode.removeChild(w); document.removeEventListener('keydown', onKey); }
+  function onKey(e){ if (e.key==='Escape') close(); }
+  w.addEventListener('click', function(e){ if (e.target===w || e.target.closest('.hvp-x')) close(); });
+  document.addEventListener('keydown', onKey);
+  w.querySelector('.hvp-x').focus();
+}
+document.getElementById('main').addEventListener('click', function(e){ var c = e.target.closest('.cell[data-nm]'); if (c) showSite(c.dataset.nm, c.dataset.d); });
+document.getElementById('main').addEventListener('keydown', function(e){ if (e.key!=='Enter' && e.key!==' ') return; var c = e.target.closest('.cell[data-nm]'); if (c){ e.preventDefault(); showSite(c.dataset.nm, c.dataset.d); } });
 
 // ===== 現場別の表：指2本で拡大・縮小（50%〜160%。大きさは携帯が覚える 11/26） =====
 var TZ = 1; try { TZ = Math.min(1.6, Math.max(.5, parseFloat(localStorage.getItem('haichi-zoom')) || 1)); } catch(e){}
