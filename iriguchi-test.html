@@ -22,8 +22,9 @@
      ライト・ダークは携帯の設定どおり。字は Inter（英数字）＋Noto Sans JP（日本語。11/26 白石さんが D を選んだ） */
   :root{
     /* 11/26 白石さん「もうダークでいいよ下も」：地図の夜空とつながる紺に */
-    --bg:#070F2E; --ink:#F4F6FF; --ink2:rgba(232,238,255,.86); --sub:rgba(220,228,255,.55); --sep:rgba(255,255,255,.13); --wg1:rgba(46,92,220,.22); --wg2:rgba(120,80,230,.14); --field:#111C44; --navy:#0B1A48;
-    color-scheme:dark;
+    /* 11/26 夜 白石さん「K でいこう」：下は白地に黒い細線（白黒の線） */
+    --bg:#FAFAF8; --ink:#111111; --ink2:#111111; --sub:rgba(17,17,17,.5); --sep:#111111; --wg1:transparent; --wg2:transparent; --field:#FFFFFF; --navy:#070F2E;
+    color-scheme:light;
   }
   html{background:var(--bg)}   /* 引っぱったときも同じ紺（11/26） */
   html,body{margin:0;min-height:100%;-webkit-text-size-adjust:100%}
@@ -82,7 +83,7 @@
   .gform h2{font-size:18px;margin:0 0 6px}
   .gform p{font-size:13px;color:var(--sub);line-height:1.7;margin:0 0 16px}
   .gform input{width:100%;box-sizing:border-box;font:600 26px/1 "Inter",sans-serif;letter-spacing:.4em;text-align:center;padding:12px;border:1px solid var(--sep);border-radius:14px;background:var(--field);color:var(--ink)}
-  .gform button{width:100%;margin-top:12px;padding:14px;border:0;border-radius:14px;background:linear-gradient(135deg,#1D4CB4,#0B1A48);color:#fff;font:700 16px/1 inherit;font-family:inherit;cursor:pointer}
+  .gform button{width:100%;margin-top:12px;padding:14px;border:0;border-radius:14px;background:#111;letter-spacing:.2em;color:#fff;font:700 16px/1 inherit;font-family:inherit;cursor:pointer}
   .gerr{color:#FF453A;font-size:13px;min-height:1.6em;margin-top:8px}
   /* ライトでは白い地に溶けて薄く見えるので、色を透かさずはっきり出す。Coming soon は薄いまま（11/26） */
   /* ライトだけで使う（11/26）：アイコンは透かさずはっきり、Coming soon は薄く */
@@ -123,6 +124,24 @@
   #menu{margin-top:auto;width:100%}
   .gform{margin-top:6vh}
   [hidden]{display:none!important}
+  /* ===== K：白黒の線（11/26 夜 決定） ===== */
+  body{background:var(--bg)}
+  #menu .grp{padding:14px 0 16px;margin:0;border-bottom:0;border-top:1px solid #111}
+  #menu .grp:first-child{border-top:0;padding-top:4px}
+  #menu .grp h2{display:flex;align-items:baseline;justify-content:space-between;margin:0 2px 14px;font:600 10.5px/1 "Inter",sans-serif;letter-spacing:.34em;color:#111}
+  #menu .grp h2 span{font:500 10.5px/1 "Noto Sans JP",sans-serif;letter-spacing:.24em;color:rgba(17,17,17,.55)}
+  #menu .grid{row-gap:16px}
+  #menu .app{gap:8px}
+  #menu .tile{width:58px;height:58px;border-radius:50%;border:1px solid #111;background:#fff;box-sizing:border-box}
+  #menu .tile::before,#menu .tile svg.sh{display:none}
+  #menu .tile svg.gl{width:26px;height:26px;stroke:#111;stroke-width:1.4}
+  #menu .app:active .tile{background:#111}
+  #menu .app:active .tile svg.gl{stroke:#fff}
+  #menu .lb{font:500 11.5px/1 "Noto Sans JP",sans-serif;letter-spacing:.12em;color:#111}
+  #menu .en{margin-top:-3px;font:600 7.5px/1 "Inter",sans-serif;letter-spacing:.22em;color:rgba(17,17,17,.45)}
+  #menu .app.soon .tile,#menu .app.soon .lb,#menu .app.soon .en{opacity:.3;filter:none}
+  #menu .app.soon .cs{display:none}
+  .addhint{color:rgba(17,17,17,.5)}
   /* 地図の左上のロゴ（11/26 D-9：細い飾りつきの字・透ける） */
   .brand{position:absolute;z-index:3;left:18px;top:calc(env(safe-area-inset-top,0px) + 16px);pointer-events:none;color:#fff}
   .brand::before{content:"";display:block;width:20px;height:2px;margin-bottom:7px;border-radius:2px;background:rgba(255,212,61,.75);box-shadow:0 0 10px rgba(255,212,61,.45)}
@@ -229,6 +248,8 @@ var GL = {
   kin:'<circle cx="12" cy="13.2" r="7.6"/><path d="M12 9.4v3.8l2.6 1.7M9.4 2.6h5.2"/>'
 };
 // 並び（11/26）：現場・加工・その他。line＝LINE に移る、href＝このまま開く、どちらも無い＝Coming soon
+var EN_LB = { dem:'DAILY REPORT', gch:'SURVEY', hai:'CREW', dai:'LEDGER', kak:'FACTORY', req:'ORDER', alc:'ALCOHOL', kin:'ATTENDANCE' };
+var EN_GRP = { '現場':'SITE', '加工':'FACTORY', 'その他':'OTHER' };
 var GROUPS = [
   ['現場', [
     { k:'dem', label:'出面報告',     c:['#3D7BFF','#0A2FD0'], line:'demen-test' },
@@ -245,7 +266,7 @@ var GROUPS = [
 var SQ = (function(s){ var r=s/2,p=[]; for(var i=0;i<96;i++){ var t=i/96*2*Math.PI,c=Math.cos(t),n=Math.sin(t); p.push((r+r*Math.sign(c)*Math.pow(Math.abs(c),.4)).toFixed(2)+','+(r+r*Math.sign(n)*Math.pow(Math.abs(n),.4)).toFixed(2)); } return 'M'+p.join('L')+'Z'; })(62);
 var k = 0;
 document.getElementById('groups').innerHTML = GROUPS.map(function(g, gi){
-  return '<section class="grp in" style="animation-delay:'+(.1+gi*.07)+'s"><h2>'+g[0]+'</h2><div class="grid">'+g[1].map(function(a){
+  return '<section class="grp in" style="animation-delay:'+(.1+gi*.07)+'s"><h2>'+(EN_GRP[g[0]]||g[0])+'<span>'+g[0]+'</span></h2><div class="grid">'+g[1].map(function(a){
     var id = k++;
     var tile = '<span class="tile"><svg class="sh" width="62" height="62" viewBox="0 0 62 62" aria-hidden="true"><defs>'+
       '<linearGradient id="g'+id+'" x1="0" y1="0" x2="0" y2="1"><stop class="b" offset="0" stop-color="'+a.c[0]+'" stop-opacity=".78"/><stop class="b" offset="1" stop-color="'+a.c[1]+'" stop-opacity=".86"/></linearGradient>'+
@@ -253,7 +274,7 @@ document.getElementById('groups').innerHTML = GROUPS.map(function(g, gi){
       '<radialGradient id="r'+id+'" cx=".28" cy=".18" r=".55"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>'+
       '<linearGradient id="e'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".7"/><stop offset=".35" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#fff" stop-opacity=".25"/></linearGradient>'+
       '</defs><path d="'+SQ+'" fill="url(#g'+id+')"/><path d="'+SQ+'" fill="url(#h'+id+')"/><path d="'+SQ+'" fill="url(#r'+id+')"/><path d="'+SQ+'" fill="none" stroke="url(#e'+id+')" stroke-width="1.4"/></svg>'+
-      '<svg class="gl" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+GL[a.k]+'</svg></span><span class="lb">'+a.label+'</span>';
+      '<svg class="gl" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+GL[a.k]+'</svg></span><span class="lb">'+a.label+'</span><span class="en">'+(EN_LB[a.k]||'')+'</span>';
     if (a.dyn) return '<a class="app" href="#" data-dyn="'+a.dyn+'">'+tile+'</a>';
     if (a.line) return '<a class="app" href="#" data-line="'+a.line+'">'+tile+'</a>';
     if (a.href) return '<a class="app" href="'+a.href+'">'+tile+'</a>';
@@ -430,7 +451,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-24";
+var BUILD_ID = "20261126-25";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
