@@ -68,7 +68,7 @@
 <div id="menu" hidden>
   <div class="widget">
     <div class="date" id="date"></div>
-    <div class="hello"><span id="who">おつかれさまです</span><span class="test">テスト</span></div>
+    <div class="hello"><span id="who">業務報告</span><span class="test">テスト</span></div>
     <div class="tip">入力して送ると、最後に送り先のグループを選びます。</div>
   </div>
 
@@ -129,11 +129,8 @@ if (!inLine) {
   }
 } else {
   document.getElementById('menu').hidden = false;
-  if (window.liff) liff.init({ liffId: LIFF }).then(function () {
-    return liff.getProfile();
-  }).then(function (p) {
-    if (p && p.displayName) document.getElementById('who').textContent = p.displayName + ' さん';
-  }).catch(function () { /* 名前が出なくても使える */ });
+  // 名前は出さない（白石さん 11/26「なければないほうがいい」）。LINEの準備だけ先にしておく
+  if (window.liff) liff.init({ liffId: LIFF }).catch(function () {});
 }
 </script>
 </body>
