@@ -16,7 +16,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Inter:wght@500;600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&family=Inter:wght@500;600;800&family=Cormorant+Garamond:wght@500&display=swap">
 <style>
   /* 入口（2026-11-26 決定：Apple風。上は会社のホームページのような紺の帯に英字の社名と小さく「業務管理」、下は iPhone のホーム画面のようなアイコン）
      ライト・ダークは携帯の設定どおり。字は Inter（英数字）＋Noto Sans JP（日本語。11/26 白石さんが D を選んだ） */
@@ -123,6 +123,11 @@
   #menu{margin-top:auto;width:100%}
   .gform{margin-top:6vh}
   [hidden]{display:none!important}
+  /* 地図の左上のロゴ（11/26 D-9：細い飾りつきの字・透ける） */
+  .brand{position:absolute;z-index:3;left:18px;top:calc(env(safe-area-inset-top,0px) + 16px);pointer-events:none;color:#fff}
+  .brand::before{content:"";display:block;width:20px;height:2px;margin-bottom:7px;border-radius:2px;background:rgba(255,212,61,.75);box-shadow:0 0 10px rgba(255,212,61,.45)}
+  .brand b{display:block;font:500 15px/1 'Cormorant Garamond',serif;letter-spacing:.4em;color:rgba(255,255,255,.62);text-shadow:0 0 18px rgba(255,255,255,.25);mix-blend-mode:screen}
+  .brand small{display:block;margin-top:5px;font:500 8px/1 'Noto Sans JP',sans-serif;letter-spacing:.34em;color:rgba(255,255,255,.5)}
   /* ===== 立体の地図（11/26 PC の業務管理と同じ作り。three.js＋m3d.js） ===== */
   .hero.map.is-3d{height:30vh;min-height:200px;max-height:300px;background:#070f2e}   /* 11/26 前の7割くらい */
   .hero.map.is-3d::before{display:none}   /* 11/26 ピンが暗くならないように（地図の上はもともと夜空） */
@@ -175,6 +180,7 @@
 <div class="bar" id="bar">業務管理</div>
 <div class="m3-card" id="m3card" hidden role="dialog" aria-live="polite"></div>
 <header class="hero map" id="map">
+  <div class="brand" aria-label="SHIRAISHI 業務管理"><b>SHIRAISHI</b><small>業務管理</small></div>   <!-- 11/26 白石さん「いったんこれで」：見本の D-9 -->
   <div class="m3-stage" id="m3stage" hidden><div class="m3-plane" id="m3plane"></div></div>
   <div class="m3-views" id="m3views" hidden role="group" aria-label="地図の見る場所"><button type="button" data-view="iri" class="on">全体</button><button type="button" data-view="kita">北九州</button><button type="button" data-view="chiku">筑豊</button><button type="button" data-view="fuku">福岡</button><button type="button" data-orbit="1" aria-pressed="true" class="on">↻ 回る</button></div>
   <div id="tiles" aria-hidden="true"></div>
@@ -376,6 +382,7 @@ if (!inLine && !standalone) {
 // ===== 合言葉で受け取るつなぎ先（加工管理など。GitHub のページには書かない） =====
 var LINKS = {}; try { LINKS = JSON.parse(localStorage.getItem('gyomu-links') || '{}') || {}; } catch(e){}
 function loadLinks(){
+  if (!getPass()) return Promise.resolve({});   // 合言葉が無いときは問い合わせない（間違いの回数に数えられないように）
   return fetch(CHECK_API + '?check=1&p=' + encodeURIComponent(getPass())).then(function(r){ return r.json(); }).then(function(j){
     if (j.bad) { setPass(''); askPass('合言葉が変わりました。もう一度入れてください'); return j; }
     if (j.ok && j.links){ LINKS = j.links; try { localStorage.setItem('gyomu-links', JSON.stringify(LINKS)); } catch(e){} }
@@ -423,7 +430,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-23";
+var BUILD_ID = "20261126-24";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
