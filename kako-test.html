@@ -1026,6 +1026,18 @@ textarea.fin{min-height:64px;line-height:1.5}
 body.haskbar{padding-top:34px}
 body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top:34px}
 .col>.card .dates>div:first-child{margin-right:8px}
+/* カードの下：案件名と名前を1行に（白石さん 11/26「案件名と名前も同じ行でいい」「きれいに入れる感じで」）。名前は社員DBの正式な名前 */
+.card .sw{display:-webkit-flex;display:flex;-webkit-align-items:baseline;align-items:baseline;min-width:0}
+.card .sw .site{-webkit-flex:1 1 auto;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:6px}
+.card .sw .who{-webkit-flex:none;flex:none;max-width:48%;font-size:13px!important;color:#4d5058!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--sub)}
+/* カードの境目をはっきり（白石さん 11/26「カードごとが少し見にくい。明確な境界がない」）：白い板に濃いめの枠と影、カードの間を少し空ける */
+@media (min-width:601px){
+  .board>.col>.card{border:1.5px solid #8e939b!important;border-radius:10px;box-shadow:0 2px 4px rgba(0,0,0,.16);margin-bottom:10px;background:#fff;overflow:hidden}
+  .board>.col>.card .thumb{border-bottom:1px solid #d5d8dd}
+}
+@media (max-width:600px){
+  .col>.card{border:1.5px solid #8e939b!important;box-shadow:0 1px 3px rgba(0,0,0,.14)}
+}
 </style>
 
 <div class="wrap">
@@ -1168,7 +1180,7 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
     return '<article class="card'+(late?' late':'')+'"><button type="button" class="open" data-id="'+esc(r.id)+'">'+
       '<div class="thumb'+(n?' skel':'')+'" data-thumb="'+esc(r.id)+'"><div class="ov">'+(r.rush?'<span class="tag rush">即日</span>':'')+'</div>'+(r.talkCount?'<span class="tcnt" aria-label="やりとり'+r.talkCount+'件">💬 '+r.talkCount+'</span>':'')+(n?'':'<span class="none">写真なし</span>')+(n>1?'<span class="cnt">ほか'+(n-1)+'枚</span>':'')+'</div>'+
       '<div class="cbody"><dl class="dates"><div><dt>依頼</dt><dd>'+esc(md(r.requestDate)||'—')+'</dd></div><div class="'+(late?'late':'')+'"><dt>納期</dt><dd>'+esc(md(r.due)||'なし')+(r.status==='納品済み'?'':days(r.due)===0?'<span class="dbg today">今日</span>':days(r.due)===1?'<span class="dbg">明日</span>':late?'<span class="dbg late">切れ</span>':'')+'</dd></div></dl>'+
-      (WORKER&&r.status==='加工中'?'<span class="wtag">加工中</span>':'')+(r.status==='納品済み'?'<span class="wtag ok">納品 '+esc(md(r.deliveredAt)||'')+'</span>':'')+'<div class="site">'+esc(r.site||'現場名なし')+'</div><div class="who">'+esc(r.company)+'　'+esc(r.worker)+'さん</div></div></button>'+(WORKER&&r.status==='依頼案件'?'<button type="button" class="wfix" data-fix="'+esc(r.id)+'">直す・写真を入れ替える</button>':'')+cact(r)+'</article>';
+      (WORKER&&r.status==='加工中'?'<span class="wtag">加工中</span>':'')+(r.status==='納品済み'?'<span class="wtag ok">納品 '+esc(md(r.deliveredAt)||'')+'</span>':'')+'<div class="sw"><span class="site">'+esc(r.site||'現場名なし')+'</span><span class="who">'+esc(r.worker||'')+'</span></div></div></button>'+(WORKER&&r.status==='依頼案件'?'<button type="button" class="wfix" data-fix="'+esc(r.id)+'">直す・写真を入れ替える</button>':'')+cact(r)+'</article>';
   }
   /* 一覧：依頼案件・編集済・加工中の見出しごとに並べる（見出しの中は納期の早い順）。納品済みは別の画面 */
   var view='main',ptab=0,vmode='list';
