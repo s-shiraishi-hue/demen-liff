@@ -247,6 +247,8 @@ async function main() {
     lineUserId = ctx.userId || '';
     if (!lineUserId) { try { lineUserId = (await liff.getProfile()).userId || ''; } catch (e) {} }
     canSend = liff.isInClient() && ['group', 'room', 'utou'].includes(ctx.type);
+    // 入口ページ（iriguchi-test.html）から開いたときは、グループの中でも必ず送り先を選ぶ（2026-11-26 テスト）
+    if (/[?&]pick=1/.test(raw) || /[?&]pick=1/.test(location.search)) canSend = false;
     if (!canSend && !usePicker()) bar('このトークには送れません（グループのリンクから開いてください）');
   } catch (e) {
     bar('liff.init 失敗: ' + e, true);
