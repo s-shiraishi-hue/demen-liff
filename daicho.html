@@ -21,6 +21,8 @@
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-b); line-height: 1.7; }
   .wrap { max-width: 560px; margin: 0 auto; padding: 18px 16px 40px; display: grid; gap: 14px; }
+  .back[hidden] { display: none; }
+  .back { display: inline-block; margin-bottom: 6px; font-size: 14px; font-weight: 700; color: var(--accent); text-decoration: none; }
   h1 { margin: 0; font-family: var(--font-d); font-weight: 900; font-size: 22px; color: var(--accent); }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 15px; display: grid; gap: 15px; }
   .f { display: grid; gap: 6px; min-width: 0; }
@@ -60,7 +62,7 @@
 </head>
 <body>
 <div class="wrap">
-  <header><h1>工事台帳 新規登録</h1></header>
+  <header><a class="back" href="iriguchi-test.html" id="toiriguchi" hidden>‹ 業務管理</a><h1>工事台帳 新規登録</h1></header>
 
   <form class="card" id="screen-form" novalidate>
     <div class="f">
@@ -70,6 +72,15 @@
         <button type="button" data-co="中嶋" aria-pressed="false">中嶋</button>
         <button type="button" data-co="山下" aria-pressed="false">山下</button>
       </div>
+    </div>
+
+    <div class="f" id="f-tanto">
+      <label id="lab-tanto">担当 <span class="must">必須</span></label>
+      <div class="seg two" role="group" aria-labelledby="lab-tanto">
+        <button type="button" data-tanto="社長" aria-pressed="false">社長</button>
+        <button type="button" data-tanto="専務" aria-pressed="false">専務</button>
+      </div>
+      <p class="err" id="err-tanto" hidden>担当を選んでください</p>
     </div>
 
     <div class="f">
@@ -299,6 +310,24 @@
     });
   });
 
+  try { if (window.navigator.standalone || /iriguchi/.test(document.referrer)) $('toiriguchi').hidden = false; } catch (e) {}
+  // 担当（11/26 台帳の担当区分。この携帯で最後に選んだものを覚える）
+  var tanto = '';
+  function setTanto(v) {
+    tanto = v;
+    document.querySelectorAll('.seg button[data-tanto]').forEach(function (x) {
+      x.setAttribute('aria-pressed', String(x.dataset.tanto === v));
+    });
+    if (v) { $('err-tanto').hidden = true; $('f-tanto').classList.remove('bad'); }
+  }
+  document.querySelectorAll('.seg button[data-tanto]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      setTanto(b.dataset.tanto);
+      try { localStorage.setItem('daicho-tanto', b.dataset.tanto); } catch (e) {}
+    });
+  });
+  try { var t0 = localStorage.getItem('daicho-tanto'); if (t0 === '社長' || t0 === '専務') setTanto(t0); } catch (e) {}
+
   [$('kc-exist'), $('kc-new')].forEach(function (b) {
     b.addEventListener('click', function () { if (!b.disabled) setKc(b.dataset.kc); });
   });
@@ -328,6 +357,7 @@
       .map(function (x) { return x.value; }).join('、');
 
     var bad = false;
+    $('err-tanto').hidden = !!tanto; $('f-tanto').classList.toggle('bad', !tanto); bad = bad || !tanto;
     if (isNew) {
       mark('newname', 'err-newname', !kokyaku); bad = bad || !kokyaku;
       mark('newkana', 'err-newkana', !kana); bad = bad || !kana;
@@ -349,7 +379,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
-        token: TOKEN, isNew: isNew, kokyaku: kokyaku, kana: kana,
+        token: TOKEN, tanto: tanto, isNew: isNew, kokyaku: kokyaku, kana: kana,
         ankenmei: anken, genba: genba, keiyaku: keiyaku,
         jusho: $('jusho').value.trim(), kigen: $('kigen').value
       })
