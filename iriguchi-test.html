@@ -66,6 +66,13 @@
   #outside p{font-size:15px;line-height:1.8;margin:6px 0;color:var(--sub)}
   #outside a{display:block;margin:22px auto 0;max-width:300px;padding:14px;border-radius:10px;background:#06C755;color:#fff;font-weight:700;font-size:16px;text-decoration:none}
   .test{display:inline-block;font-size:10px;font-weight:700;border:1px solid currentColor;border-radius:4px;padding:0 4px;margin-left:6px;opacity:.8;vertical-align:2px}
+  /* 合言葉 */
+  .gform{max-width:320px;margin:10vh auto 0;text-align:center;padding:0 20px}
+  .gform h1{font-size:18px;margin:0 0 6px}
+  .gform p{font-size:13px;color:var(--sub);line-height:1.7;margin:0 0 16px}
+  .gform input{width:100%;box-sizing:border-box;font-size:24px;letter-spacing:.4em;text-align:center;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--ground);color:var(--ink);-webkit-user-select:text;user-select:text}
+  .gform button{width:100%;margin-top:12px;padding:13px;border:0;border-radius:10px;background:var(--band);color:#fff;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer}
+  .gerr{color:#D63031;font-size:13px;min-height:1.6em;margin-top:8px}
   [hidden]{display:none!important}
   @media (prefers-reduced-motion: reduce){ .tile{transition:none} .app:active .tile{transform:none} }
 </style>
@@ -89,6 +96,21 @@
   <main class="body"><div class="wrap" id="groups"></div></main>
 </div>
 
+<!-- 合言葉（最初の1回だけ） -->
+<div id="gate" hidden>
+  <header class="band"><div class="band-in"><div class="brand">
+    <span class="mark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 20V9l9-5 9 5v11"/><path d="M8 20v-6h8v6"/></svg>白石グループ</span>
+    <span class="title">業務管理</span>
+  </div></div></header>
+  <form id="gform" class="gform">
+    <h1>合言葉を入れてください</h1>
+    <p>会社から聞いた合言葉です。<br>1回入れると、この携帯が覚えます。</p>
+    <input id="gin" inputmode="numeric" autocomplete="off" maxlength="12" aria-label="合言葉">
+    <button type="submit" id="gbtn">開く</button>
+    <div class="gerr" id="gerr"></div>
+  </form>
+</div>
+
 <!-- LINE の外（Safari など）で開いたとき：ホーム画面への追加のしかた -->
 <div id="outside" hidden>
   <img src="icon-180.png" alt="">
@@ -101,6 +123,8 @@
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
 var LIFF = '2011897591-HBBipfnN';
+var PASS_KEY = 'gyomu-pass';
+var CHECK_API = 'https://script.google.com/macros/s/AKfycbz_T9F0l7sHffSRxrU-nSa8dRd954UMMi7Q6veE-dkuzDBS-NIOoOjGOf6J8jR04Mmx/exec';
 var PAGE = 'iriguchi-test.html';
 var app = 'line://app/' + LIFF + '/' + PAGE;              // LINE アプリを直接開く
 var web = 'https://liff.line.me/' + LIFF + '/' + PAGE;    // LINE アプリが開かないときの予備
@@ -122,7 +146,7 @@ var GROUPS = [
   { name:'現場', apps:[
     { k:'dem', label:'出面報告',     href:'form-test.html?pick=1' },
     { k:'gch', label:'現調・打合せ', href:'form-test.html?pick=1&mode=gencho' },
-    { k:'hai', label:'人員配置' }
+    { k:'hai', label:'人員配置',     href:'haichi-view-test.html' }
   ]},
   { name:'加工', apps:[
     { k:'kak', label:'加工依頼' }
@@ -168,10 +192,31 @@ if (!inLine) {
     document.getElementById(/iPhone|iPad|iPod/.test(navigator.userAgent) ? 'how-ios' : 'how-android').hidden = false;
   }
 } else {
-  document.getElementById('menu').hidden = false;
   // 名前は出さない（11/26）。LINE の準備だけ先にしておく
   if (window.liff) liff.init({ liffId: LIFF }).catch(function () {});
+  if (getPass()) document.getElementById('menu').hidden = false; else askPass('');
 }
+
+// ===== 合言葉（11/26：入口で1回入れて携帯が覚える。確かめは人員配置の読み取りの仕組みで） =====
+function getPass(){ try { return localStorage.getItem(PASS_KEY) || ''; } catch(e){ return ''; } }
+function setPass(v){ try { if (v) localStorage.setItem(PASS_KEY, v); else localStorage.removeItem(PASS_KEY); } catch(e){} }
+function askPass(err){
+  var g = document.getElementById('gate');
+  g.hidden = false; document.getElementById('menu').hidden = true;
+  document.getElementById('gerr').textContent = err || '';
+  setTimeout(function(){ document.getElementById('gin').focus(); }, 50);
+}
+document.getElementById('gform').onsubmit = function(e){
+  e.preventDefault();
+  var v = document.getElementById('gin').value.trim(), btn = document.getElementById('gbtn');
+  if (!v) return;
+  btn.disabled = true; btn.textContent = '確かめています…';
+  fetch(CHECK_API + '?check=1&p=' + encodeURIComponent(v)).then(function(r){ return r.json(); }).then(function(j){
+    btn.disabled = false; btn.textContent = '開く';
+    if (j.ok){ setPass(v); document.getElementById('gate').hidden = true; document.getElementById('menu').hidden = false; }
+    else document.getElementById('gerr').textContent = j.error || '合言葉が違います';
+  }).catch(function(){ btn.disabled = false; btn.textContent = '開く'; document.getElementById('gerr').textContent = 'つながりませんでした。電波のよいところでもう一度'; });
+};
 </script>
 </body>
 </html>

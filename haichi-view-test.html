@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>人員配置テスト</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<script>(function () { var t = null; try { t = localStorage.getItem('iriguchi-theme'); } catch (e) {} if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); })();</script>
+<style>
+  /* 人員配置の携帯表示（2026-11-26）。入口と同じ帯。日別＝今の配置LINEの画像に近い形、現場別＝PC と同じ表 */
+  :root{
+    --ground:#FFFFFF; --ink:#111318; --sub:#7C808A; --line:#D5D9E0; --head-bg:#EEF1F7;
+    --band:#1E3C8F; --band-ink:#FFFFFF; --accent:#1E3C8F;
+    --sh-bg:#E3EDFA; --sh-fg:#1F4F8A; --nk-bg:#E1F3E7; --nk-fg:#1F6B3C; --ym-bg:#FBE5E3; --ym-fg:#8F3329; --gk-bg:#FDF0D9; --gk-fg:#7D5410;
+    --chief:#D99A00; --memo-bg:#FFF4CC; --memo-fg:#7A4A00; color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+    --ground:#121316; --ink:#F4F5F7; --sub:#8D919B; --line:#33363D; --head-bg:#1F2A48;
+    --band:#26386B; --band-ink:#F4F5F7; --accent:#8EA6F0;
+    --sh-bg:#1C2B42; --sh-fg:#A9C6F0; --nk-bg:#173022; --nk-fg:#9ED6B2; --ym-bg:#3A1E1B; --ym-fg:#F0AFA7; --gk-bg:#3A2E15; --gk-fg:#EBC98A;
+    --chief:#E8B23A; --memo-bg:#3A3015; --memo-fg:#F2D38A; color-scheme:dark } }
+  :root[data-theme="dark"]{
+    --ground:#121316; --ink:#F4F5F7; --sub:#8D919B; --line:#33363D; --head-bg:#1F2A48;
+    --band:#26386B; --band-ink:#F4F5F7; --accent:#8EA6F0;
+    --sh-bg:#1C2B42; --sh-fg:#A9C6F0; --nk-bg:#173022; --nk-fg:#9ED6B2; --ym-bg:#3A1E1B; --ym-fg:#F0AFA7; --gk-bg:#3A2E15; --gk-fg:#EBC98A;
+    --chief:#E8B23A; --memo-bg:#3A3015; --memo-fg:#F2D38A; color-scheme:dark }
+  html,body{margin:0;min-height:100%;-webkit-text-size-adjust:100%}
+  body{background:var(--ground);color:var(--ink);font-family:"Noto Sans JP","Hiragino Sans","Yu Gothic UI",sans-serif;font-feature-settings:"palt";-webkit-font-smoothing:antialiased}
+  button{font-family:inherit}
+
+  .band{background:var(--band);color:var(--band-ink);padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 12px;position:sticky;top:0;z-index:5}
+  .row1{display:flex;align-items:center;gap:8px}
+  .back{display:flex;align-items:center;gap:2px;font-size:13px;opacity:.85;color:inherit;text-decoration:none}
+  .ttl{font-size:17px;font-weight:700;letter-spacing:.06em;margin-left:4px}
+  .seg{display:flex;padding:2px;border-radius:9px;background:rgba(255,255,255,.16);margin-left:auto}
+  .seg button{border:0;background:transparent;color:rgba(255,255,255,.8);font:600 10.5px/1 inherit;min-width:28px;height:24px;padding:0 7px;border-radius:7px;cursor:pointer}
+  .seg button[aria-checked="true"],.views button[aria-checked="true"]{background:rgba(255,255,255,.95);color:#14264F}
+  .views{display:flex;padding:2px;border-radius:9px;background:rgba(255,255,255,.14);margin-top:10px}
+  .views button{flex:1;border:0;background:transparent;color:rgba(255,255,255,.85);font:600 12px/1 inherit;height:30px;border-radius:7px;cursor:pointer}
+  .wk{display:flex;align-items:center;gap:6px;margin-top:10px}
+  .wk .nav{border:0;width:30px;height:28px;border-radius:8px;background:rgba(255,255,255,.14);color:var(--band-ink);font:700 18px/1 inherit;cursor:pointer}
+  .wk .rng{flex:1;text-align:center;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+  .wk .tw{border:0;height:24px;padding:0 9px;border-radius:999px;background:rgba(255,255,255,.2);color:var(--band-ink);font:600 11px/1 inherit;cursor:pointer}
+  .strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px}
+  .dy{border:0;border-radius:8px;padding:5px 0 6px;background:rgba(255,255,255,.1);color:var(--band-ink);font:inherit;cursor:pointer;line-height:1.1;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .dy .w{font-size:10px;opacity:.8} .dy b{font-size:15px;font-variant-numeric:tabular-nums}
+  .dy i{width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.85} .dy i.none{opacity:0}
+  .dy.sun .w{color:#FFB4B4} .dy.sat .w{color:#B4D0FF}
+  .dy.today{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.6)}
+  .dy[aria-pressed="true"]{background:rgba(255,255,255,.95);color:#14264F}
+  .dy[aria-pressed="true"].sun .w{color:#C0392B} .dy[aria-pressed="true"].sat .w{color:#1F4F8A}
+  .tbl-mode .strip{display:none}
+
+  .body{padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 40px)}
+  .msg{color:var(--sub);font-size:13px;line-height:1.8;padding:24px 4px;text-align:center}
+  .ld .big{font-size:22px;font-weight:700}
+  .ld .rel{font-size:13px;font-weight:700;color:var(--sub);margin-top:2px}
+  .pills{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 14px}
+  .pill{font-size:12.5px;font-weight:700;padding:6px 11px;border-radius:999px;font-variant-numeric:tabular-nums}
+  .sh-c{background:var(--sh-bg);color:var(--sh-fg)} .nk-c{background:var(--nk-bg);color:var(--nk-fg)} .ym-c{background:var(--ym-bg);color:var(--ym-fg)} .gk-c{background:var(--gk-bg);color:var(--gk-fg)}
+  .grp{margin-bottom:14px}
+  .grp h2{margin:0 0 8px;background:var(--g);color:#fff;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:700;letter-spacing:.08em;display:flex;justify-content:space-between;align-items:center}
+  .grp h2 small{font-size:11px;font-weight:500;opacity:.85;letter-spacing:0}
+  .site{border:1px solid var(--line);border-radius:8px;margin-bottom:8px;box-shadow:inset 4px 0 0 var(--g);padding:11px 12px 12px 16px}
+  .sh{display:flex;align-items:center;gap:8px}
+  .sh .nm{font-size:15px;font-weight:700;flex:1;min-width:0}
+  .sh .n{font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums}
+  .map{display:flex;align-items:center;gap:3px;font-size:11.5px;font-weight:600;color:var(--accent);text-decoration:none;padding:4px 8px;border:1px solid var(--line);border-radius:999px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .chip{font-size:13px;line-height:1;padding:6px 9px;border-radius:999px;white-space:nowrap}
+  .chip small{font-size:10px;opacity:.8;margin-left:2px}
+  .chip.chief{box-shadow:inset 0 0 0 1.5px var(--chief);font-weight:700}
+  .chip.chief::before{content:"職";display:inline-block;width:15px;height:15px;line-height:15px;text-align:center;border-radius:50%;background:var(--chief);color:#fff;font-size:9.5px;margin-right:5px;vertical-align:1px}
+  .memo{margin-top:8px;font-size:12px;line-height:1.6;padding:6px 10px;border-radius:6px;background:var(--memo-bg);color:var(--memo-fg);font-weight:700}
+  .upd{font-size:11px;color:var(--sub);text-align:right;margin-top:6px}
+
+  .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .tbl{border-collapse:separate;border-spacing:0;font-size:11px;min-width:100%}
+  .tbl th,.tbl td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);vertical-align:top;padding:4px;background:var(--ground)}
+  .tbl thead th{font-weight:500;text-align:left;padding:5px 6px;white-space:nowrap}
+  .tbl thead th span{display:block;font-size:9.5px;color:var(--sub)}
+  .tbl thead th b{font-size:12.5px;font-variant-numeric:tabular-nums}
+  .tbl thead th.today b{background:#F5C451;color:#2A1D00;border-radius:999px;padding:0 6px}
+  .tbl .sun{background:color-mix(in srgb,var(--ym-bg) 45%,var(--ground))}
+  .tbl .sat span{color:var(--sh-fg)} .tbl .sun span{color:var(--ym-fg)}
+  .tbl tr.tot td,.tbl tr.tot th{font-weight:700;font-size:12px;padding:6px;font-variant-numeric:tabular-nums}
+  .tbl .c0{position:sticky;left:0;z-index:2;min-width:92px;max-width:92px;text-align:left;font-weight:700;font-size:12px;padding:8px 6px;box-shadow:1px 0 0 var(--line)}
+  .tbl tbody .c0 i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px}
+  .tbl tbody .c0 small{display:block;font-weight:400;font-size:10px;color:var(--sub);margin-top:3px;padding-left:12px}
+  .tbl td{min-width:84px;max-width:84px}
+  .cell{border-radius:6px;padding:4px 5px 5px 7px;background:var(--head-bg);box-shadow:inset 3px 0 0 var(--g);min-height:58px}
+  .cell b{font-size:15px;font-variant-numeric:tabular-nums} .cell b small{font-size:9.5px;font-weight:500;margin-left:1px}
+  .cell p{margin:2px 0 0;font-size:10.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all}
+  .cell em{font-style:normal;font-weight:700;color:var(--chief)}
+
+  /* 合言葉 */
+  .pass{max-width:320px;margin:10vh auto 0;text-align:center;padding:0 20px}
+  .pass h1{font-size:18px;margin:0 0 6px}
+  .pass p{font-size:13px;color:var(--sub);line-height:1.7;margin:0 0 16px}
+  .pass input{width:100%;box-sizing:border-box;font-size:24px;letter-spacing:.4em;text-align:center;padding:12px;border:1.5px solid var(--line);border-radius:10px;background:var(--ground);color:var(--ink)}
+  .pass button{width:100%;margin-top:12px;padding:13px;border:0;border-radius:10px;background:var(--band);color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+  .pass .err{color:#D63031;font-size:13px;min-height:1.6em;margin-top:8px}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header class="band" id="band">
+  <div class="row1">
+    <a class="back" href="iriguchi-test.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>業務管理</a>
+    <span class="ttl">人員配置</span>
+    <div class="seg" role="radiogroup" aria-label="表示の明るさ">
+      <button type="button" data-t="auto" role="radio">自動</button>
+      <button type="button" data-t="light" role="radio" aria-label="ライト">☀</button>
+      <button type="button" data-t="dark" role="radio" aria-label="ダーク">☾</button>
+    </div>
+  </div>
+  <div class="views" role="radiogroup" aria-label="見かた">
+    <button type="button" data-v="day" role="radio">日別</button>
+    <button type="button" data-v="site" role="radio">現場別</button>
+  </div>
+  <div class="wk"><button type="button" class="nav" data-w="-7" aria-label="前の週">‹</button><span class="rng" id="rng"></span><button type="button" class="tw" id="tw" hidden>今週</button><button type="button" class="nav" data-w="7" aria-label="次の週">›</button></div>
+  <div class="strip" id="strip"></div>
+</header>
+<main class="body" id="main"><div class="msg">読み込んでいます…</div></main>
+
+<script>
+var API = 'https://script.google.com/macros/s/AKfycbz_T9F0l7sHffSRxrU-nSa8dRd954UMMi7Q6veE-dkuzDBS-NIOoOjGOf6J8jR04Mmx/exec';
+var PASS_KEY = 'gyomu-pass';   // 入口と同じ合言葉（携帯が覚える）
+var WD = '日月火水木金土';
+var GROUP = { sh:'白石工業の現場', nk:'中嶋板金の現場', ym:'山下板金の現場', kakou:'加工（工場）' };
+var BAND = { sh:'#1F4F8A', nk:'#1F6B3C', ym:'#8F3329', kakou:'#555049' };
+
+function ymd(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function today0(){ var d = new Date(); d.setHours(0,0,0,0); return d; }
+function addDays(d,n){ var x = new Date(d); x.setDate(x.getDate()+n); return x; }
+function monday(d){ return addDays(d, -((d.getDay()+6)%7)); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function getPass(){ try { return localStorage.getItem(PASS_KEY) || ''; } catch(e){ return ''; } }
+function setPass(v){ try { if (v) localStorage.setItem(PASS_KEY, v); else localStorage.removeItem(PASS_KEY); } catch(e){} }
+
+var view = 'day', weekStart = monday(today0()), sel = today0(), weeks = {};
+try { view = localStorage.getItem('haichi-view') === 'site' ? 'site' : 'day'; } catch(e){}
+
+// ===== 人の並び（配置LINEと同じ：白石→中嶋→山下の社員、協力会社は人数。先頭の人を職長） =====
+function people(s){
+  var out = [];
+  ['sh','nk','ym'].forEach(function(c){ s.m.filter(function(p){ return p.co===c; }).forEach(function(p){ out.push({ co:c, name:p.name, half:p.half||'' }); }); });
+  s.m.filter(function(p){ return p.co==='gk'; }).forEach(function(p){ out.push({ co:'gk', name:p.name, n:p.n||1 }); });
+  if (!s.kakou && out.length && out[0].co!=='gk') out[0].chief = true;
+  return out;
+}
+function count(s){ return s.m.reduce(function(k,p){ return k+(p.co==='gk'?(p.n||1):1); },0); }
+function ownOf(s){ return s.kakou ? 'kakou' : (s.own||'sh'); }
+
+// ===== 読み込み（1週間ずつ。5分は覚えておく） =====
+function load(ws){
+  var key = ymd(ws);
+  if (weeks[key] && Date.now()-weeks[key].t < 300000) return Promise.resolve(weeks[key].days);
+  return fetch(API+'?p='+encodeURIComponent(getPass())+'&w='+key+'&n=7').then(function(r){ return r.json(); }).then(function(j){
+    if (!j.ok){ var e = new Error(j.error||'読めませんでした'); e.bad = j.bad; throw e; }
+    weeks[key] = { t:Date.now(), days:j.days, at:j.at };
+    return j.days;
+  });
+}
+function dayData(d){ var w = weeks[ymd(monday(d))]; if (!w) return null; return w.days.filter(function(x){ return x.date===ymd(d); })[0] || null; }
+
+// ===== 帯（週・日付・見かた） =====
+function drawBand(){
+  var we = addDays(weekStart,6), t = today0();
+  document.getElementById('rng').textContent = (weekStart.getMonth()+1)+'/'+weekStart.getDate()+' 〜 '+(we.getMonth()+1)+'/'+we.getDate();
+  document.getElementById('tw').hidden = ymd(weekStart)===ymd(monday(t));
+  var h = '';
+  for (var i=0;i<7;i++){
+    var d = addDays(weekStart,i), dd = dayData(d), has = dd && dd.sites && dd.sites.some(function(s){ return !s.kakou || s.m.length; });
+    h += '<button type="button" class="dy'+(ymd(d)===ymd(t)?' today':'')+(d.getDay()===0?' sun':d.getDay()===6?' sat':'')+'" data-d="'+ymd(d)+'" aria-pressed="'+(ymd(d)===ymd(sel))+'"><span class="w">'+WD[d.getDay()]+'</span><b>'+d.getDate()+'</b><i'+(has?'':' class="none"')+'></i></button>';
+  }
+  document.getElementById('strip').innerHTML = h;
+  [].forEach.call(document.querySelectorAll('.views button'), function(b){ b.setAttribute('aria-checked', b.dataset.v===view?'true':'false'); });
+  document.body.classList.toggle('tbl-mode', view==='site');
+}
+
+// ===== 日別（今の配置LINEの画像に近い形） =====
+function drawDay(){
+  var d = dayData(sel), main = document.getElementById('main');
+  var diff = Math.round((sel - today0())/86400000);
+  var rel = diff===0?'今日の分です':diff===1?'明日の分です':diff>1&&diff<7?'次の'+WD[sel.getDay()]+'曜日の分です':'';
+  var head = '<div class="ld"><div class="big">'+(sel.getMonth()+1)+'/'+sel.getDate()+'（'+WD[sel.getDay()]+'）の配置です</div><div class="rel">'+rel+'</div></div>';
+  var sites = d && d.sites ? d.sites.filter(function(s){ return !s.kakou || s.m.length; }) : [];
+  if (!sites.length){ main.innerHTML = head + '<div class="msg">この日の配置はまだ出ていません。</div>'; return; }
+  var by = { sh:{}, nk:{}, ym:{} }, gk = 0;
+  sites.forEach(function(s){ s.m.forEach(function(p){ if (p.co==='gk') gk += (p.n||1); else if (by[p.co]) by[p.co][p.name]=1; }); });
+  var h = head + '<div class="pills"><span class="pill sh-c">白石工業 '+Object.keys(by.sh).length+'名</span><span class="pill nk-c">中嶋板金 '+Object.keys(by.nk).length+'名</span><span class="pill ym-c">山下板金 '+Object.keys(by.ym).length+'名</span><span class="pill gk-c">協力会社 '+gk+'名</span></div>';
+  ['sh','nk','ym','kakou'].forEach(function(g){
+    var ss = sites.filter(function(s){ return ownOf(s)===g; });
+    if (!ss.length) return;
+    h += '<section class="grp" style="--g:'+BAND[g]+'"><h2><span>'+GROUP[g]+'</span><small>'+ss.length+'現場</small></h2>';
+    ss.forEach(function(s){
+      var notes = s.m.map(function(p){ return p.note; }).filter(Boolean);
+      h += '<div class="site"><div class="sh"><span class="nm">'+esc(s.kakou?'加工':s.name)+'</span><span class="n">'+count(s)+'名</span>'+
+        (s.map ? '<a class="map" href="'+esc(s.map)+'" target="_blank" rel="noopener"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>地図</a>' : '')+'</div>'+
+        '<div class="chips">'+people(s).map(function(p){
+          return '<span class="chip '+p.co+'-c'+(p.chief?' chief':'')+'">'+esc(p.co==='gk'? p.name+' ×'+p.n : p.name)+(p.half?'<small>（'+esc(p.half)+'）</small>':'')+'</span>';
+        }).join('')+'</div>'+
+        (notes.length ? '<div class="memo">※ '+notes.map(esc).join('／')+'</div>' : '')+'</div>';
+    });
+    h += '</section>';
+  });
+  // 休み
+  var off = [];
+  ['sh','nk','ym'].forEach(function(c){ ((d.companies||{})[c]||{}).off && d.companies[c].off.forEach(function(n){ if (off.every(function(o){ return o.name!==n; })) off.push({ co:c, name:n }); }); });
+  (d.offGk||[]).forEach(function(g){ off.push({ co:'gk', name:g.name+' ×'+(g.n||1) }); });
+  if (off.length){
+    h += '<section class="grp" style="--g:#8A9298"><h2><span>休み</span><small>'+off.length+'</small></h2><div class="site"><div class="chips" style="margin-top:0">'+off.map(function(o){ return '<span class="chip '+o.co+'-c">'+esc(o.name)+'</span>'; }).join('')+'</div></div></section>';
+  }
+  var w = weeks[ymd(monday(sel))];
+  h += '<div class="upd">配置表を読んだ時刻 '+esc(w&&w.at||'')+'</div>';
+  main.innerHTML = h;
+}
+
+// ===== 現場別（PC と同じ表。横にずらして見る） =====
+function drawSite(){
+  var main = document.getElementById('main'), t = today0();
+  var days = []; for (var i=0;i<7;i++){ var d = addDays(weekStart,i); days.push({ d:d, data:dayData(d) }); }
+  var names = [], own = {};
+  days.forEach(function(x){ (x.data&&x.data.sites||[]).forEach(function(s){ if (s.kakou && !s.m.length) return; var nm = s.kakou?'加工':s.name; if (names.indexOf(nm)<0){ names.push(nm); own[nm]=ownOf(s); } }); });
+  var order = { sh:0, nk:1, ym:2, kakou:3 };
+  names.sort(function(a,b){ return order[own[a]]-order[own[b]]; });
+  var find = function(x,nm){ return (x.data&&x.data.sites||[]).filter(function(s){ return (s.kakou?'加工':s.name)===nm; })[0]; };
+  var h = '<div class="tblwrap"><table class="tbl"><thead><tr><th class="c0">現場</th>'+days.map(function(x){
+    var cls = (x.d.getDay()===0?'sun':x.d.getDay()===6?'sat':'')+(ymd(x.d)===ymd(t)?' today':'');
+    return '<th class="'+cls+'"><span>'+WD[x.d.getDay()]+'</span><b>'+(x.d.getMonth()+1)+'/'+x.d.getDate()+'</b></th>';
+  }).join('')+'</tr><tr class="tot"><th class="c0">合計</th>'+days.map(function(x){
+    var n = (x.data&&x.data.sites||[]).reduce(function(k,s){ return k+count(s); },0);
+    return '<td class="'+(x.d.getDay()===0?'sun':'')+'">'+(n?n+'人':'')+'</td>';
+  }).join('')+'</tr></thead><tbody>';
+  names.forEach(function(nm){
+    var tot = 0;
+    var cells = days.map(function(x){
+      var s = find(x,nm), cls = x.d.getDay()===0?'sun':'';
+      if (!s || !s.m.length) return '<td class="'+cls+'"></td>';
+      tot += count(s);
+      var txt = people(s).map(function(p){ return p.co==='gk' ? esc(p.name)+p.n+'人' : (p.chief?'<em>★'+esc(p.name)+'</em>':esc(p.name)); }).join('、');
+      return '<td class="'+cls+'"><div class="cell" style="--g:'+BAND[ownOf(s)]+'"><b>'+count(s)+'<small>人</small></b><p>'+txt+'</p></div></td>';
+    }).join('');
+    h += '<tr><th class="c0"><i style="background:'+BAND[own[nm]]+'"></i>'+esc(nm)+'<small>'+tot+'人日</small></th>'+cells+'</tr>';
+  });
+  if (!names.length) h += '<tr><th class="c0">—</th><td colspan="7" style="color:var(--sub);font-size:12px;padding:14px">この週の配置はまだ出ていません</td></tr>';
+  h += '</tbody></table></div>';
+  var w = weeks[ymd(weekStart)];
+  h += '<div class="upd">配置表を読んだ時刻 '+esc(w&&w.at||'')+'</div>';
+  main.innerHTML = h;
+}
+
+function draw(){ drawBand(); if (view==='site') drawSite(); else drawDay(); }
+function go(){
+  document.getElementById('main').innerHTML = '<div class="msg">配置表を読んでいます…</div>';
+  drawBand();
+  load(weekStart).then(draw).catch(function(e){
+    if (e.bad){ setPass(''); askPass('合言葉が違うか、変わりました。もう一度入れてください'); return; }
+    document.getElementById('main').innerHTML = '<div class="msg">配置を読めませんでした。<br>'+esc(e.message||e)+'<br><button type="button" onclick="go()" style="margin-top:12px;padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:var(--ground);color:var(--ink)">もう一度</button></div>';
+  });
+}
+
+// ===== 合言葉（入口で入れていればそのまま。無いときだけここで聞く） =====
+function askPass(err){
+  document.getElementById('band').hidden = true;
+  document.getElementById('main').innerHTML = '<form class="pass" id="pf"><h1>合言葉を入れてください</h1><p>会社から聞いた合言葉です。1回入れると、この携帯が覚えます。</p><input id="pi" inputmode="numeric" autocomplete="off" maxlength="12" aria-label="合言葉"><button type="submit">開く</button><div class="err">'+esc(err||'')+'</div></form>';
+  document.getElementById('pf').onsubmit = function(e){ e.preventDefault(); setPass(document.getElementById('pi').value.trim()); document.getElementById('band').hidden = false; go(); };
+  setTimeout(function(){ var i = document.getElementById('pi'); if (i) i.focus(); }, 50);
+}
+
+document.getElementById('strip').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b) return; var p = b.dataset.d.split('-'); sel = new Date(+p[0], +p[1]-1, +p[2]); draw(); });
+document.querySelector('.wk').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if (!b) return;
+  if (b.id==='tw'){ weekStart = monday(today0()); sel = today0(); }
+  else { var n = +b.dataset.w; weekStart = addDays(weekStart,n); sel = addDays(sel,n); }
+  go();
+});
+document.querySelector('.views').addEventListener('click', function(e){ var b = e.target.closest('button'); if (!b) return; view = b.dataset.v; try { localStorage.setItem('haichi-view', view); } catch(er){} draw(); });
+
+function setTheme(t){
+  if (t==='light'||t==='dark') document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme');
+  [].forEach.call(document.querySelectorAll('.seg button'), function(b){ b.setAttribute('aria-checked', b.dataset.t===(t||'auto')?'true':'false'); });
+  try { localStorage.setItem('iriguchi-theme', t||'auto'); } catch(e){}
+}
+document.querySelector('.seg').onclick = function(e){ var b = e.target.closest('button'); if (b) setTheme(b.dataset.t); };
+var sv='auto'; try { sv = localStorage.getItem('iriguchi-theme')||'auto'; } catch(e){}
+setTheme(sv);
+
+if (getPass()) go(); else askPass();
+</script>
+</body>
+</html>
