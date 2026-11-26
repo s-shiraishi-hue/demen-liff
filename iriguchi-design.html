@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>入口デザイン案</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;600;700;800&family=Montserrat:wght@200;300&family=Raleway:wght@200;300&family=Josefin+Sans:wght@200;300&family=Syncopate:wght@400&family=Michroma&family=Jost:wght@200;300&family=Space+Grotesk:wght@300&family=Cormorant+Garamond:wght@300;500&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;600;700;800&family=Montserrat:wght@200;300&family=Raleway:wght@200;300&family=Josefin+Sans:wght@200;300&family=Syncopate:wght@400&family=Michroma&family=Jost:wght@200;300&family=Space+Grotesk:wght@300&family=Cormorant+Garamond:wght@300;500&family=Kaushan+Script&family=Mr+Dafoe&family=Permanent+Marker&family=Sedgwick+Ave+Display&family=Rock+Salt&family=Knewave&family=Yuji+Syuku&family=Yuji+Boku&family=Noto+Sans+JP:wght@400;500;700&display=swap">
 <style>
   /* 11/26 入口の見た目の案（地図の左上に SHIRAISHI ／ アイコンの部分は明るく） */
   :root{--ink:#14192B}
@@ -39,6 +39,12 @@
   .fx b{display:block;font-size:17px;line-height:1;color:rgba(255,255,255,.62);letter-spacing:.5em;text-shadow:0 0 18px rgba(255,255,255,.25);mix-blend-mode:screen}   /* 透ける */
   .fx::before{content:"";display:block;width:26px;height:2px;background:rgba(255,212,61,.75);margin-bottom:9px;border-radius:2px;box-shadow:0 0 10px rgba(255,212,61,.45)}
   .fx small{display:block;margin-top:7px;font:500 9px/1 "Noto Sans JP";letter-spacing:.34em;color:rgba(255,255,255,.5)}
+  /* 筆文字（白い字が少し透ける） */
+  .fd{position:absolute;z-index:3;left:16px;top:18px;color:rgba(255,255,255,.88);pointer-events:none;display:flex;align-items:flex-end;gap:10px;mix-blend-mode:screen}
+  .fd b{display:block;font-weight:400;line-height:1;text-shadow:0 2px 14px rgba(0,0,0,.35);transform:rotate(-4deg);transform-origin:left bottom}
+  .fd .sub{display:block;margin:6px 0 0 4px;font:600 8px/1 Inter;letter-spacing:.42em;color:rgba(255,255,255,.7)}
+  .fd .kan{writing-mode:vertical-rl;font-family:"Yuji Syuku";font-size:13px;letter-spacing:.15em;color:rgba(255,255,255,.75);padding:3px 2px;border:1px solid rgba(255,255,255,.45);border-radius:2px;margin-bottom:14px}
+  .fd .han{width:20px;height:20px;border-radius:3px;background:rgba(214,40,40,.85);color:#fff;font:400 11px/20px "Yuji Boku";text-align:center;margin-bottom:16px}
   .lg5 b{display:block;font:800 44px/.9 Inter;letter-spacing:-.02em;color:rgba(255,255,255,.18);mix-blend-mode:screen}
   .lg5 small{display:block;margin-top:2px;font:600 9px/1 Inter;letter-spacing:.55em;color:rgba(255,255,255,.75)}
 
@@ -140,15 +146,25 @@ const FONTS = [
   ["D-1 Inter（今の D）", "font-family:Inter;font-weight:300"],
   ["D-2 Montserrat（細い）", "font-family:Montserrat;font-weight:200"],
   ["D-3 Raleway（細くて品がある）", "font-family:Raleway;font-weight:300"],
-  ["D-4 Josefin Sans（すらっと縦長）", "font-family:\"Josefin Sans\";font-weight:300"],
+  ["D-4 Josefin Sans（すらっと縦長）", "font-family:'Josefin Sans';font-weight:300"],
   ["D-5 Syncopate（横に広い・未来っぽい）", "font-family:Syncopate;font-weight:400;font-size:15px;letter-spacing:.42em"],
   ["D-6 Michroma（車・機械っぽい）", "font-family:Michroma;font-size:14px;letter-spacing:.4em"],
   ["D-7 Jost（丸みのある幾何学）", "font-family:Jost;font-weight:200;font-size:19px"],
-  ["D-8 Space Grotesk（今どきのIT）", "font-family:\"Space Grotesk\";font-weight:300"],
-  ["D-9 Cormorant（細いセリフ・高級）", "font-family:\"Cormorant Garamond\";font-weight:500;font-size:20px;letter-spacing:.42em"]
+  ["D-8 Space Grotesk（今どきのIT）", "font-family:'Space Grotesk';font-weight:300"],
+  ["D-9 Cormorant（細いセリフ・高級）", "font-family:'Cormorant Garamond';font-weight:500;font-size:20px;letter-spacing:.42em"]
 ];
 html += '<section class="opt"><h2>D の字体の仲間（黄色の線＋細い字）</h2><p>どれも同じ形で、字体だけ変えています。気に入った番号を教えてください（例：D-3）。</p>' +
   FONTS.map(([n, st]) => '<div class="phone" style="margin-bottom:12px"><div class="map" style="height:130px;background-position:62% 22%"><div style="position:absolute;inset:0;z-index:1;background:radial-gradient(120% 140% at 0% 0%,rgba(7,15,46,.85),rgba(7,15,46,.35) 55%,rgba(7,15,46,0) 80%)"></div><div class="logo fx" style="top:30px"><b style="' + st + '">SHIRAISHI</b><small>業務管理</small></div><span style="position:absolute;right:14px;bottom:10px;z-index:3;color:#fff;font:600 12px Noto Sans JP;opacity:.85">' + n + '</span></div></div>').join("") + '</section>';
+const BRUSH = [
+  ["筆-1 Kaushan（力強い筆）", "font-family:'Kaushan Script';font-size:38px", "kan"],
+  ["筆-2 Mr Dafoe（流れる筆）", "font-family:'Mr Dafoe';font-size:50px", "han"],
+  ["筆-3 Sedgwick（荒い筆・勢い）", "font-family:'Sedgwick Ave Display';font-size:44px", "kan"],
+  ["筆-4 Permanent Marker（太いマーカー）", "font-family:'Permanent Marker';font-size:32px", "han"],
+  ["筆-5 Knewave（太く跳ねる）", "font-family:Knewave;font-size:34px", "kan"],
+  ["筆-6 Rock Salt（かすれ）", "font-family:'Rock Salt';font-size:24px", "han"]
+];
+html += '<section class="opt"><h2>筆文字の案（送ってもらった見本の雰囲気）</h2><p>字体で近づけたものです。本物の手書きのロゴを作るなら、デザインした画像を入れることもできます。左上の小さい「白石」は縦書きの札か、赤い印のどちらかにしています。</p>' +
+  BRUSH.map(([n, st, mark]) => '<div class="phone" style="margin-bottom:12px"><div class="map" style="height:150px;background-position:62% 22%"><div style="position:absolute;inset:0;z-index:1;background:radial-gradient(120% 140% at 0% 0%,rgba(7,15,46,.9),rgba(7,15,46,.4) 55%,rgba(7,15,46,0) 85%)"></div><div class="fd">' + (mark === "kan" ? '<span class="kan">白石</span>' : '<span class="han">白</span>') + '<div><b style="' + st + '">Shiraishi</b><span class="sub">GROUP · 業務管理</span></div></div><span style="position:absolute;right:14px;bottom:10px;z-index:3;color:#fff;font:600 12px Noto Sans JP;opacity:.85">' + n + '</span></div></div>').join("") + '</section>';
 document.write(html);
 </script>
 </body>
