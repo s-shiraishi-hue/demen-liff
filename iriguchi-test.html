@@ -36,7 +36,7 @@
     --bg:#FAFAF8; --ink:#111111; --ink2:#111111; --sub:rgba(17,17,17,.5); --sep:#111111; --wg1:transparent; --wg2:transparent; --field:#FFFFFF; --navy:#070F2E;
     color-scheme:light;
   }
-  html{background:var(--bg)}   /* 引っぱったときも同じ紺（11/26） */
+  html{background:#070F2E}   /* 11/26 夜 iOS 26 はホーム画面から開くと上の端をページの背景色でぼかす → 背景を紺にして白く曇らないように（下はbodyの明るい色） */
   html,body{margin:0;min-height:100%;-webkit-text-size-adjust:100%}
   body{font-family:"Inter","Noto Sans JP","Hiragino Sans",sans-serif;font-feature-settings:"palt";-webkit-font-smoothing:antialiased;color:var(--ink);
     background:radial-gradient(80% 40% at 0% 22%,var(--wg1),transparent 70%),radial-gradient(70% 40% at 100% 40%,var(--wg2),transparent 70%),var(--bg);min-height:100vh}
@@ -63,7 +63,8 @@
   .bar{position:fixed;left:0;right:0;top:0;z-index:10;padding:calc(env(safe-area-inset-top,0px) + 10px) 0 10px;text-align:center;font:600 15px/1.2 "Inter",sans-serif;letter-spacing:.04em;color:var(--ink);
     background:color-mix(in srgb,var(--bg) 72%,transparent);-webkit-backdrop-filter:blur(20px) saturate(1.6);backdrop-filter:blur(20px) saturate(1.6);border-bottom:.5px solid var(--sep);opacity:0;transform:translateY(-6px);transition:opacity .2s,transform .2s;pointer-events:none}
   .bar.on{opacity:1;transform:none}
-  .bar{display:none!important}   /* 11/26 夜 下に送ると上に白いすりガラスの帯が出て、地図が曇って見えた → ロゴがあるので帯は出さない */
+  .bar{display:none!important}
+  .topcap{position:fixed;left:0;right:0;top:0;height:env(safe-area-inset-top,0px);background:#070F2E;z-index:50;pointer-events:none}   /* 11/26 夜 下に送ると上に白いすりガラスの帯が出て、地図が曇って見えた → ロゴがあるので帯は出さない */
 
   /* アイコン：iPhone のホーム画面と同じ並び。グループは見出しと細い線だけ */
   main{padding:14px max(20px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 16px) max(20px,env(safe-area-inset-left,0px))}
@@ -225,6 +226,7 @@
 </style>
 </head>
 <body>
+<div class="topcap" aria-hidden="true"></div>   <!-- 11/26 夜 上の時計の帯を紺で固定（iOS が上の帯の色をこれで決める） -->
 <div class="bar" id="bar">業務管理</div>
 <div class="m3-card" id="m3card" hidden role="dialog" aria-live="polite"></div>
 <header class="hero map" id="map">
@@ -534,7 +536,7 @@ else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-31";
+var BUILD_ID = "20261126-32";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
