@@ -1150,6 +1150,11 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
 .chatwho{margin:0;padding:6px 12px 0;font-size:11px;color:var(--sub);border-top:1px solid #e1e3e7;background:#fff}
 .chatwho+.chati{border-top:0}
 .cmemo .cbt{border-color:#9aa0a8}.cmh{display:block;font-size:11px;font-weight:700;color:#5d6169;margin-bottom:2px}.cb.me.cmemo .cmh{color:#d5d8dd}
+/* 切り替え2つの色を分ける（白石さん 11/26「加工管理と納品済みの色と、一覧とカレンダーの色だけかえよう」）：
+   ［加工管理｜納品済み］＝濃い灰色で白い字（画面を変える）、［一覧｜カレンダー］＝うすい灰色の台に白い札（見え方を変える）。並びはそのまま */
+.vtabs:not(.vsw){border:0!important;background:#e3e5e9;padding:3px;border-radius:10px}
+.vtabs:not(.vsw) button{background:transparent!important;color:#4d5058!important;border-radius:8px;font-weight:700}
+.vtabs:not(.vsw) button[aria-selected="true"]{background:#fff!important;color:var(--ink)!important;box-shadow:0 1px 3px rgba(0,0,0,.18)}
 </style>
 
 <div class="wrap">
