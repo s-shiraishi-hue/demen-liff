@@ -587,6 +587,12 @@ textarea.fin{min-height:64px;line-height:1.5}
 .rq .rsend{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;background:var(--blue);box-shadow:0 4px 12px rgba(0,49,216,.28)}
 .rq .rsend .plane{width:20px;height:20px;margin-right:8px}
 .rq .rsum{color:var(--ink)}
+/* 納期：青い札＋「押して変える」。透明の date 欄を行いっぱいに重ねて、どこを押しても選び画面が開く */
+.rq .dpill{display:inline-block;background:var(--blue-bg);color:var(--blue);font-weight:700;font-size:16px;line-height:1;padding:8px 12px;border-radius:8px}
+.rq .dhint{margin-left:auto;font-size:13px;color:#8e8e93;padding-right:16px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='13' viewBox='0 0 8 13'%3E%3Cpath d='M1 1l5.5 5.5L1 12' fill='none' stroke='%23c4c4c7' stroke-width='2'/%3E%3C/svg%3E") no-repeat right center}
+.rq .dover{position:absolute;left:0;top:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer;-webkit-appearance:none;appearance:none;font-size:16px}
+.rq .fband .eb{min-width:120px}
+.rq .fband .ttl{margin-right:120px}
 .rq .iv{-webkit-flex-wrap:wrap;flex-wrap:wrap}.rq .iv>.fin{width:100%;-webkit-flex:none;flex:none}.rq .iv>.frad.seg{-webkit-flex:1 1 100%;flex:1 1 100%}
 .rq .ival:empty{display:none}
 .rq .ib>.rhelp{margin:0;padding:0 14px 8px 104px}
@@ -1762,7 +1768,7 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
   window.openRequestForm=function(edit){photos=[];oldPh=[];busy=false;editing=edit||null;
     var me=load('kako-me'),co=load('kako-company')||COMPANIES[0];if(editing){co=editing.company||co;me=editing.worker||'';}
     var box=document.createElement('div');box.className='ed rq';box.id='rqBox';box.setAttribute('role','dialog');box.setAttribute('aria-label','加工を依頼する');
-    box.innerHTML='<div class="fband"><button class="eb" type="button" id="rqClose">← やめる</button><span class="ttl">'+(editing?'依頼を直す':'加工を依頼する')+'</span></div>'+
+    box.innerHTML='<div class="fband"><button class="eb" type="button" id="rqClose" aria-label="加工管理の画面へ戻る">‹ 加工管理へ</button><span class="ttl">'+(editing?'依頼を直す':'加工を依頼する')+'</span></div>'+
      '<div class="rqbody" id="rqBody"><div class="ig">'+
       '<div class="lt"><h1>'+(editing?'依頼を直す':'加工を依頼する')+'</h1><p>'+(editing?esc(editing.id):'写真と現場を選んで送るだけ')+'</p></div>'+
       /* 11/26 白石さん：会社 → 依頼者 → 現場名（元請は自動）。2回目「iPhone の設定画面みたいにぎゅっと」：1行44pxの表 */
@@ -1770,7 +1776,8 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
        irow('会社',true,radios('rqCo',COMPANIES.map(function(c){return [c,c.replace(/工業$|板金.*$/,'')];}),co).replace('class="frad"','class="frad seg"'),'rqCo','co')+
        irow('依頼者',true,'<select class="fin" id="rqMe" aria-label="依頼者（3社全員。押した会社が上）"></select><input class="fin" id="rqMeT" aria-label="名前を入れる" placeholder="名前を入れる" hidden>','rqMe','me')+
        irow('現場名',true,'<select class="fin" id="rqSite"></select><input class="fin" id="rqSiteT" aria-label="現場名を入れる" placeholder="現場名を入れる" hidden>','rqSite','site')+
-       irow('元請',true,'<span class="ival" id="rqCustV"></span><button type="button" class="lnk" id="rqCustE" hidden>直す</button><input class="fin" id="rqCust" autocomplete="off" aria-label="元請" placeholder="元請を入れる" hidden>','rqCust','cust')+
+       /* 元請は出さない（白石さん 11/26「どうせ出てくる」）。現場名から自動で入れて送る */
+       '<div hidden>'+irow('元請',false,'<span class="ival" id="rqCustV"></span><button type="button" class="lnk" id="rqCustE" hidden>直す</button><input class="fin" id="rqCust" autocomplete="off" aria-label="元請" placeholder="元請を入れる" hidden>','rqCust','cust')+'</div>'+
       '</div>'+
       '<p class="ih">加工の内容</p><div class="ib">'+
        (editing?'<div id="rqOld" style="padding:8px 14px 0"></div>':'')+
@@ -1780,7 +1787,8 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
       '</div>'+
       /* 11/26 白石さん「依頼日の修正はいらない・急ぎもいらない・日付を選ぶで、明日がデフォルト。今日とか明日の選択肢はいらない」：納期は日付1つだけ。依頼日は今日、急ぎはなし（直すときは前の値をそのまま残す） */
       '<div class="ib" style="margin-top:14px">'+
-       irow('納期',true,'<input class="fin" type="date" id="rqDue" value="'+day(1)+'" aria-label="納期">','rqDue','due')+
+       /* 11/26 白石さん「日にちが上にずれてる・押すと日が変わるのかわかりにくい」：日付は青い札で出し、行のどこを押しても日付の選び画面が開く（透明の date 欄を行に重ねる） */
+       irow('納期',true,'<span class="dpill" id="rqDueV"></span><span class="dhint">押して変える</span><input class="dover" type="date" id="rqDue" value="'+day(1)+'" aria-label="納期（押して日付を変える）">','rqDue','due')+
        '<div hidden><div id="rqDueQ"><button type="button" data-v="other" aria-checked="true"></button></div><span id="rqRushL"><i></i></span><input type="checkbox" id="rqRush"><span id="rqDateL"></span><span id="rqDateV"></span><button type="button" id="rqDateE"></button><input type="date" id="rqDate" value="'+day(0)+'"></div>'+
       '</div>'+
       /* 「そのほか」は消した（白石さん 11/26「いらない、開きにくい」）。値は決まった値（自社・その他・空）で送る。直すときは前の値をそのまま残す */
@@ -1794,7 +1802,9 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
     function curMe(){return ($('rqMe').value==='__other'?$('rqMeT').value:$('rqMe').value).trim();}
     bindRad('rqCo',function(v){fillNames(curMe(),v);fillSites(v,'');setCust('');sumUp();});
     bindRad('rqDueQ',function(v){$('rqDue').hidden=v!=='other';if(v!=='other')$('rqDue').value=v;sumUp();});
-    $('rqDue').onchange=function(){clearErr('rqDue');sumUp();};
+    function dueUI(){$('rqDueV').textContent=mdw($('rqDue').value)||'日付を選ぶ';}
+    $('rqDue').onchange=function(){clearErr('rqDue');dueUI();sumUp();};$('rqDue').oninput=$('rqDue').onchange;
+    $('rqDue').onclick=function(){try{if(this.showPicker)this.showPicker();}catch(e){}};
     function rushUI(){$('rqRushL').className='rrush'+($('rqRush').checked?' on':'');$('rqRushL').querySelector('i').textContent=$('rqRush').checked?'✓':'';sumUp();}
     $('rqRush').onchange=rushUI;
     function dateUI(){$('rqDateV').textContent=mdw($('rqDate').value)||'（選ぶ）';}
@@ -1814,6 +1824,7 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
       setRad('rqCat',e.category||'自社');if(e.method)$('rqMeth').value=e.method;custUI();dateUI();rushUI();}
     if(editing)loadOld(editing.id);
     drawPhotos();
+    dueUI();
     function grow(){var t=$('rqMemo');t.style.height='auto';t.style.height=Math.max(44,t.scrollHeight)+'px';} /* 書いた分だけ下へ伸ばす */
     $('rqMemo').addEventListener('input',grow);grow();
     $('rqSend').onclick=send;
@@ -1823,7 +1834,7 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
       cust=$('rqCust').value.trim(),memo=$('rqMemo').value.trim(),due=$('rqDue').value,date=$('rqDate').value,first=null;
     function need(ok,id,msg){if(!ok){err(id,msg);if(!first)first=id;}}
     need(me,'rqMe','＊依頼者を選んでください。');need(/^\d{4}-\d{2}-\d{2}$/.test(date),'rqDate','＊依頼日を選んでください。');need(site,'rqSite','＊現場を選んでください。');
-    need(cust||!site,'rqCust','＊元請を入れてください。');need(/^\d{4}-\d{2}-\d{2}$/.test(due),'rqDue','＊納期を選んでください。');
+    need(/^\d{4}-\d{2}-\d{2}$/.test(due),'rqDue','＊納期を選んでください。');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){$('rqDateL').hidden=true;$('rqDate').hidden=false;} /* たたんでいる欄は、空なら開いて見せる */
     if(!cust&&site){custEdit=true;custUI();}
     if(first==='rqDueQ'&&!$('rqDue').hidden)first='rqDue';
