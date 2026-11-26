@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>入口デザイン案</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;600;700;800&family=Montserrat:wght@200;300&family=Raleway:wght@200;300&family=Josefin+Sans:wght@200;300&family=Syncopate:wght@400&family=Michroma&family=Jost:wght@200;300&family=Space+Grotesk:wght@300&family=Cormorant+Garamond:wght@300;500&family=Noto+Sans+JP:wght@400;500;700&display=swap">
 <style>
   /* 11/26 入口の見た目の案（地図の左上に SHIRAISHI ／ アイコンの部分は明るく） */
   :root{--ink:#14192B}
@@ -36,6 +36,9 @@
   .lg4 b{display:block;font:300 15px/1 Inter;letter-spacing:.5em;opacity:.85}
   .lg4::before{content:"";display:block;width:26px;height:2px;background:#ffd43d;margin-bottom:9px;border-radius:2px}
   .lg4 small{display:block;margin-top:6px;font:500 9px/1 "Noto Sans JP";letter-spacing:.3em;opacity:.65}
+  .fx b{display:block;font-size:17px;line-height:1;color:rgba(255,255,255,.62);letter-spacing:.5em;text-shadow:0 0 18px rgba(255,255,255,.25);mix-blend-mode:screen}   /* 透ける */
+  .fx::before{content:"";display:block;width:26px;height:2px;background:rgba(255,212,61,.75);margin-bottom:9px;border-radius:2px;box-shadow:0 0 10px rgba(255,212,61,.45)}
+  .fx small{display:block;margin-top:7px;font:500 9px/1 "Noto Sans JP";letter-spacing:.34em;color:rgba(255,255,255,.5)}
   .lg5 b{display:block;font:800 44px/.9 Inter;letter-spacing:-.02em;color:rgba(255,255,255,.18);mix-blend-mode:screen}
   .lg5 small{display:block;margin-top:2px;font:600 9px/1 Inter;letter-spacing:.55em;color:rgba(255,255,255,.75)}
 
@@ -133,6 +136,19 @@ OPTS.forEach(([k, title, desc, logoNo]) => {
 });
 html += '<section class="opt"><h2>ロゴの5つ（どの案とも組み合わせられます）</h2><p>1：細い字を広くあける　2：ふちだけの太字　3：すりガラスの札　4：黄色の線＋細い字　5：大きく透ける字</p>' +
   LOGOS.map((l, i) => '<div class="phone" style="height:150px;margin-bottom:12px"><div class="map" style="height:150px">' + l + '<span style="position:absolute;right:14px;bottom:10px;z-index:3;color:#fff;font:700 18px Inter;opacity:.8">' + (i + 1) + '</span></div></div>').join('') + '</section>';
+const FONTS = [
+  ["D-1 Inter（今の D）", "font-family:Inter;font-weight:300"],
+  ["D-2 Montserrat（細い）", "font-family:Montserrat;font-weight:200"],
+  ["D-3 Raleway（細くて品がある）", "font-family:Raleway;font-weight:300"],
+  ["D-4 Josefin Sans（すらっと縦長）", "font-family:\"Josefin Sans\";font-weight:300"],
+  ["D-5 Syncopate（横に広い・未来っぽい）", "font-family:Syncopate;font-weight:400;font-size:15px;letter-spacing:.42em"],
+  ["D-6 Michroma（車・機械っぽい）", "font-family:Michroma;font-size:14px;letter-spacing:.4em"],
+  ["D-7 Jost（丸みのある幾何学）", "font-family:Jost;font-weight:200;font-size:19px"],
+  ["D-8 Space Grotesk（今どきのIT）", "font-family:\"Space Grotesk\";font-weight:300"],
+  ["D-9 Cormorant（細いセリフ・高級）", "font-family:\"Cormorant Garamond\";font-weight:500;font-size:20px;letter-spacing:.42em"]
+];
+html += '<section class="opt"><h2>D の字体の仲間（黄色の線＋細い字）</h2><p>どれも同じ形で、字体だけ変えています。気に入った番号を教えてください（例：D-3）。</p>' +
+  FONTS.map(([n, st]) => '<div class="phone" style="margin-bottom:12px"><div class="map" style="height:130px;background-position:62% 22%"><div style="position:absolute;inset:0;z-index:1;background:radial-gradient(120% 140% at 0% 0%,rgba(7,15,46,.85),rgba(7,15,46,.35) 55%,rgba(7,15,46,0) 80%)"></div><div class="logo fx" style="top:30px"><b style="' + st + '">SHIRAISHI</b><small>業務管理</small></div><span style="position:absolute;right:14px;bottom:10px;z-index:3;color:#fff;font:600 12px Noto Sans JP;opacity:.85">' + n + '</span></div></div>').join("") + '</section>';
 document.write(html);
 </script>
 </body>
