@@ -148,6 +148,45 @@
   .J .low > *{position:relative}
   .J .cap{color:#1E2547}
   .J .t{border-radius:20px!important;box-shadow:0 10px 24px -6px var(--k2),inset 0 1px 0 rgba(255,255,255,.4)}
+
+  /* ===== 白黒の案 K〜N（11/26 前の「白黒の線」＋E） ===== */
+  .mono .low{padding:20px 20px 24px}
+  .mono .g{margin:0;padding:14px 0 16px;border-top:1px solid var(--rule)}
+  .mono .g:first-child{border-top:0;padding-top:4px}
+  .mono h3.mh{display:flex;align-items:baseline;justify-content:space-between;margin:0 2px 14px;font:600 10px/1 Inter;letter-spacing:.34em;color:var(--mink)}
+  .mono h3.mh span{font:500 10px/1 'Noto Sans JP';letter-spacing:.24em;opacity:.55}
+  .mono .grid{row-gap:16px}
+  .mono .app{gap:8px}
+  .mono .t{background:transparent!important;box-shadow:none!important}
+  .mono .t svg{stroke:var(--mink);stroke-width:1.4;width:25px;height:25px}
+  .mono .lb{font:500 11px/1 'Noto Sans JP';letter-spacing:.12em;color:var(--mink)}
+  .mono .en{font:600 7.5px/1 Inter;letter-spacing:.22em;color:var(--mink);opacity:.45;margin-top:-3px}
+  .mono .soon .t,.mono .soon .lb,.mono .soon .en{opacity:.3;filter:none}
+
+  /* K：白・丸い枠（前の白黒の線） */
+  .K{--mink:#111;--rule:#111}
+  .K .low{background:#FAFAF8}
+  .K .t{border-radius:50%;border:1px solid #111}
+
+  /* L：白・角の丸い四角（E に近い） */
+  .L{--mink:#141414;--rule:#E2E2E2}
+  .L .low{background:#FFFFFF}
+  .L .t{border-radius:17px;border:1px solid #DADADA;box-shadow:0 6px 14px rgba(0,0,0,.05)!important}
+
+  /* M：黒・白い線（夜の地図とつながる） */
+  .M{--mink:#F2F2F2;--rule:rgba(255,255,255,.18)}
+  .M .low{background:#0A0B0F}
+  .M .t{border-radius:50%;border:1px solid rgba(255,255,255,.7)}
+
+  /* N：白黒＋黄色をひとつだけ（ロゴの線とそろえる） */
+  .N{--mink:#111;--rule:#E6E6E6}
+  .N .low{background:#FFFFFF}
+  .N .t{border-radius:17px;border:1px solid #111}
+  .N h3.mh::before{content:"";width:16px;height:2px;background:#FFD43D;border-radius:2px;align-self:center;margin-right:8px}
+  .N h3.mh{justify-content:flex-start}
+  .N h3.mh span{margin-left:auto}
+  .N .g:first-child .app:first-child .t{background:#111!important}
+  .N .g:first-child .app:first-child .t svg{stroke:#FFD43D}
 </style>
 </head>
 <body>
@@ -216,6 +255,22 @@ CHIC.forEach(([k, title, desc, body]) => {
   chic += '<section class="opt"><h2>' + title + '</h2><p>' + desc + '</p><div class="phone chic ' + k + '"><div class="map">' + brandD + '<span class="pin" style="left:46%;top:44%">ネグロス電工<em>6</em></span><span class="pin" style="left:8%;top:64%">LP福岡古賀<em>4</em></span><div class="views"><span class="on">全体</span><span>北九州</span><span>筑豊</span><span>福岡</span><span>↻ 回る</span></div></div><div class="low">' + body() + '</div></div></section>';
 });
 html = chic + html;
+
+// ===== 白黒の案 K〜N =====
+const EN = { dem:'DAILY REPORT', gch:'SURVEY', hai:'CREW', dai:'LEDGER', kak:'FACTORY', req:'ORDER', alc:'ALCOHOL', kin:'ATTENDANCE' };
+const appM = k => '<div class="app' + ((k==='alc'||k==='kin')?' soon':'') + '"><div class="t">' + svg(k) + '</div><div class="lb">' + NAME[k] + '</div><div class="en">' + EN[k] + '</div></div>';
+const groupsM = () => G.map(([jp, en, ks]) => '<div class="g"><h3 class="mh">' + en + '<span>' + jp + '</span></h3><div class="grid">' + ks.map(appM).join('') + '</div></div>').join('');
+const MONO = [
+  ['K', 'K：白・丸い枠（前の白黒の線）', '色を使わず、細い線と字の間で整えた形。丸い枠のアイコン、名前の下に小さく英字。見出しは英字で、区切りは黒い細線。'],
+  ['L', 'L：白・角の丸い四角（E に近い）', 'E の白い四角を白黒にしたもの。線のアイコン、薄い灰色の区切り。いちばんすっきり。'],
+  ['M', 'M：黒・白い線（夜の地図とつながる）', 'K を黒地に反転。上の夜の地図からそのまま続く。黒白でいちばん締まって見える。'],
+  ['N', 'N：白黒＋黄色ひとつ（ロゴとそろえる）', '白黒の四角に、見出しの頭だけロゴと同じ黄色の線。よく使う出面報告だけ黒地に黄色の線。']
+];
+let mono = '<section class="opt"><h2 style="font-size:17px">白黒の案 K〜N（いちばん新しい案）</h2><p>前に出した「白黒の線」の案と、E を合わせたものです。アイコンの名前の下に、小さく英字を添えています。</p></section>';
+MONO.forEach(([k, title, desc]) => {
+  mono += '<section class="opt"><h2>' + title + '</h2><p>' + desc + '</p><div class="phone mono ' + k + '"><div class="map">' + brandD + '<span class="pin" style="left:46%;top:44%">ネグロス電工<em>6</em></span><span class="pin" style="left:8%;top:64%">LP福岡古賀<em>4</em></span><div class="views"><span class="on">全体</span><span>北九州</span><span>筑豊</span><span>福岡</span><span>↻ 回る</span></div></div><div class="low">' + groupsM() + '</div></div></section>';
+});
+html = mono + html;
 html += '<section class="opt"><h2>ロゴの5つ（どの案とも組み合わせられます）</h2><p>1：細い字を広くあける　2：ふちだけの太字　3：すりガラスの札　4：黄色の線＋細い字　5：大きく透ける字</p>' +
   LOGOS.map((l, i) => '<div class="phone" style="height:150px;margin-bottom:12px"><div class="map" style="height:150px">' + l + '<span style="position:absolute;right:14px;bottom:10px;z-index:3;color:#fff;font:700 18px Inter;opacity:.8">' + (i + 1) + '</span></div></div>').join('') + '</section>';
 const FONTS = [
