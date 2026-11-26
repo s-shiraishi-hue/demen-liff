@@ -104,7 +104,7 @@
   .wsub{grid-row:2;align-self:start;padding-top:10px;gap:4px;opacity:.75;font:500 12px/1 "Inter","Noto Sans JP",sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap}
   .wsub .dot{opacity:.6}
   /* 明るさの切り替え：帯のすぐ下の右上 */
-  .tb{display:flex;justify-content:flex-end;margin-top:-14px;margin-bottom:8px}
+  .tb{display:flex;justify-content:flex-end;margin-top:-14px;margin-bottom:8px;width:100%;box-sizing:border-box;align-self:stretch}   /* 右上に寄せる（真ん中に出ていたのを直す 11/26） */
   .seg{display:flex;padding:2px;border-radius:10px;background:var(--sep)}
   .seg button{border:0;background:transparent;color:var(--sub);font:600 11px/1 "Inter","Noto Sans JP",sans-serif;min-width:30px;height:26px;padding:0 8px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
   .seg button[aria-checked="true"]{background:var(--field);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -297,7 +297,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-4";
+var BUILD_ID = "20261126-5";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
