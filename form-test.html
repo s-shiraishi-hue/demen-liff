@@ -43,12 +43,20 @@
   #wait-sum{display:none;grid-template-columns:4.6em minmax(0,1fr);gap:6px 8px;width:100%;max-width:360px;margin:0;font-size:14px;color:#14264F}
   #wait-sum dt{font-weight:700;font-size:13px}
   #wait-sum dd{margin:0;overflow-wrap:anywhere}
+  #nosend{position:fixed;inset:0;z-index:5;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;background:rgba(255,255,255,.98);text-align:center;box-sizing:border-box;font-family:"Hiragino Sans","Yu Gothic UI",sans-serif;color:#14264F}
+  #nosend h2{margin:0;font-size:22px;line-height:1.4;color:#B42318}
+  #nosend p{margin:0;font-size:15px;line-height:1.6;max-width:340px}
+  #nosend button{width:100%;max-width:340px;height:56px;border:0;border-radius:14px;font-size:18px;font-weight:700;cursor:pointer}
+  #nosend .go{background:#06C755;color:#fff}
+  #nosend .later{height:44px;background:transparent;color:#5F6368;font-size:14px;font-weight:400;text-decoration:underline}
+  #nosend small{font-size:11px;color:#9AA0A6;max-width:340px;overflow-wrap:anywhere}
   #wait-note{display:none;max-width:360px;margin:0;font-size:13px;color:#5F6368;text-align:center}
 </style>
 </head>
 <body>
 <div id="bar">準備中…</div>
 <div id="wait"><svg id="wait-house" viewBox="0 0 220 170" aria-hidden="true"></svg><div class="g" id="wait-g"></div><div class="x"><span id="wait-text">読み込み中</span><i id="wait-d"></i></div><dl id="wait-sum"></dl><p id="wait-note">閉じずにお待ちください。修正がある場合は、送信後にカードの［編集］から再送信してください</p></div>
+<div id="nosend" role="alertdialog" aria-labelledby="nosend-h"><h2 id="nosend-h">まだグループに<br>送っていません</h2><p id="nosend-p">報告は保存できています。<br>このあと送り先のグループを選ばないと、<br>事務やグループの人には届きません。</p><button type="button" class="go" id="nosend-go">送り先を選んで送る</button><button type="button" class="later" id="nosend-later">送らずに閉じる（事務に連絡します）</button><small id="nosend-why"></small></div>
 <iframe id="frame" allow="camera; microphone; clipboard-write"></iframe>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -458,6 +466,7 @@ window.addEventListener('message', async ev => {
   if (d.type === 'demen-failed' && d.report) {
     try { ev.source.postMessage({ type: 'demen-fail-ack' }, '*'); } catch (e) {}   // フォームはいつもの「送信完了」を出す
     if (!canSend && !usePicker()) { bar('報告は送れませんでした。事務に連絡してください', true); return; }
+    lastSaved = !!d.saved;
     lastCard = buildFailCard(d, d.saved ? 'photo' : 'save');   // 職人にはいつもどおりに見せ、カードの赤い帯で事務に知らせる
     pendingMsgs = [lastCard];
     sendCard();
@@ -468,6 +477,7 @@ window.addEventListener('message', async ev => {
   if (!canSend && !usePicker()) { bar('報告は保存しました（このトークには送れません）'); return; }
   const photos = (d.photoIds || []).map(id => photoUrl(id));
   if (d.report && d.report.gencho) d.report.photoIds = d.photoIds || [];   // 現調・打合せはカードの中に写真を並べる（2026-11-25）
+  lastSaved = true;
   lastCard = buildCard(d.report, photos, d.reportId, d.edit);
   pendingMsgs = [lastCard];
   sendCard();
@@ -475,7 +485,7 @@ window.addEventListener('message', async ev => {
 
 // ===== 送れなかったとき（2026-10-28 追加）=====
 // D：保存はできたがLINEに送れなかった → 帯をタップするともう一度送る
-let lastCard = null, cardSending = false;
+let lastCard = null, cardSending = false, lastSaved = true;
 let pendingMsgs = [];   // まだ送っていないもの（カード・現調の写真）。途中で失敗したら、帯のタップで続きから送る
 async function sendCard() {
   if (!lastCard) return;
@@ -489,7 +499,7 @@ async function sendCard() {
       }
     } else {
       waitTo(1);   // 送り先を選ぶ画面が隠れないように、先に読み込み画面を閉じる
-      const res = await liff.shareTargetPicker(pendingMsgs.slice(0, 5), { isMultiple: false });   // 選ぶ画面は1回だけ（現調の写真は4枚まで）
+      const res = await liff.shareTargetPicker(pendingMsgs.slice(0, 5));   // 11/26 本番と同じに戻した：isMultiple:false にすると友だちしか選べなくなる（現調の写真は4枚まで）
       if (!res) throw new Error('送り先を選んでいません');
       pendingMsgs = [];
     }
@@ -500,10 +510,24 @@ async function sendCard() {
   } catch (e) {
     cardSending = false;
     waitTo(1);
-    bar('LINEに送れませんでした。ここをタップしてもう一度送る（報告は保存済み）' + (canSend ? '' : ' [' + ((e && (e.message || e.code)) || e) + ']'), true);
-    document.getElementById('bar').className = 'tap';
-    document.getElementById('bar').onclick = () => { document.getElementById('bar').onclick = null; sendCard(); };
+    // 11/26 細い帯だと見落とすので、画面いっぱいに出す。送り終わるまで下のフォームのボタンは押せない
+    showNoSend(canSend ? '' : String((e && (e.message || e.code)) || e));
   }
+}
+
+function showNoSend(why) {
+  const box = document.getElementById('nosend');
+  document.getElementById('nosend-why').textContent = why && why !== '送り先を選んでいません' ? '（' + why + '）' : '';
+  document.getElementById('nosend-p').innerHTML = lastSaved
+    ? '報告は保存できています。<br>このあと送り先のグループを選ばないと、<br>事務やグループの人には届きません。'
+    : '報告がスプレッドシートに入りませんでした。<br>グループに送ると、事務が代わりに入れます。<br>必ず送ってください。';
+  box.style.display = 'flex';
+  document.getElementById('nosend-go').onclick = () => { box.style.display = 'none'; sendCard(); };
+  document.getElementById('nosend-later').onclick = () => {
+    if (!confirm(lastSaved ? 'グループに送らずに閉じます。報告は保存されていますが、事務に「送れなかった」と連絡してください。' : 'グループに送らずに閉じます。報告は保存されていません。必ず事務に連絡してください。')) return;
+    box.style.display = 'none'; lastCard = null; pendingMsgs = [];
+    bar('グループには送っていません。事務に連絡してください', true);
+  };
 }
 
 // B・C：日報データに保存できなかった → いつもの報告カードを、事務向けの赤い帯つきで自動でグループに送る。
