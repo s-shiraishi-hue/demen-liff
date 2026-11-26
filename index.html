@@ -8,6 +8,13 @@
   html,body{height:100%;margin:0;background:#fff}
   body{display:flex;align-items:center;justify-content:center;font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;font-size:16px;font-weight:700;color:#14264F}
 </style>
+<script>
+// 11/26 ?to=〇〇 のときは、LINE の部品を待たずにすぐ移る（飛ぶ動きを見えにくくする）
+var TO = { 'iriguchi-test': 'iriguchi-test.html', 'demen-test': 'form-test.html?pick=1&mode=sekou', 'gencho-test': 'form-test.html?pick=1&mode=gencho', 'kako-req': 'kako-test.html?open=request' };
+var raw0 = location.search; try { raw0 = decodeURIComponent(raw0); } catch (e) {}
+var mTo0 = /[?&]to=([a-z-]+)/.exec(raw0);
+if (mTo0 && TO[mTo0[1]]) { window.__GO = true; location.replace(TO[mTo0[1]]); }
+</script>
 </head>
 <body>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -15,10 +22,10 @@
 // LINEはリンクを開くとき、最初にこのページを開き、ここから目的のページへ移る（2026-11-05 古いテスト画面から差し替え）
 var hadTarget = /liff\.state=/.test(location.search);
 // 2026-11-26：?to=〇〇 で行き先を決める（入口のテスト）。LINE がアドレスの後ろのページ名を落とすことがあるため
-var TO = { 'iriguchi-test': 'iriguchi-test.html', 'demen-test': 'form-test.html?pick=1&mode=sekou', 'gencho-test': 'form-test.html?pick=1&mode=gencho', 'kako-req': 'kako-test.html?open=request' };   // 11/26 加工依頼も LINE の通り道
 var raw = location.search; try { raw = decodeURIComponent(raw); } catch (e) {}
 var mTo = /[?&]to=([a-z-]+)/.exec(raw);
-if (mTo && TO[mTo[1]]) { location.replace(TO[mTo[1]]); }
+if (window.__GO) { /* もう移っている */ }
+else if (mTo && TO[mTo[1]]) { location.replace(TO[mTo[1]]); }
 else liff.init({ liffId: '2011897591-HBBipfnN' }).then(function () {
   // 行き先の指定がないリンクは、フォームを開く
   if (!hadTarget) location.replace('form.html' + location.search);

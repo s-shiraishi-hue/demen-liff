@@ -124,6 +124,11 @@
   #menu{margin-top:auto;width:100%}
   .gform{margin-top:6vh}
   [hidden]{display:none!important}
+  #going{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#FAFAF8;opacity:0;pointer-events:none;transition:opacity .18s}
+  #going.on{opacity:1;pointer-events:auto}
+  #going i{width:34px;height:34px;border-radius:50%;border:1.5px solid rgba(17,17,17,.15);border-top-color:#111;animation:gospin .8s linear infinite}
+  #going span{font:500 12px/1 'Noto Sans JP',sans-serif;letter-spacing:.24em;color:#111}
+  @keyframes gospin{to{transform:rotate(360deg)}}
   /* ===== K：白黒の線（11/26 夜 決定） ===== */
   body{background:var(--bg)}
   #menu .grp{padding:14px 0 16px;margin:0;border-bottom:0;border-top:1px solid #111}
@@ -378,7 +383,16 @@ if (window.Map3D) mapStart(); else document.addEventListener('DOMContentLoaded',
 window.addEventListener('scroll', function(){ document.getElementById('bar').classList.toggle('on', window.scrollY > 80); }, { passive:true });
 
 // 出面・現調：LINE の中ならそのままフォームへ。外（Safari・ホーム画面）なら LINE アプリを開いて ?to= で渡す
+function showGoing(){
+  var g = document.getElementById('going');
+  if (!g) { g = document.createElement('div'); g.id = 'going'; g.innerHTML = '<i></i><span>LINE を開いています</span>'; document.body.appendChild(g); }
+  g.className = 'on';
+}
+// LINE から戻ってきたら消す
+window.addEventListener('pageshow', function(){ var g = document.getElementById('going'); if (g) g.className = ''; });
+document.addEventListener('visibilitychange', function(){ if (!document.hidden) setTimeout(function(){ var g = document.getElementById('going'); if (g) g.className = ''; }, 600); });
 function goLine(to) {
+  showGoing();   // 11/26 押した瞬間に「LINE を開いています」を出して、切り替わりを目立たなくする
   if (inLine) { location.href = LOCAL[to]; return; }
   // line:// で開くと LINE が ?to= を落として出面が開いた（11/26）。行き先が残る https://liff.line.me/ の形だけで開く
   location.href = 'https://liff.line.me/' + LIFF + '?to=' + to;
@@ -451,7 +465,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-25";
+var BUILD_ID = "20261126-26";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
