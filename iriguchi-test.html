@@ -122,16 +122,13 @@
   #menu{margin-top:auto;width:100%}
   .gform{margin-top:6vh}
   [hidden]{display:none!important}
+  .top{padding:calc(env(safe-area-inset-top,0px) + 28px) 20px 4px}
+  .top h1{margin:0;font:700 28px/1.15 "Inter","Noto Sans JP",sans-serif;letter-spacing:.02em;color:var(--ink)}
 </style>
 </head>
 <body>
 <div class="bar" id="bar">業務管理</div>
-<header class="hero map" id="map">
-  <div id="tiles" aria-hidden="true"></div>
-  <div id="labels" aria-hidden="true"></div>
-  <div id="pins"></div>
-  <div class="credit">出典：国土地理院</div>
-</header>
+<header class="top" id="map"><h1>業務管理</h1></header>   <!-- 11/26 地図（国土地理院）はいったん外す。あとで入れる。地図ありの版は scratchpad の iriguchi-with-map.html -->
 
 <main>
   <div class="wrap" id="menu" hidden>
@@ -231,8 +228,7 @@ function loadPins(){
     if (!j.ok) return; PINS = j.pins || []; try { localStorage.setItem('gyomu-pins', JSON.stringify(PINS)); } catch(e){} drawMap();
   }).catch(function(){});
 }
-drawMap();
-window.addEventListener('resize', drawMap);
+// 地図はいったん外した（11/26）。入れ直すときは drawMap() と resize を戻す
 
 // 下に送ったら上に小さいタイトル
 window.addEventListener('scroll', function(){ document.getElementById('bar').classList.toggle('on', window.scrollY > 80); }, { passive:true });
@@ -279,7 +275,7 @@ function openDyn(k){
 // ===== 合言葉（1回入れて携帯が覚える。確かめは人員配置の読み取りの仕組みで） =====
 function getPass(){ try { return localStorage.getItem(PASS_KEY) || ''; } catch(e){ return ''; } }
 function setPass(v){ try { if (v) localStorage.setItem(PASS_KEY, v); else localStorage.removeItem(PASS_KEY); } catch(e){} }
-function showMenu(){ document.getElementById('gform').hidden = true; document.getElementById('menu').hidden = false; loadLinks().catch(function(){}); loadPins(); }
+function showMenu(){ document.getElementById('gform').hidden = true; document.getElementById('menu').hidden = false; loadLinks().catch(function(){}); }
 function askPass(err){
   document.getElementById('menu').hidden = true; document.getElementById('gform').hidden = false;
   document.getElementById('gerr').textContent = err || '';
@@ -300,7 +296,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-12";
+var BUILD_ID = "20261126-13";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
