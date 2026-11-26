@@ -215,6 +215,11 @@
   .ln-pop::after{content:"";position:absolute;left:var(--tx,50%);width:12px;height:12px;margin-left:-6px;background:#fff;transform:rotate(45deg);border-radius:2px}
   .ln-pop.up::after{bottom:-5px}
   .ln-pop.down::after{top:-5px}
+  .ln-pop.kako{background:#1E56C8;color:#fff}   /* 加工は青（11/26 白石さん「加工は青のポップアップで」） */
+  .ln-pop.kako small{color:rgba(255,255,255,.85)}
+  .ln-pop.kako small i{background:#fff;color:#1E56C8}
+  .ln-pop.kako em{color:#CFE0FF}
+  .ln-pop.kako::after{display:none}
   @media (prefers-reduced-motion: reduce){ .ln-pop{transition:none} }
   .m3-card{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);max-width:496px;margin:0 auto;max-height:55vh;overflow:auto;box-sizing:border-box;z-index:40;display:grid;gap:8px;padding:14px 16px 14px 18px;border-radius:16px;background:rgba(255,255,255,.95);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#14192B;box-shadow:0 10px 30px rgba(4,9,32,.45);border-left:5px solid var(--co,#ffd43d);animation:cardin .22s ease both}
   @keyframes cardin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -396,18 +401,25 @@ function lnNext(){
   if (lnBusy || !LN_Q.length) return;
   var card = document.getElementById('m3card');
   if (!M3 || (card && !card.hidden) || document.hidden) { clearTimeout(lnTimer); lnTimer = setTimeout(lnNext, 3000); return; }
-  var m = LN_Q.shift(), head = lnPinHead(m.site);
-  if (!head) { lnNext(); return; }   // 地図の外・平らな地図のときは出さない
+  var m = LN_Q.shift(), head = m.kako ? null : lnPinHead(m.site);
+  if (!m.kako && !head) { lnNext(); return; }   // 加工の会話は地図の上のふちに出すので札は要らない（11/26 白石さん）   // 地図の外・平らな地図のときは出さない
   lnBusy = true;
   var esc = function(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); };
   var box = document.getElementById('map'), el = document.createElement('div');
-  el.className = 'ln-pop'; el.setAttribute('role', 'status');
-  el.innerHTML = '<small><i>LINE</i>' + esc(m.time) + '　' + esc(m.who) + '</small><p>' + esc(m.text) + '</p>' + (m.photos ? '<em>写真 ' + m.photos + '枚</em>' : '');
+  el.className = 'ln-pop' + (m.kako ? ' kako' : ''); el.setAttribute('role', 'status');
+  el.innerHTML = '<small><i>' + (m.kako ? '加工' : 'LINE') + '</i>' + esc(m.time) + '　' + esc(m.who) + (m.kako && m.site ? '　' + esc(m.site) : '') + '</small><p>' + esc(m.text) + '</p>' + (m.photos ? '<em>写真 ' + m.photos + '枚</em>' : '');
   box.appendChild(el);
-  var wasOrbit = orbiting; if (wasOrbit) M3.orbit(false);   // 出ている間は回さない
+  var wasOrbit = orbiting && !m.kako; if (wasOrbit) M3.orbit(false);   // 出ている間は回さない
   var alive = true;
   var place = function(){
     if (!alive) return;
+    if (m.kako) {   // 加工：地図の上のふち、まん中（ロゴにかかるときはロゴをうすく）
+      var Bk = box.getBoundingClientRect(), wk = el.offsetWidth, hk = el.offsetHeight, capk = document.querySelector('.topcap');
+      var xk = Math.max(8, (Bk.width - wk) / 2), yk = 8 + (capk ? capk.offsetHeight : 0), bk = box.querySelector('.brand');
+      if (bk) { var rb = bk.getBoundingClientRect(); bk.style.opacity = (xk < rb.right - Bk.left + 6 && yk < rb.bottom - Bk.top + 6 && yk + hk > rb.top - Bk.top - 6) ? '.12' : ''; }
+      el.style.left = xk.toFixed(1) + 'px'; el.style.top = yk.toFixed(1) + 'px';
+      requestAnimationFrame(place); return;
+    }
     var h = lnPinHead(m.site); if (h) head = h;
     var B = box.getBoundingClientRect(), H = head.getBoundingClientRect(), w = el.offsetWidth, ht = el.offsetHeight;
     var rel = function(n){ var r = n.getBoundingClientRect(); return { l: r.left - B.left, t: r.top - B.top, r: r.right - B.left, b: r.bottom - B.top }; };
@@ -629,7 +641,7 @@ else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-33";
+var BUILD_ID = "20261126-34";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
