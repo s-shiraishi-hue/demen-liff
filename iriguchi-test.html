@@ -176,7 +176,8 @@
   .brand small{display:block;margin-top:5px;font:500 8px/1 'Noto Sans JP',sans-serif;letter-spacing:.34em;color:rgba(255,255,255,.5)}
   /* ===== 立体の地図（11/26 PC の業務管理と同じ作り。three.js＋m3d.js） ===== */
   .hero.map.is-3d{height:30vh;min-height:200px;max-height:300px;background:#070f2e}   /* 11/26 前の7割くらい */
-  .hero.map.is-3d::before{display:none}   /* 11/26 ピンが暗くならないように（地図の上はもともと夜空） */
+  /* 11/26 夜 上が白く曇って見えた（地図の遠くのかすみが時計の帯の下に出る）→ 上の帯だけ夜空の紺でしめる。ピンにはかからない高さ */
+  .hero.map.is-3d::before{display:block;content:"";position:absolute;left:0;right:0;top:0;bottom:auto;height:calc(env(safe-area-inset-top,0px) + 70px);z-index:2;background:linear-gradient(180deg,rgba(7,15,46,.92) 0%,rgba(7,15,46,.7) 45%,rgba(7,15,46,0) 100%);pointer-events:none}   /* 11/26 ピンが暗くならないように（地図の上はもともと夜空） */
   .m3-stage{position:absolute;inset:0;z-index:1;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
   .m3-stage .h-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   .m3-plane{position:absolute;inset:0;pointer-events:none}
@@ -532,7 +533,7 @@ else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-29";
+var BUILD_ID = "20261126-30";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
