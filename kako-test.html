@@ -645,6 +645,23 @@ textarea.fin{min-height:64px;line-height:1.5}
 .spk .spk-r.on .spk-c{font-weight:400}
 .spk .spk-none{padding:24px;text-align:center;color:#6d6d72}
 .spk :focus-visible{outline:2px solid var(--blue);outline-offset:-2px;box-shadow:none}
+/* 9回目（白石さん「納期がギリ隠れる・納期まで出したい」）：高さ640pxの携帯でも納期まで1画面に。
+   行は48px、写真は横長の1行ボタン（写真を入れると小さいタイル）、書く欄は1行から（書くと伸びる）、見出しの間を詰める、「いつまで」の見出しはやめて間だけ空ける */
+.rq .ir{min-height:48px}
+.rq .iv .fin,.rq .sitebtn{min-height:48px}
+.rq .ih{margin:10px 16px 5px;font-size:13px}
+.rq .ig>.ih:first-child{margin-top:6px}
+.rq .rtile.add.big{height:56px}
+.rq .rtile.add.big>span{-webkit-flex-direction:row;flex-direction:row;margin:6px 12px}
+.rq .rtile.add.big .ico{margin:0 10px 0 0;width:30px;height:30px;border-radius:8px}
+.rq .rtile.add.big .ico svg{width:18px;height:18px}
+.rq .ir.memo .iv textarea.fin{min-height:48px;padding:12px 0}
+.rq .ir.memo .ico{margin-top:9px}
+.rq .ib.due{margin-top:12px}
+.rq .dpill{padding:7px 12px}
+.rq .rqfoot{padding-top:6px}
+.rq .rsum{margin-bottom:4px}
+.rq .rsend{min-height:50px}
 .rq .iv{-webkit-flex-wrap:wrap;flex-wrap:wrap}.rq .iv>.fin{width:100%;-webkit-flex:none;flex:none}.rq .iv>.frad.seg{-webkit-flex:1 1 100%;flex:1 1 100%}
 .rq .ival:empty{display:none}
 .rq .ib>.rhelp{margin:0;padding:0 14px 8px 104px}
@@ -1086,7 +1103,7 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
 .col>.card .dates>div:first-child{margin-right:8px}
 /* カードの下：案件名と名前を1行に（白石さん 11/26「案件名と名前も同じ行でいい」「きれいに入れる感じで」）。名前は社員DBの正式な名前 */
 .card .sw{display:-webkit-flex;display:flex;-webkit-align-items:baseline;align-items:baseline;min-width:0}
-.card .sw .site{-webkit-flex:1 1 auto;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:6px}
+.card .sw .site{-webkit-flex:0 1 auto;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:10px}
 .card .sw .who{-webkit-flex:none;flex:none;max-width:48%;font-size:13px!important;color:#4d5058!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--sub)}
 /* カードの境目をはっきり（白石さん 11/26「カードごとが少し見にくい。明確な境界がない」）：白い板に濃いめの枠と影、カードの間を少し空ける */
 @media (min-width:601px){
@@ -1130,6 +1147,9 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
 .chatno{margin:0;padding:10px 12px;font-size:13px;color:var(--sub);text-align:center;border-top:1px solid #e1e3e7}
 .chat .talkme{margin:8px 8px 0;width:calc(100% - 16px)}
 .chat .talkline{padding:0 10px 8px}
+.chatwho{margin:0;padding:6px 12px 0;font-size:11px;color:var(--sub);border-top:1px solid #e1e3e7;background:#fff}
+.chatwho+.chati{border-top:0}
+.cmemo .cbt{border-color:#9aa0a8}.cmh{display:block;font-size:11px;font-weight:700;color:#5d6169;margin-bottom:2px}.cb.me.cmemo .cmh{color:#d5d8dd}
 </style>
 
 <div class="wrap">
@@ -1237,6 +1257,8 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
   function canEdit(){return PHONE_EDIT||!isPhone();}
   var WORKER=false;var me='';try{me=localStorage.getItem('kako-view')||'';}catch(e){} /* me＝［表示 ▼］で選んだ人（しぼり込み）。だれが操作したかは kako-me（依頼フォームで選んだ名前） */
   function whoAmI(){try{return localStorage.getItem('kako-me')||'';}catch(e){return '';}}
+  /* やりとりで書く人の名前（白石さん 11/26「工場長のは名前を入れなくて、iPad はデフォルト工場長」「携帯のは担当がデフォルト」）：名前を入れる欄はなくした */
+  function talkName(r){return isPhone()?(whoAmI()||(r&&r.worker)||'名前なし'):'工場長';}
   if(WORKER)document.documentElement.className+=' worker';
   var $=function(id){return document.getElementById(id);};
   var STATES=['依頼案件','編集済','加工中','納品済み'];
@@ -1298,12 +1320,15 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
          納期を変える行は外した（納期はカードに出ている）。写真とやりとりは LINE のようなチャットに。下の入力欄の左の［📷］で写真を足す・入れ替える */
       (pr.status==='納品済み'?'<div class="cpdd"><span>納品日 <b>'+esc(md(pr.deliveredAt)||'—')+'</b></span>'+(canEdit()?'<button type="button" class="cpddb" data-dd="'+esc(pr.id)+'">📅 納品日を直す</button>':'')+'</div>':'')+
       '<div class="chat"><div class="chath"><b>やりとり</b><span>写真 '+(pr.imageCount||0)+'枚</span></div><div class="chatl" id="talkL"><p class="csys">読み込み中…</p></div>'+
-        (!canEdit()?'<p class="chatno">直してほしいこと・連絡は、LINE のグループへ</p>':(whoAmI()?'':'<input class="fin talkme" id="talkMe" placeholder="あなたの名前" autocomplete="name">')+
+        ('<p class="chatwho">'+esc(talkName(pr))+' として書きます</p>'+
         '<div class="chati"><button type="button" class="chatph" data-fix="'+esc(pr.id)+'" aria-label="写真を足す・入れ替える"><span aria-hidden="true">📷</span><small>写真</small></button><textarea class="chatin" id="talkIn" rows="1" placeholder="メッセージを入力"></textarea><button type="button" class="chats" data-talk-send="'+esc(pr.id)+'" aria-label="送る">送る</button></div>'+
         (LINE_NOTICE_ALL?'<label class="fchk talkline"><input type="checkbox" id="talkLine"'+(window.KAKO_IN_LINE?' checked':'')+'>LINE のグループにも送る</label>':''))+'</div>'+
       '</div></div>';}
-  function loadTalk(id){rpc('shiraishiListRequestTalk',id).then(function(res){var box=$('talkL');if(!box||calPop!==id)return;var items=(res&&res.items)||[],me=whoAmI();
+  function loadTalk(id){rpc('shiraishiListRequestTalk',id).then(function(res){var box=$('talkL');if(!box||calPop!==id)return;var items=((res&&res.items)||[]).slice(),tr0=rows.filter(function(x){return x.id===id;})[0],me=talkName(tr0);
+    /* 依頼のメモ（加工の内容）を、いちばん上に頼んだ人の吹き出しで出す（白石さん 11/26「メモがちゃんと出るように」） */
+    if(tr0&&String(tr0.memo||'').trim())items.unshift({kind:'memo',by:tr0.worker||'',text:String(tr0.memo).trim(),at:(md(tr0.requestDate)||'')+' 依頼'});
     var prev='';box.innerHTML=items.length?items.map(function(t){var mine=!!(me&&t.by===me),day=String(t.at||'').split(' ')[0],dsep=(/\//.test(day)&&day!==prev)?'<p class="cdsep"><span>'+esc(day)+'</span></p>':'';if(/\//.test(day))prev=day;var tm=String(t.at||'').split(' ').pop();
+      if(t.kind==='memo')return '<div class="cb cmemo'+(mine?' me':'')+'">'+(mine?'':'<p class="cbn">'+esc(t.by||'名前なし')+'</p>')+'<div class="cbr"><div class="cbt"><span class="cmh">依頼の内容</span>'+esc(t.text)+'</div><span class="cbm">'+esc(String(t.at||'').split(' ')[0])+'</span></div></div>';
       if(t.kind!=='msg')return dsep+'<p class="csys"><span>'+esc(t.by||'')+(t.by?' が ':'')+esc(t.text)+'　'+esc(tm)+'</span></p>';
       return dsep+'<div class="cb'+(mine?' me':'')+'">'+(mine?'':'<p class="cbn">'+esc(t.by||'名前なし')+'</p>')+'<div class="cbr"><p class="cbt">'+esc(t.text)+'</p><span class="cbm">'+esc(tm)+'</span></div></div>';}).join(''):'<p class="cempty">まだやりとりはありません。<br>下の欄から書けます。</p>';
     box.scrollTop=box.scrollHeight;},function(){var box=$('talkL');if(box)box.innerHTML='<p class="tlog">読めませんでした</p>';});}
@@ -1506,7 +1531,7 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
     var ck=e.target.closest('[data-ck]');if(ck){calKind=ck.getAttribute('data-ck');calOpenDay='';calPop='';try{localStorage.setItem('kako-cal',calKind);}catch(err){}render();return;}
     var mo=e.target.closest('[data-more]');if(mo){var dd=mo.getAttribute('data-more');calOpenDay=calOpenDay===dd?'':dd;render();return;}var pt=e.target.closest('[data-ptab]');if(pt){ptab=+pt.getAttribute('data-ptab');render();window.scrollTo(0,0);return;}var o=e.target.closest('[data-st]');if(o){var id=o.getAttribute('data-st'),m=document.querySelector('[data-menu="'+id+'"]');menu(id,m&&m.hidden);return;}
     var ts=e.target.closest('[data-talk-send]');if(ts){var tid=ts.getAttribute('data-talk-send'),tr=rows.filter(function(x){return x.id===tid;})[0],tx=($('talkIn').value||'').trim();if(!tr||!tx){$('talkIn').focus();return;}
-      var nm=whoAmI();if(!nm){nm=(($('talkMe')||{}).value||'').trim();if(!nm){$('talkMe').focus();toast('名前を入れてください');return;}try{localStorage.setItem('kako-me',nm);}catch(err){}}
+      var nm=talkName(tr);
       var line=!!($('talkLine')&&$('talkLine').checked);ts.disabled=true;rpc('shiraishiAddRequestTalk',{caseId:tid,text:tx,by:nm}).then(function(){tr.talkCount=(tr.talkCount||0)+1;$('talkIn').value='';ts.disabled=false;loadTalk(tid);if(line)toGroup(tr,nm,tx);},function(){ts.disabled=false;toast('送れませんでした。もう一度押してください。');});return;}
     var dq=e.target.closest('[data-dd]');if(dq){openDeliv(dq.getAttribute('data-dd'));return;}
     var du=e.target.closest('[data-due]');if(du){var dr=rows.filter(function(x){return x.id===du.getAttribute('data-due');})[0];if(dr)careful(dr,'納期').then(function(y){if(y)openDue(dr.id);});return;}
@@ -1893,7 +1918,7 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
        '<div class="ir top memo">'+ico('memo')+'<div class="iv"><textarea class="fin" id="rqMemo" rows="1" aria-label="加工の内容" placeholder="'+(editing?'足したいこと':'足したいこと（なければ空でOK）')+'"></textarea></div></div><p class="rerr" id="e-rqMemo"></p>'+
       '</div>'+
       /* 11/26 白石さん「依頼日の修正はいらない・急ぎもいらない・日付を選ぶで、明日がデフォルト。今日とか明日の選択肢はいらない」：納期は日付1つだけ。依頼日は今日、急ぎはなし（直すときは前の値をそのまま残す） */
-      '<p class="ih">いつまで</p><div class="ib">'+
+      '<div class="ib due">'+
        /* 11/26 白石さん「日にちが上にずれてる・押すと日が変わるのかわかりにくい」：日付は青い札で出し、行のどこを押しても日付の選び画面が開く（透明の date 欄を行に重ねる） */
        irow('納期',true,'<span class="dpill" id="rqDueV"></span><span class="dhint">変える</span><input class="dover" type="date" id="rqDue" value="'+day(1)+'" aria-label="納期（押して日付を変える）">','rqDue','due')+
        '<div hidden><div id="rqDueQ"><button type="button" data-v="other" aria-checked="true"></button></div><span id="rqRushL"><i></i></span><input type="checkbox" id="rqRush"><span id="rqDateL"></span><span id="rqDateV"></span><button type="button" id="rqDateE"></button><input type="date" id="rqDate" value="'+day(0)+'"></div>'+
