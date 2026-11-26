@@ -1330,14 +1330,16 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
         /* 11/26 白石さん「このコメントは一応グループに返すかやね。機能はつけておこうか」：やりとりに書いたことを、加工番号つきでグループにも送る（最初からチェックあり。外せば送らない） */
         '<label class="fchk talkline"><input type="checkbox" id="talkLine" checked>LINE のグループにも送る</label>')+'</div>'+
       '</div></div>';}
-  function loadTalk(id){rpc('shiraishiListRequestTalk',id).then(function(res){var box=$('talkL');if(!box||calPop!==id)return;var items=((res&&res.items)||[]).slice(),tr0=rows.filter(function(x){return x.id===id;})[0],me=talkName(tr0);
+  /* やりとりが読めなくても（宮本さん版にまだ関数がないときなど）、依頼のメモは一覧の行から出す（11/26） */
+  function loadTalk(id){rpc('shiraishiListRequestTalk',id).then(function(res){drawTalk(id,(res&&res.items)||[],'');},function(){drawTalk(id,[],'<p class="csys"><span>やりとりはまだ読めません</span></p>');});}
+  function drawTalk(id,list,note){var box=$('talkL');if(!box||calPop!==id)return;var items=list.slice(),tr0=rows.filter(function(x){return x.id===id;})[0],me=talkName(tr0);
     /* 依頼のメモ（加工の内容）を、いちばん上に頼んだ人の吹き出しで出す（白石さん 11/26「メモがちゃんと出るように」） */
     if(tr0&&String(tr0.memo||'').trim())items.unshift({kind:'memo',by:tr0.worker||'',text:String(tr0.memo).trim(),at:(md(tr0.requestDate)||'')+' 依頼'});
     var prev='';box.innerHTML=items.length?items.map(function(t){var mine=!!(me&&t.by===me),day=String(t.at||'').split(' ')[0],dsep=(/\//.test(day)&&day!==prev)?'<p class="cdsep"><span>'+esc(day)+'</span></p>':'';if(/\//.test(day))prev=day;var tm=String(t.at||'').split(' ').pop();
       if(t.kind==='memo')return '<div class="cb cmemo'+(mine?' me':'')+'">'+(mine?'':'<p class="cbn">'+esc(t.by||'名前なし')+'</p>')+'<div class="cbr"><div class="cbt"><span class="cmh">依頼の内容</span>'+esc(t.text)+'</div><span class="cbm">'+esc(String(t.at||'').split(' ')[0])+'</span></div></div>';
       if(t.kind!=='msg')return dsep+'<p class="csys"><span>'+esc(t.by||'')+(t.by?' が ':'')+esc(t.text)+'　'+esc(tm)+'</span></p>';
-      return dsep+'<div class="cb'+(mine?' me':'')+'">'+(mine?'':'<p class="cbn">'+esc(t.by||'名前なし')+'</p>')+'<div class="cbr"><p class="cbt">'+esc(t.text)+'</p><span class="cbm">'+esc(tm)+'</span></div></div>';}).join(''):'<p class="cempty">まだやりとりはありません。<br>下の欄から書けます。</p>';
-    box.scrollTop=box.scrollHeight;},function(){var box=$('talkL');if(box)box.innerHTML='<p class="tlog">読めませんでした</p>';});}
+      return dsep+'<div class="cb'+(mine?' me':'')+'">'+(mine?'':'<p class="cbn">'+esc(t.by||'名前なし')+'</p>')+'<div class="cbr"><p class="cbt">'+esc(t.text)+'</p><span class="cbm">'+esc(tm)+'</span></div></div>';}).join('')+note:(note||'<p class="cempty">まだやりとりはありません。<br>下の欄から書けます。</p>');
+    box.scrollTop=box.scrollHeight;}
   /* LINE のグループにも送る：LINE から開いたとき（LIFF）は、その人の名前でグループに送る（シロの送る数には入らない）。見本では送る中身を出すだけ */
   /* 加工ID も入れる（白石さん 11/25「加工番号もどこかに入ったほうが事務は分かりやすい」） */
   /* LINE へ送る文の形（白石さん 11/25）：加工番号／案件名／名前（頼んだ人）／内容 の4行 */
@@ -1376,7 +1378,11 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
     /* ホーム画面のアイコンから開いた形（standalone。携帯の入口など）：同じ画面のまま LINE に渡すと、戻ったときに入口ごと閉じた状態になる（白石さん 11/26）。
        そのときは外の Safari 経由で LINE に渡し、この画面はそのまま残す */
     var standalone=false;try{standalone=window.navigator.standalone===true||(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches);}catch(e){}
-    if(standalone){var w=null;try{w=window.open(u,'_blank');}catch(e){}if(w){toast('LINE に切り替えます。送ったら、この画面に戻ってください');return;}}
+    /* Apps Script の中（外枠の iframe）や、入口から別の窓（window.open）で開いたときも同じ：今の画面のまま渡すと、加工のページが LINE に置きかわって消える
+       （白石さん 11/26「携帯で加工のページにメモ残してラインでおくったら、管理ページがきえる」）。そのときは別の窓で LINE に渡し、この画面は残す */
+    var inFrame=false;try{inFrame=window.top!==window.self;}catch(e){inFrame=true;}
+    var opened=false;try{opened=!!window.opener;}catch(e){}
+    if(standalone||inFrame||opened){var w=null;try{w=window.open(u,'_blank');}catch(e){}if(w){sendNote('別の窓で LINE に渡しました（この画面は残します）');toast('LINE に切り替えます。送ったら、この画面に戻ってください');return;}}
     /* 新しいタブは開かない（白石さん 11/25「Safari を押しても LINE の画面になる」：残ったタブがまた LINE に飛ぶため）。今の画面のまま LINE アプリに渡す */
     var a=document.createElement('a');a.href=u;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();}
   /* 送り先を、画面の上に重なる窓で選ぶ（シェアターゲットピッカー。白石さん 11/25「オンにしよう」）。送ったあとも元の画面のまま。
