@@ -593,6 +593,32 @@ textarea.fin{min-height:64px;line-height:1.5}
 .rq .dover{position:absolute;left:0;top:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer;-webkit-appearance:none;appearance:none;font-size:16px}
 .rq .fband .eb{min-width:120px}
 .rq .fband .ttl{margin-right:120px}
+/* 6回目（白石さん「枠が黄色と黒で主張すごい」「項目が減って全体に空いた」）：
+   押した欄は黄色と黒の枠をやめ、行をうすい青にするだけ（ボタンは細い青の枠）。行を少し高く・文字を少し大きく、写真の場所と書く欄を広くして、画面を使い切る */
+.rq :focus-visible{outline:none;box-shadow:none}
+.rq button:focus-visible,.rq .rtile.add:focus-within{outline:2px solid var(--blue);outline-offset:2px}
+.rq .ir:focus-within{background:#f2f6ff}
+.rq .rqbody{padding:4px 16px 20px}
+.rq .lt{margin:10px auto 6px}
+.rq .ih{margin:16px 16px 7px;font-size:14px}
+.rq .ir{min-height:54px}
+.rq .il{font-size:16px}
+.rq .iv .fin{min-height:54px;font-size:17px}
+.rq .ival{font-size:17px}
+.rq .ico{width:30px;height:30px;border-radius:8px}
+.rq .ico svg{width:18px;height:18px}
+.rq .frad.seg button{min-height:36px;font-size:15px}
+.rq .rtile.add.big{height:96px}
+.rq .rtile.add.big>span{-webkit-flex-direction:column;flex-direction:column;-webkit-justify-content:center;justify-content:center;padding:0;border:1.5px dashed #b9c6f0;border-radius:10px;margin:10px 12px;width:auto;height:auto;left:0;right:0;top:0;bottom:0;background:#f7f9ff}
+.rq .rtile.add.big .ico{margin:0 0 6px;width:36px;height:36px;border-radius:9px}
+.rq .rtile.add.big .ico svg{width:22px;height:22px}
+.rq .rtile.add.big em{font-size:16px;font-weight:700}
+.rq .ir.memo .iv textarea.fin{min-height:76px;padding:14px 0}
+.rq .ir.memo .ico{margin-top:12px}
+.rq .dpill{font-size:17px;padding:9px 14px}
+.rq .dhint{white-space:nowrap}
+.rq .ib>.ir:only-of-type .iv,.rq #rqDueV{white-space:nowrap}
+.rq .rsend{min-height:54px;font-size:18px}
 .rq .iv{-webkit-flex-wrap:wrap;flex-wrap:wrap}.rq .iv>.fin{width:100%;-webkit-flex:none;flex:none}.rq .iv>.frad.seg{-webkit-flex:1 1 100%;flex:1 1 100%}
 .rq .ival:empty{display:none}
 .rq .ib>.rhelp{margin:0;padding:0 14px 8px 104px}
@@ -1786,9 +1812,9 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
        '<div class="ir top memo">'+ico('memo')+'<div class="iv"><textarea class="fin" id="rqMemo" rows="1" aria-label="加工の内容" placeholder="'+(editing?'足したいこと':'足したいこと（なければ空でOK）')+'"></textarea></div></div><p class="rerr" id="e-rqMemo"></p>'+
       '</div>'+
       /* 11/26 白石さん「依頼日の修正はいらない・急ぎもいらない・日付を選ぶで、明日がデフォルト。今日とか明日の選択肢はいらない」：納期は日付1つだけ。依頼日は今日、急ぎはなし（直すときは前の値をそのまま残す） */
-      '<div class="ib" style="margin-top:14px">'+
+      '<p class="ih">いつまで</p><div class="ib">'+
        /* 11/26 白石さん「日にちが上にずれてる・押すと日が変わるのかわかりにくい」：日付は青い札で出し、行のどこを押しても日付の選び画面が開く（透明の date 欄を行に重ねる） */
-       irow('納期',true,'<span class="dpill" id="rqDueV"></span><span class="dhint">押して変える</span><input class="dover" type="date" id="rqDue" value="'+day(1)+'" aria-label="納期（押して日付を変える）">','rqDue','due')+
+       irow('納期',true,'<span class="dpill" id="rqDueV"></span><span class="dhint">変える</span><input class="dover" type="date" id="rqDue" value="'+day(1)+'" aria-label="納期（押して日付を変える）">','rqDue','due')+
        '<div hidden><div id="rqDueQ"><button type="button" data-v="other" aria-checked="true"></button></div><span id="rqRushL"><i></i></span><input type="checkbox" id="rqRush"><span id="rqDateL"></span><span id="rqDateV"></span><button type="button" id="rqDateE"></button><input type="date" id="rqDate" value="'+day(0)+'"></div>'+
       '</div>'+
       /* 「そのほか」は消した（白石さん 11/26「いらない、開きにくい」）。値は決まった値（自社・その他・空）で送る。直すときは前の値をそのまま残す */
