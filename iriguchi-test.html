@@ -159,7 +159,7 @@ var inLine = /Line\//i.test(navigator.userAgent);
 var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
 
 var d = new Date();
-document.getElementById('dt').textContent = (d.getMonth()+1) + '月' + d.getDate() + '日 ' + '日月火水木金土'[d.getDay()] + '曜日';
+var dtEl = document.getElementById('dt'); if (dtEl) dtEl.textContent = (d.getMonth()+1) + '月' + d.getDate() + '日 ' + '日月火水木金土'[d.getDay()] + '曜日';
 
 var GL = {
   dem:'<rect x="5.5" y="4.5" width="13" height="16" rx="2.2"/><path d="M9.5 4.5V3.6c0-.3.3-.6.6-.6h3.8c.3 0 .6.3.6.6v.9"/><path d="M8.8 10.2h6.4M8.8 13.4h6.4M8.8 16.6h3.6"/>',
@@ -296,7 +296,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-9";
+var BUILD_ID = "20261126-10";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
