@@ -21,8 +21,9 @@
   /* 入口（2026-11-26 決定：Apple風。上は会社のホームページのような紺の帯に英字の社名と小さく「業務管理」、下は iPhone のホーム画面のようなアイコン）
      ライト・ダークは携帯の設定どおり。字は Inter（英数字）＋Noto Sans JP（日本語。11/26 白石さんが D を選んだ） */
   :root{
-    --bg:#F2F2F7; --ink:#000; --ink2:#3C3C43; --sub:rgba(60,60,67,.6); --sep:rgba(60,60,67,.28); --wg1:#E9EEFF; --wg2:#F4F0FF; --field:#FFFFFF; --navy:#0B1A48;
-    color-scheme:light;
+    /* 11/26 白石さん「もうダークでいいよ下も」：地図の夜空とつながる紺に */
+    --bg:#070F2E; --ink:#F4F6FF; --ink2:rgba(232,238,255,.86); --sub:rgba(220,228,255,.55); --sep:rgba(255,255,255,.13); --wg1:rgba(46,92,220,.22); --wg2:rgba(120,80,230,.14); --field:#111C44; --navy:#0B1A48;
+    color-scheme:dark;
   }
   html{background:var(--navy)}   /* 上に引っぱったときも帯の色 */
   html,body{margin:0;min-height:100%;-webkit-text-size-adjust:100%}
@@ -407,7 +408,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-18";
+var BUILD_ID = "20261126-19";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
