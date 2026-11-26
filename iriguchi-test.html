@@ -30,13 +30,14 @@
 
   /* 上の帯：紺のグラデーション＋屋根の波板のような細い縦線＋右下の光 */
   .hero{position:relative;color:#fff;overflow:hidden;background:linear-gradient(165deg,#0B1A48 0%,#132C74 55%,#1D4CB4 100%);
-    padding:calc(env(safe-area-inset-top,0px) + 30px) max(24px,env(safe-area-inset-right,0px)) 26px max(24px,env(safe-area-inset-left,0px))}
+    padding:calc(env(safe-area-inset-top,0px) + 24px) max(24px,env(safe-area-inset-right,0px)) 22px max(24px,env(safe-area-inset-left,0px))}
   .hero::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.07) 0 1.5px,rgba(255,255,255,0) 1.5px 13px);
     -webkit-mask-image:linear-gradient(200deg,#000 0%,rgba(0,0,0,.4) 45%,transparent 75%);mask-image:linear-gradient(200deg,#000 0%,rgba(0,0,0,.4) 45%,transparent 75%)}
   .hero::after{content:"";position:absolute;right:-60px;bottom:-80px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(90,160,255,.45),rgba(90,160,255,0) 70%)}
   .hero .wrap{position:relative;z-index:1}
-  .hero h1{margin:0;font:800 34px/1 "Inter",sans-serif;letter-spacing:.01em}
-  .hero .name{margin-top:12px;font:700 14px/1 "Noto Sans JP",sans-serif;letter-spacing:.12em;opacity:.95}   /* 業務管理は小さく（11/26） */
+  /* 上は小さく英字の社名、タイトルは「業務管理」を小さめに（11/26） */
+  .hero .en{font:600 11px/1 "Inter",sans-serif;letter-spacing:.3em;opacity:.75}
+  .hero h1{margin:10px 0 0;font:700 24px/1.1 "Noto Sans JP",sans-serif;letter-spacing:.08em}
   .hero .dt{margin-top:8px;font:500 12px/1 "Inter","Noto Sans JP",sans-serif;opacity:.75;letter-spacing:.04em;font-variant-numeric:tabular-nums}
   .hero .test{display:inline-block;margin-left:8px;font:700 9px/1 "Inter",sans-serif;letter-spacing:.1em;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:2px 4px;vertical-align:2px;opacity:.9}
   .hero{animation:heroin .7s cubic-bezier(.2,.8,.2,1) both}
@@ -82,10 +83,10 @@
 </style>
 </head>
 <body>
-<div class="bar" id="bar">SHIRAISHI GROUP</div>
+<div class="bar" id="bar">業務管理</div>
 <header class="hero"><div class="wrap">
-  <h1>SHIRAISHI<br>GROUP</h1>
-  <div class="name">業務管理<span class="test">TEST</span></div>
+  <div class="en">SHIRAISHI GROUP</div>
+  <h1>業務管理<span class="test">TEST</span></h1>
   <div class="dt" id="dt"></div>
 </div></header>
 
@@ -155,7 +156,7 @@ document.getElementById('groups').innerHTML = GROUPS.map(function(g, gi){
 }).join('');
 
 // 下に送ったら上に小さいタイトル
-window.addEventListener('scroll', function(){ document.getElementById('bar').classList.toggle('on', window.scrollY > 110); }, { passive:true });
+window.addEventListener('scroll', function(){ document.getElementById('bar').classList.toggle('on', window.scrollY > 80); }, { passive:true });
 
 // 出面・現調：LINE の中ならそのままフォームへ。外（Safari・ホーム画面）なら LINE アプリを開いて ?to= で渡す
 function goLine(to) {
