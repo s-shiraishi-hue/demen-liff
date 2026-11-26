@@ -21,11 +21,11 @@
   /* 入口（2026-11-26 決定：Apple風。上は会社のホームページのような紺の帯に英字の社名と小さく「業務管理」、下は iPhone のホーム画面のようなアイコン）
      ライト・ダークは携帯の設定どおり。字は Inter（英数字）＋Noto Sans JP（日本語。11/26 白石さんが D を選んだ） */
   :root{
-    --bg:#F2F2F7; --ink:#000; --sub:rgba(60,60,67,.6); --sep:rgba(60,60,67,.12); --wg1:#E9EEFF; --wg2:#F4F0FF; --field:#FFFFFF; --navy:#0B1A48;
+    --bg:#F2F2F7; --ink:#000; --ink2:#3C3C43; --sub:rgba(60,60,67,.6); --sep:rgba(60,60,67,.12); --wg1:#E9EEFF; --wg2:#F4F0FF; --field:#FFFFFF; --navy:#0B1A48;
     color-scheme:light;
   }
-  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#000; --ink:#FFF; --sub:rgba(235,235,245,.6); --sep:rgba(84,84,88,.6); --wg1:#16213F; --wg2:#221A3A; --field:#1C1C1E; color-scheme:dark } }
-  :root[data-theme="dark"]{ --bg:#000; --ink:#FFF; --sub:rgba(235,235,245,.6); --sep:rgba(84,84,88,.6); --wg1:#16213F; --wg2:#221A3A; --field:#1C1C1E; color-scheme:dark }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#000; --ink:#FFF; --ink2:#EBEBF5; --sub:rgba(235,235,245,.6); --sep:rgba(84,84,88,.6); --wg1:#16213F; --wg2:#221A3A; --field:#1C1C1E; color-scheme:dark } }
+  :root[data-theme="dark"]{ --bg:#000; --ink:#FFF; --ink2:#EBEBF5; --sub:rgba(235,235,245,.6); --sep:rgba(84,84,88,.6); --wg1:#16213F; --wg2:#221A3A; --field:#1C1C1E; color-scheme:dark }
   html{background:var(--navy)}   /* 上に引っぱったときも帯の色 */
   html,body{margin:0;min-height:100%;-webkit-text-size-adjust:100%}
   body{font-family:"Inter","Noto Sans JP","Hiragino Sans",sans-serif;font-feature-settings:"palt";-webkit-font-smoothing:antialiased;color:var(--ink);
@@ -34,19 +34,20 @@
   .wrap{max-width:520px;margin:0 auto}
 
   /* 上の帯：紺のグラデーション＋屋根の波板のような細い縦線＋右下の光 */
-  .hero{position:relative;color:#fff;overflow:hidden;background:linear-gradient(165deg,#0B1A48 0%,#132C74 55%,#1D4CB4 100%);
+  .hero{position:relative;color:#fff;overflow:hidden;background:linear-gradient(180deg,#0B1A48 0%,#0F2360 30%,#163A98 75%,#1D4CB4 100%);
     padding:calc(env(safe-area-inset-top,0px) + 24px) max(24px,env(safe-area-inset-right,0px)) 22px max(24px,env(safe-area-inset-left,0px))}
-  .hero::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.07) 0 1.5px,rgba(255,255,255,0) 1.5px 13px);
-    -webkit-mask-image:linear-gradient(200deg,#000 0%,rgba(0,0,0,.4) 45%,transparent 75%);mask-image:linear-gradient(200deg,#000 0%,rgba(0,0,0,.4) 45%,transparent 75%)}
+  /* 縦線は上を消して下から右へうっすら（上がぼやけて見えないように 11/26） */
+  .hero::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,rgba(255,255,255,0) 1px 12px);
+    -webkit-mask-image:linear-gradient(to bottom,transparent 0%,transparent 35%,#000 100%);mask-image:linear-gradient(to bottom,transparent 0%,transparent 35%,#000 100%)}
   .hero::after{content:"";position:absolute;right:-60px;bottom:-80px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(90,160,255,.45),rgba(90,160,255,0) 70%)}
   .hero .wrap{position:relative;z-index:1}
   /* 上は小さく英字の社名、タイトルは「業務管理」を小さめに（11/26） */
   .hero .en{font:600 11px/1 "Inter",sans-serif;letter-spacing:.3em;opacity:.75}
-  .hero h1{margin:0;font:700 24px/1.1 "Noto Sans JP",sans-serif;letter-spacing:.08em;opacity:.6}   /* 業務管理は透けるくらいに（11/26） */
+  .hero h1{margin:0;font:700 24px/1.1 "Noto Sans JP",sans-serif;letter-spacing:.08em}   /* 業務管理ははっきり（11/26「見えないから」） */
   .hero .dt{margin-top:8px;font:500 12px/1 "Inter","Noto Sans JP",sans-serif;opacity:.75;letter-spacing:.04em;font-variant-numeric:tabular-nums}
   .hero .test{display:inline-block;margin-left:8px;font:700 9px/1 "Inter",sans-serif;letter-spacing:.1em;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:2px 4px;vertical-align:2px;opacity:.9}
-  .hero{animation:heroin .7s cubic-bezier(.2,.8,.2,1) both}
-  @keyframes heroin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+  .hero{animation:heroin .6s ease both}
+  @keyframes heroin{from{opacity:0}to{opacity:1}}
 
   /* 下に送ると上に出る小さいタイトル（すりガラス） */
   .bar{position:fixed;left:0;right:0;top:0;z-index:10;padding:calc(env(safe-area-inset-top,0px) + 10px) 0 10px;text-align:center;font:600 15px/1.2 "Inter",sans-serif;letter-spacing:.04em;color:var(--ink);
@@ -57,7 +58,7 @@
   main{padding:24px max(20px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 40px) max(20px,env(safe-area-inset-left,0px))}
   .grp{padding:4px 0 18px;margin-bottom:16px;border-bottom:.5px solid var(--sep)}
   .grp:last-child{border-bottom:0}
-  .grp h2{margin:0 2px 14px;font-size:13px;font-weight:700;color:var(--sub);letter-spacing:.04em}
+  .grp h2{margin:0 2px 14px;font-size:13px;font-weight:700;color:var(--ink2);letter-spacing:.04em}
   .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));row-gap:18px;margin:0 -4px}
   .app{display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--ink);text-decoration:none;cursor:pointer}
   .tile{position:relative;width:62px;height:62px;transition:transform .35s cubic-bezier(.2,.9,.25,1.25)}
@@ -84,6 +85,15 @@
   .gform input{width:100%;box-sizing:border-box;font:600 26px/1 "Inter",sans-serif;letter-spacing:.4em;text-align:center;padding:12px;border:1px solid var(--sep);border-radius:14px;background:var(--field);color:var(--ink)}
   .gform button{width:100%;margin-top:12px;padding:14px;border:0;border-radius:14px;background:linear-gradient(135deg,#1D4CB4,#0B1A48);color:#fff;font:700 16px/1 inherit;font-family:inherit;cursor:pointer}
   .gerr{color:#FF453A;font-size:13px;min-height:1.6em;margin-top:8px}
+  /* ライトでは白い地に溶けて薄く見えるので、色を透かさずはっきり出す。Coming soon は薄いまま（11/26） */
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]) .tile svg.sh .b{stop-opacity:1}
+    :root:not([data-theme="dark"]) .tile svg.sh{filter:drop-shadow(0 4px 10px rgba(16,32,96,.22))}
+    :root:not([data-theme="dark"]) .app.soon .tile{filter:saturate(0);opacity:.3}
+  }
+  :root[data-theme="light"] .tile svg.sh .b{stop-opacity:1}
+  :root[data-theme="light"] .tile svg.sh{filter:drop-shadow(0 4px 10px rgba(16,32,96,.22))}
+  :root[data-theme="light"] .app.soon .tile{filter:saturate(0);opacity:.3}
   /* 明るさの切り替え（帯の右上、すりガラス） */
   .hero .wrap{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
   .seg{display:flex;padding:2px;border-radius:10px;background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);flex:0 0 auto}
@@ -159,7 +169,7 @@ document.getElementById('groups').innerHTML = GROUPS.map(function(g, gi){
   return '<section class="grp in" style="animation-delay:'+(.1+gi*.07)+'s"><h2>'+g[0]+'</h2><div class="grid">'+g[1].map(function(a){
     var id = k++;
     var tile = '<span class="tile"><svg class="sh" width="62" height="62" viewBox="0 0 62 62" aria-hidden="true"><defs>'+
-      '<linearGradient id="g'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+a.c[0]+'" stop-opacity=".78"/><stop offset="1" stop-color="'+a.c[1]+'" stop-opacity=".86"/></linearGradient>'+
+      '<linearGradient id="g'+id+'" x1="0" y1="0" x2="0" y2="1"><stop class="b" offset="0" stop-color="'+a.c[0]+'" stop-opacity=".78"/><stop class="b" offset="1" stop-color="'+a.c[1]+'" stop-opacity=".86"/></linearGradient>'+
       '<linearGradient id="h'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient>'+
       '<radialGradient id="r'+id+'" cx=".28" cy=".18" r=".55"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>'+
       '<linearGradient id="e'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".7"/><stop offset=".35" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#fff" stop-opacity=".25"/></linearGradient>'+
