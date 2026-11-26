@@ -1155,6 +1155,12 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
 .vtabs:not(.vsw){border:0!important;background:#e3e5e9;padding:3px;border-radius:10px}
 .vtabs:not(.vsw) button{background:transparent!important;color:#4d5058!important;border-radius:8px;font-weight:700}
 .vtabs:not(.vsw) button[aria-selected="true"]{background:#fff!important;color:var(--ink)!important;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.shareln{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;min-height:52px;font-size:17px!important;text-decoration:none;margin:4px 0 10px;border-radius:12px}
+/* ［‹ 業務管理にもどる］を分かりやすく（11/26 白石さん「もう少しわかりやすいか、操作しやすいほうがいい」）：帯を少し高く、ボタンを枠つきで大きく */
+#kbar{height:46px!important}#kbar.nop{background:var(--surface);border-bottom:1px solid var(--line)}
+#kbar .kback{min-height:36px!important;padding:0 14px 0 10px!important;margin-left:6px;border:1.5px solid #8e939b!important;border-radius:999px!important;background:#fff!important;font-size:15px!important;color:var(--ink)!important}
+#kbar .kback span{font-size:20px;line-height:1;margin-right:2px;vertical-align:-1px}
+body.haskbar{padding-top:46px!important}body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top:46px!important}
 </style>
 
 <div class="wrap">
@@ -1323,7 +1329,9 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
       card(pr)+
       /* 11/26 白石さん「工場長が納期は変えないだろう」「写真入れ替えや、やり取りも質上げれる？チャット的なイメージ」「こんな履歴がありますみたいな素人感」：
          納期を変える行は外した（納期はカードに出ている）。写真とやりとりは LINE のようなチャットに。下の入力欄の左の［📷］で写真を足す・入れ替える */
-      (pr.status==='納品済み'?'<div class="cpdd"><span>納品日 <b>'+esc(md(pr.deliveredAt)||'—')+'</b></span>'+(canEdit()?'<button type="button" class="cpddb" data-dd="'+esc(pr.id)+'">📅 納品日を直す</button>':'')+'</div>':'')+
+      (pr.status==='納品済み'?'<div class="cpdd"><span>納品日 <b>'+esc(md(pr.deliveredAt)||'—')+'</b></span>'+(canEdit()?'<button type="button" class="cpddb" data-dd="'+esc(pr.id)+'">📅 納品日を直す</button>':'')+'</div>':
+        /* 納期は工場長も頼んだ人も直せる（11/26 白石さん決定）：iPad も携帯も［📅 納期を変える］ */
+        '<div class="cpdd due"><span>納期 <b>'+esc(md(pr.due)||'なし')+'</b>'+(pr.rush?'<i>即日</i>':'')+'</span><button type="button" class="cpddb" data-due="'+esc(pr.id)+'">📅 納期を変える</button></div>')+
       '<div class="chat"><div class="chath"><b>やりとり</b><span>写真 '+(pr.imageCount||0)+'枚</span></div><div class="chatl" id="talkL"><p class="csys">読み込み中…</p></div>'+
         ('<p class="chatwho">'+esc(talkName(pr))+' として書きます</p>'+
         '<div class="chati"><button type="button" class="chatph" data-fix="'+esc(pr.id)+'" aria-label="写真を足す・入れ替える"><span aria-hidden="true">📷</span><small>写真</small></button><textarea class="chatin" id="talkIn" rows="1" placeholder="メッセージを入力"></textarea><button type="button" class="chats" data-talk-send="'+esc(pr.id)+'" aria-label="送る">送る</button></div>'+
@@ -1375,16 +1383,20 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
       function old(){var t=document.createElement('textarea');t.value=msg;t.setAttribute('readonly','');t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();try{t.setSelectionRange(0,msg.length);}catch(e){}try{document.execCommand('copy');done();}catch(e){b.textContent='長押しでコピーしてください';}t.remove();}};}
   function lineShare(msg,why){var u='https://line.me/R/share?text='+encodeURIComponent(msg);
     if(window.liff&&liff.isInClient&&liff.isInClient()){sendNote('LINE の中なので、文のコピーに切り替えました');copyBox(msg,why);return;}
-    /* ホーム画面のアイコンから開いた形（standalone。携帯の入口など）：同じ画面のまま LINE に渡すと、戻ったときに入口ごと閉じた状態になる（白石さん 11/26）。
-       そのときは外の Safari 経由で LINE に渡し、この画面はそのまま残す */
-    var standalone=false;try{standalone=window.navigator.standalone===true||(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches);}catch(e){}
-    /* Apps Script の中（外枠の iframe）や、入口から別の窓（window.open）で開いたときも同じ：今の画面のまま渡すと、加工のページが LINE に置きかわって消える
-       （白石さん 11/26「携帯で加工のページにメモ残してラインでおくったら、管理ページがきえる」）。そのときは別の窓で LINE に渡し、この画面は残す */
-    var inFrame=false;try{inFrame=window.top!==window.self;}catch(e){inFrame=true;}
-    var opened=false;try{opened=!!window.opener;}catch(e){}
-    if(standalone||inFrame||opened){var w=null;try{w=window.open(u,'_blank');}catch(e){}if(w){sendNote('別の窓で LINE に渡しました（この画面は残します）');toast('LINE に切り替えます。送ったら、この画面に戻ってください');return;}}
-    /* 新しいタブは開かない（白石さん 11/25「Safari を押しても LINE の画面になる」：残ったタブがまた LINE に飛ぶため）。今の画面のまま LINE アプリに渡す */
-    var a=document.createElement('a');a.href=u;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();}
+    /* ブラウザ（Safari・Chrome）では、画面から自動で LINE に移らない（白石さん 11/26「クロームに戻ってもブランクになる」：自動で開いた別の窓が白いまま残るため）。
+       送る文を見せて、本人が［LINE で送る］を押す形にする。本人が押したリンクなら、携帯は LINE アプリが直接開き、この画面はそのまま残る */
+    shareBox(msg,u);}
+  function shareBox(msg,u){var el=document.createElement('div');el.className='dlg';
+    el.innerHTML='<div class="in duein" role="dialog" aria-modal="true" aria-label="LINE に送る"><p class="dueh">LINE のグループに送ります</p><p class="duesub">［LINE で送る］を押して、送り先にグループを選んでください。送ったら、この画面に戻ってきてください。</p><pre class="npre"></pre>'+
+      '<a class="btn primary nsend shareln" target="_blank" rel="noopener" data-go>LINE で送る</a>'+
+      '<div class="row"><button class="btn quiet" type="button" data-x>閉じる</button><button class="btn quiet" type="button" data-c>文をコピー</button></div></div>';
+    el.querySelector('.npre').textContent=msg;el.querySelector('[data-go]').setAttribute('href',u);
+    document.body.appendChild(el);sendNote('送る文を出しました（本人が［LINE で送る］を押す形）');
+    el.querySelector('[data-go]').onclick=function(){setTimeout(function(){el.remove();},300);};
+    el.querySelector('[data-x]').onclick=function(){el.remove();};
+    el.querySelector('[data-c]').onclick=function(){var b=this,done=function(){b.textContent='コピーしました';};
+      try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(msg).then(done,function(){old();});return;}}catch(e){}old();
+      function old(){var t=document.createElement('textarea');t.value=msg;t.setAttribute('readonly','');t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();try{t.setSelectionRange(0,msg.length);}catch(e){}try{document.execCommand('copy');done();}catch(e){b.textContent='長押しでコピーしてください';}t.remove();}};}
   /* 送り先を、画面の上に重なる窓で選ぶ（シェアターゲットピッカー。白石さん 11/25「オンにしよう」）。送ったあとも元の画面のまま。
      LIFF の設定でオンになっていないときは使えないので、そのときは LINE の「送る」画面に切り替える */
   function canPicker(){try{return !!(window.liff&&liff.isApiAvailable&&liff.isApiAvailable('shareTargetPicker'));}catch(e){return false;}}
@@ -1608,7 +1620,7 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
     el.innerHTML='<div class="in duein" role="dialog" aria-modal="true" aria-label="納期を変える"><p class="dueh">納期を変える</p><p class="duesub"></p>'+
       '<div class="frad" id="dueQ">'+[[dd(0),'今日'],[dd(1),'明日'],[dd(2),'あさって']].map(function(q){return '<button type="button" data-q="'+q[0]+'" aria-checked="'+(r.due===q[0])+'">'+q[1]+'</button>';}).join('')+'</div>'+
       '<input class="fin" type="date" id="dueIn"><label class="fchk"><input type="checkbox" id="dueRush">即日（急ぎ）</label>'+
-      (LINE_NOTICE_ALL?'<label class="fchk"><input type="checkbox" id="dueLine"'+(window.KAKO_IN_LINE?' checked':'')+'>LINE のグループにも知らせる</label>':'')+
+      '<label class="fchk"><input type="checkbox" id="dueLine" checked>LINE のグループにも知らせる</label>'+
       '<div class="row"><button class="btn quiet" type="button" id="dueNo">やめる</button><button class="btn primary" type="button" id="dueOk">変える</button></div></div>';
     document.body.appendChild(el);el.querySelector('.duesub').textContent=r.site+'　いまの納期 '+(md(r.due)||'なし')+(r.rush?'（即日）':'');
     var inp=el.querySelector('#dueIn'),rush=el.querySelector('#dueRush');inp.value=r.due||'';rush.checked=!!r.rush;
@@ -1619,9 +1631,9 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
     el.onclick=function(e){if(e.target===el)el.remove();};
     el.querySelector('#dueOk').onclick=function(){var nd=inp.value,nr=rush.checked,toLine=!!(el.querySelector('#dueLine')&&el.querySelector('#dueLine').checked);el.remove();if(nd===(r.due||'')&&nr===!!r.rush)return;
       /* 納期を変えたら、チェックがあれば LINE にも知らせる（白石さん 11/25「携帯は納期・メモを送れるように」） */
-      if(toLine)lineSend(lineMsg(r,'納期を '+(md(r.due)||'なし')+' → '+(md(nd)||'なし')+(nr?'（即日）':'')+' に変更'+(whoAmI()?'（'+whoAmI()+'）':'')));
+      if(toLine)lineSend(lineMsg(r,'納期を '+(md(r.due)||'なし')+' → '+(md(nd)||'なし')+(nr?'（即日）':'')+' に変更（'+talkName(r)+'）'));
       var od=r.due,orr=r.rush;r.due=nd;r.rush=nr;render();
-      function save(d,u){return rpc('shiraishiUpdateManagerDue',{caseId:r.id,due:d,rush:u,by:whoAmI()});}
+      function save(d,u){return rpc('shiraishiUpdateManagerDue',{caseId:r.id,due:d,rush:u,by:talkName(r)});}
       save(nd,nr).then(function(){if(calPop===r.id)loadTalk(r.id);undoToast('「'+r.site+'」の納期を '+(md(nd)||'なし')+(nr?'（即日）':'')+' にしました',function(){r.due=od;r.rush=orr;render();save(od,orr).then(function(){toast('納期を元に戻しました');});});},
         function(){r.due=od;r.rush=orr;render();toast('保存できませんでした。もう一度押してください。');});};
   }
@@ -1920,8 +1932,8 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
        irow('会社',true,radios('rqCo',COMPANIES.map(function(c){return [c,c.replace(/工業$|板金.*$/,'')];}),co).replace('class="frad"','class="frad seg"'),'rqCo','co')+
        irow('依頼者',true,'<select class="fin" id="rqMe" aria-label="依頼者（3社全員。押した会社が上）"></select><input class="fin" id="rqMeT" aria-label="名前を入れる" placeholder="名前を入れる" hidden>','rqMe','me')+
        irow('現場名',true,'<button type="button" class="sitebtn" id="rqSiteB" aria-haspopup="dialog"><span class="spk-n">選んでください</span><span class="spk-c"></span></button><select class="fin" id="rqSite" hidden></select><input class="fin" id="rqSiteT" aria-label="現場名を入れる" placeholder="現場名を入れる" hidden>','rqSite','site')+
-       /* 元請は出さない（白石さん 11/26「どうせ出てくる」）。現場名から自動で入れて送る */
-       '<div hidden>'+irow('元請',false,'<span class="ival" id="rqCustV"></span><button type="button" class="lnk" id="rqCustE" hidden>直す</button><input class="fin" id="rqCust" autocomplete="off" aria-label="元請" placeholder="元請を入れる" hidden>','rqCust','cust')+'</div>'+
+       /* 元請（11/26 夜 白石さん「前の自動表記でいいよ 現場ので」・必須）：現場名を選ぶと自動で1行に出る。台帳に元請がない現場・一覧にない現場のときは入れてもらう */
+       irow('元請',true,'<span class="ival" id="rqCustV"></span><button type="button" class="lnk" id="rqCustE" hidden>直す</button><input class="fin" id="rqCust" autocomplete="off" aria-label="元請" placeholder="元請を入れる" hidden>','rqCust','cust')+
       '</div>'+
       '<p class="ih">加工の内容</p><div class="ib">'+
        (editing?'<div id="rqOld" style="padding:8px 14px 0"></div>':'')+
@@ -1979,7 +1991,7 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
       cust=$('rqCust').value.trim(),memo=$('rqMemo').value.trim(),due=$('rqDue').value,date=$('rqDate').value,first=null;
     function need(ok,id,msg){if(!ok){err(id,msg);if(!first)first=id;}}
     need(me,'rqMe','＊依頼者を選んでください。');need(/^\d{4}-\d{2}-\d{2}$/.test(date),'rqDate','＊依頼日を選んでください。');need(site,'rqSite','＊現場を選んでください。');
-    need(/^\d{4}-\d{2}-\d{2}$/.test(due),'rqDue','＊納期を選んでください。');
+    need(cust||!site,'rqCust','＊元請を入れてください。');need(/^\d{4}-\d{2}-\d{2}$/.test(due),'rqDue','＊納期を選んでください。');
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){$('rqDateL').hidden=true;$('rqDate').hidden=false;} /* たたんでいる欄は、空なら開いて見せる */
     if(!cust&&site){custEdit=true;custUI();}
     if(first==='rqDueQ'&&!$('rqDue').hidden)first='rqDue';
@@ -2034,10 +2046,10 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
    ③［‹ 業務管理］：入口（携帯）からは別の窓で開いているので、まず閉じる。閉じられなければ入口のページを開く（ホーム画面のアプリの中で行き止まりにしない）
    ④練習用のお知らせ：本番では KAKO_PRACTICE を false にするだけで消える */
 (function(){
-  var KAKO_PRACTICE=true;
+  var KAKO_PRACTICE=false; /* 11/26 白石さん「練習用も消して。リアルでどうかを判断する」 */
   var IRIGUCHI='https://s-shiraishi-hue.github.io/demen-liff/iriguchi-test.html';
   var b=document.createElement('div');b.id='kbar';if(!KAKO_PRACTICE)b.className='nop';
-  b.innerHTML='<button type="button" class="kback" id="kBack">‹ 業務管理</button>'+(KAKO_PRACTICE?'<span class="kprac">練習用：ここで受け付けた依頼は保存されません（LINE には本当に送られます）</span>':'');
+  b.innerHTML='<button type="button" class="kback" id="kBack"><span aria-hidden="true">‹</span> 業務管理にもどる</button>'+(KAKO_PRACTICE?'<span class="kprac">練習用：ここで受け付けた依頼は保存されません（LINE には本当に送られます）</span>':'');
   document.body.insertBefore(b,document.body.firstChild);document.body.className+=' haskbar';
   document.getElementById('kBack').onclick=function(){
     try{window.close();}catch(e){}
