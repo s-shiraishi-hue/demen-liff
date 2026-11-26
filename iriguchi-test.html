@@ -122,6 +122,8 @@
   #menu{margin-top:auto;width:100%}
   .gform{margin-top:6vh}
   [hidden]{display:none!important}
+  #toast{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);z-index:30;padding:14px 16px;border-radius:14px;background:rgba(20,25,43,.94);color:#fff;font:600 14px/1.5 "Noto Sans JP",sans-serif;text-align:center;opacity:0;transform:translateY(10px);transition:opacity .2s,transform .2s;pointer-events:none}
+  #toast.on{opacity:1;transform:none}
   .top{padding:calc(env(safe-area-inset-top,0px) + 28px) 20px 4px}
   .top h1{margin:0;font:700 28px/1.15 "Inter","Noto Sans JP",sans-serif;letter-spacing:.02em;color:var(--ink)}
 </style>
@@ -265,11 +267,20 @@ function loadLinks(){
   });
 }
 // 加工管理は外の Safari で開く（11/26：同じ画面で開くと、加工の依頼を LINE に送ったときに入口ごと閉じて戻れなかった）
-function openOut(u){ var w = window.open(u, '_blank'); if (!w) location.href = u; }
+// 11/26 点検③：開けなかったときに同じ画面で開くと、加工のページから入口に戻れなくなる → 同じ画面では開かず、知らせるだけにする
+function openOut(u){ var w = null; try { w = window.open(u, '_blank'); } catch(e){} if (!w) toast('開けませんでした。もう一度押してください'); }
 function openDyn(k){
   if (LINKS[k]) { openOut(LINKS[k]); return; }
-  var w = window.open('about:blank', '_blank');   // 押したときに窓を開いておく（あとで開くと止められるため）
-  loadLinks().then(function(){ if (!LINKS[k]) { if (w) w.close(); return; } if (w) w.location.href = LINKS[k]; else location.href = LINKS[k]; }).catch(function(){ if (w) w.close(); });
+  // つなぎ先をまだ受け取っていない（電波が弱いなど）。空の窓は開かずに、受け取ってから押し直してもらう
+  toast('準備しています…少し待ってもう一度押してください');
+  loadLinks().then(function(){ toast(LINKS[k] ? '準備できました。もう一度押してください' : 'つなぎ先を受け取れませんでした。電波のよい所で開き直してください'); })
+    .catch(function(){ toast('つなぎ先を受け取れませんでした。電波のよい所で開き直してください'); });
+}
+var toastT = 0;
+function toast(msg){
+  var t = document.getElementById('toast');
+  if (!t) { t = document.createElement('div'); t.id = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+  t.textContent = msg; t.className = 'on'; clearTimeout(toastT); toastT = setTimeout(function(){ t.className = ''; }, 3500);
 }
 
 // ===== 合言葉（1回入れて携帯が覚える。確かめは人員配置の読み取りの仕組みで） =====
@@ -296,7 +307,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-13";
+var BUILD_ID = "20261126-14";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
