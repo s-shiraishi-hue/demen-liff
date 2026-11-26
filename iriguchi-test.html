@@ -339,9 +339,21 @@ function drawMap(){
     return '<span class="dotp" style="left:'+q[0]+'px;top:'+q[1]+'px"></span><span class="pin" style="left:'+q[0]+'px;top:'+q[1]+'px">'+String(p.name).replace(/[<>&]/g,'')+'<b>'+p.n+'人</b></span>';
   }).join('');
 }
+// 11/26 Supabase 試し①：アドレスに ?src=sb を付けて1回開くと、この携帯は地図のピンを Supabase から読む（?src=gas で元に戻す）
+var SB_URL = 'https://smhyelpqubglqaqvxtcd.supabase.co', SB_KEY = 'sb_publishable_3uPK9GbdsCVsOnJUjGae1g_c6Pdn510';   // 公開してよい鍵。テーブルは直接読めず、合言葉の窓口 get_pins だけ
+var PIN_SRC = (function(){ var m = /[?&]src=(sb|gas)\b/.exec(location.search), v = ''; try { if (m) localStorage.setItem('gyomu-src', m[1]); v = localStorage.getItem('gyomu-src') || ''; } catch(e){ v = m ? m[1] : ''; } return v === 'sb' ? 'sb' : 'gas'; })();
+function fetchPins(){
+  if (PIN_SRC !== 'sb') return fetch(CHECK_API + '?pins=1&p=' + encodeURIComponent(getPass())).then(function(r){ return r.json(); });
+  return fetch(SB_URL + '/rest/v1/rpc/get_pins', { method: 'POST', headers: { 'apikey': SB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ pass: getPass() }) })
+    .then(function(r){ return r.json(); }).then(function(j){
+      var t = document.getElementById('srcmark'); if (t) t.textContent = 'Supabase ' + (j && j.at ? j.at.replace(/^0?(\d+)\/0?(\d+)/, '$1/$2') : '');
+      return j;
+    });
+}
 function loadPins(){
   if (!getPass()) return;
-  fetch(CHECK_API + '?pins=1&p=' + encodeURIComponent(getPass())).then(function(r){ return r.json(); }).then(function(j){
+  if (PIN_SRC === 'sb' && !document.getElementById('srcmark')) { var t = document.createElement('span'); t.id = 'srcmark'; t.style.cssText = 'position:absolute;right:8px;bottom:6px;z-index:6;font:600 10px/1.4 Inter,sans-serif;color:#fff;background:rgba(62,207,142,.85);padding:1px 6px;border-radius:8px;pointer-events:none'; t.textContent = 'Supabase'; document.getElementById('map').appendChild(t); }
+  fetchPins().then(function(j){
     if (j.bad) { setPass(''); askPass('合言葉が変わりました。もう一度入れてください'); return; }
     if (!j.ok) return; var same = JSON.stringify(j.pins || []) === JSON.stringify(PINS); PINS = j.pins || []; try { localStorage.setItem('gyomu-pins', JSON.stringify(PINS)); } catch(e){} if (same) return; if (M3) draw3d(); else drawMap();
   }).catch(function(){});
@@ -520,7 +532,7 @@ else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-28";
+var BUILD_ID = "20261126-29";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
