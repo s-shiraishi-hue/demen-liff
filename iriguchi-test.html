@@ -240,8 +240,8 @@ window.addEventListener('scroll', function(){ document.getElementById('bar').cla
 // 出面・現調：LINE の中ならそのままフォームへ。外（Safari・ホーム画面）なら LINE アプリを開いて ?to= で渡す
 function goLine(to) {
   if (inLine) { location.href = LOCAL[to]; return; }
-  location.href = 'line://app/' + LIFF + '?to=' + to;
-  setTimeout(function () { if (!document.hidden) location.href = 'https://liff.line.me/' + LIFF + '?to=' + to; }, 1800);
+  // line:// で開くと LINE が ?to= を落として出面が開いた（11/26）。行き先が残る https://liff.line.me/ の形だけで開く
+  location.href = 'https://liff.line.me/' + LIFF + '?to=' + to;
 }
 document.getElementById('groups').addEventListener('click', function (e) {
   var d = e.target.closest('a[data-dyn]');
@@ -297,7 +297,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-6";
+var BUILD_ID = "20261126-7";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
