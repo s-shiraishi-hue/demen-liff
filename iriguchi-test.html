@@ -35,7 +35,7 @@
 
   /* 上の帯：紺のグラデーション＋屋根の波板のような細い縦線＋右下の光 */
   .hero{position:relative;color:#fff;overflow:hidden;background:linear-gradient(180deg,#0B1A48 0%,#0F2360 30%,#163A98 75%,#1D4CB4 100%);
-    padding:calc(env(safe-area-inset-top,0px) + 24px) max(24px,env(safe-area-inset-right,0px)) 22px max(24px,env(safe-area-inset-left,0px))}
+    padding:calc(env(safe-area-inset-top,0px) + 48px) max(24px,env(safe-area-inset-right,0px)) 26px max(24px,env(safe-area-inset-left,0px))}
   /* 縦線は上を消して下から右へうっすら（上がぼやけて見えないように 11/26） */
   .hero::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,rgba(255,255,255,0) 1px 12px);
     -webkit-mask-image:linear-gradient(to bottom,transparent 0%,transparent 35%,#000 100%);mask-image:linear-gradient(to bottom,transparent 0%,transparent 35%,#000 100%)}
@@ -55,7 +55,7 @@
   .bar.on{opacity:1;transform:none}
 
   /* アイコン：iPhone のホーム画面と同じ並び。グループは見出しと細い線だけ */
-  main{padding:24px max(20px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 40px) max(20px,env(safe-area-inset-left,0px))}
+  main{padding:30px max(20px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 40px) max(20px,env(safe-area-inset-left,0px))}
   .grp{padding:4px 0 18px;margin-bottom:16px;border-bottom:1px solid var(--sep)}   /* 区切りの線を少し濃く（11/26） */
   .grp:last-child{border-bottom:0}
   .grp h2{margin:0 2px 14px;font-size:17px;font-weight:700;color:var(--ink2);letter-spacing:.06em}   /* 現場・加工・その他を大きく（11/26） */
@@ -238,7 +238,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-1";
+var BUILD_ID = "20261126-2";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
