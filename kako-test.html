@@ -770,7 +770,7 @@ textarea.fin{min-height:64px;line-height:1.5}
   .vtabs{max-width:320px;margin-bottom:6px}.vtabs button{min-height:38px;font-size:15px}
   .colh{min-height:44px;font-size:17px;padding:0 12px;margin-bottom:8px;border-width:2px}.colh b{font-size:22px}
   .col>.card{margin-bottom:8px;border-width:1.5px}
-  .col>.card .thumb{aspect-ratio:16/9}
+  .col>.card .thumb{aspect-ratio:5/2!important}
   .col>.card .cnt{font-size:13px;padding:0 8px;right:6px;bottom:6px}
   .col>.card .ov{left:6px;top:6px}.col>.card .ov .tag{min-height:24px;font-size:12px;padding:0 8px}
   .col>.card .cbody{padding:6px 10px 6px;gap:1px}
@@ -788,7 +788,7 @@ textarea.fin{min-height:64px;line-height:1.5}
   .wh{margin-bottom:4px}
   .ctall{margin-bottom:4px}
 }
-@supports not (aspect-ratio:1/1){@media (min-width:601px){.col>.card .thumb{padding-top:56.25%}}}
+@supports not (aspect-ratio:1/1){@media (min-width:601px){.col>.card .thumb{padding-top:40%!important}}}
 @media (min-width:601px) and (orientation:landscape){.col>.card .thumb{aspect-ratio:5/2}}
 @supports not (aspect-ratio:1/1){@media (min-width:601px) and (orientation:landscape){.col>.card .thumb{padding-top:40%}}}
 /* 月のカレンダーで依頼を押したときの小窓（中身は一覧と同じカード） */
@@ -966,6 +966,45 @@ textarea.fin{min-height:64px;line-height:1.5}
 /* 新しい依頼をグループに送るときの中身（左寄せ） */
 .rgrp{margin-top:8px}.rgrp .npre{text-align:left}
 .rgmsg{max-width:720px;margin:0 auto 6px;font-size:12px;color:var(--sub)}
+/* ステータスの色（白石さん 11/26「各ステータスがやっぱり判別しにくい」）：依頼案件＝灰色、編集済＝オレンジ、加工中＝青、納品済み＝緑。編集済を青の枠からオレンジに */
+:root{--org:#c25400;--org-bd:#e07a10;--org-bg:#fff1e0;--org-ink:#8a3b00}
+.tag.s1{color:var(--org-ink)!important;border-color:var(--org-bd)!important;background:var(--org-bg)!important}
+.sdot.s1{border-color:var(--org-bd)!important}
+.stbtn.s1{border-color:var(--org-bd)!important;background:var(--org-bg)}.stbtn.s1 .arr{color:var(--org)!important}
+.colh.s1{border-color:var(--org-bd)!important;background:var(--org-bg)!important;color:var(--org-ink)!important}
+.sg.s1[aria-pressed="true"]{border-color:var(--org-bd)!important;color:var(--org-ink)!important;background:var(--org-bg)!important}
+.stview.s1{border-color:var(--org-bd)!important;background:var(--org-bg)!important;color:var(--org-ink)!important}
+.ptab[aria-selected="true"].s1{border-color:var(--org-bd)!important;color:var(--org-ink)!important;background:var(--org-bg)!important}
+.citem.s1{border-color:var(--org-bd)!important;background:var(--org-bg)!important}
+.citem.s1 .cst,.cnote.top .cst.s1{background:var(--org-bd)!important;color:#fff!important;border-color:var(--org-bd)!important}
+.cdots i.s1{background:var(--org-bd)!important;border-color:var(--org-bd)!important}
+.ctall.s1,.mitem.s1{border-left-color:var(--org-bd)!important;background:var(--org-bg)!important}
+@media (min-width:601px){.board>.col.c1{background:#fdf3e7!important;border-color:#e9b77a!important}.board>.col.c2{background:#e8effd!important;border-color:#5b7fe0!important}}
+/* iPad のカードをぎゅっと（白石さん 11/26「依頼日、納期を同じ行で出すとかぎゅっとして、カードがまとめて見れるように」）：写真を低く、依頼と納期を1行、すき間を小さく */
+@media (min-width:601px){
+  .board>.col>.card{margin-bottom:6px}
+  .col>.card .thumb{aspect-ratio:16/9}
+  @supports not (aspect-ratio:1/1){.col>.card .thumb{padding-top:56.25%}}
+  .col>.card .cbody{padding:5px 8px 4px;gap:1px}
+  .col>.card .dates{display:-webkit-flex!important;display:flex!important;border:0;margin:0;-webkit-flex-wrap:nowrap;flex-wrap:nowrap;white-space:nowrap}
+  .col>.card .dates>div{display:block!important;width:auto!important;-webkit-flex:none;flex:none;padding:0 8px 0 0;border:0!important;background:none!important}
+  .col>.card .dates dt{display:inline!important;font-size:11px;margin-right:3px}
+  .col>.card .dates dd{display:inline!important;font-size:13px}
+  .col>.card .dates .dbg{font-size:11px;padding:0 4px;margin-left:3px}
+  .col>.card .site{font-size:15px;line-height:1.3}
+  .col>.card .who{font-size:12px;line-height:1.3}
+  .col>.card .cact{padding:0 8px 6px;gap:4px}
+  .col>.card .cact button,.col>.card .cact .btn{min-height:34px!important;font-size:13px!important}
+  .col>.card .tcnt,.col>.card .cnt{font-size:11px}
+}
+/* 上の帯：③［‹ 業務管理］（入口に戻る）と ④練習用のお知らせ（入口の係より 11/26 白石さん「加工③④直して」） */
+#kbar{position:fixed;top:0;left:0;right:0;z-index:50;height:34px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;background:#fff8d6;border-bottom:1px solid #e0c96a;padding:0 8px 0 4px;font-size:12px;color:#5a4a00}
+#kbar .kback{border:0;background:none;color:var(--ink);font-size:14px;font-weight:700;min-height:34px;padding:0 10px 0 6px;white-space:nowrap;-webkit-flex:none;flex:none}
+#kbar .kprac{-webkit-flex:1;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
+#kbar.nop{background:#fff;border-bottom-color:var(--line)}
+body.haskbar{padding-top:34px}
+body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top:34px}
+.col>.card .dates>div:first-child{margin-right:8px}
 </style>
 
 <div class="wrap">
@@ -1793,6 +1832,21 @@ textarea.fin{min-height:64px;line-height:1.5}
   try{if(window.google&&google.script&&google.script.url&&google.script.url.getLocation){google.script.url.getLocation(function(l){go(l&&l.parameter);});return;}}catch(e){}
   function q(){var o={};(location.search||'').replace(/^[?]/,'').split('&').forEach(function(kv){if(!kv)return;var j=kv.indexOf('=');try{o[decodeURIComponent(j<0?kv:kv.slice(0,j))]=decodeURIComponent(j<0?'':kv.slice(j+1));}catch(e){}});return o;}
   if(window.KAKO_LIFF&&window.KAKO_LIFF.then)window.KAKO_LIFF.then(function(){go(q());},function(){go(q());});else go(q());
+})();
+
+/* 上の帯（入口の係より 11/26 白石さん「加工③④直して」）
+   ③［‹ 業務管理］：入口（携帯）からは別の窓で開いているので、まず閉じる。閉じられなければ入口のページを開く（ホーム画面のアプリの中で行き止まりにしない）
+   ④練習用のお知らせ：本番では KAKO_PRACTICE を false にするだけで消える */
+(function(){
+  var KAKO_PRACTICE=true;
+  var IRIGUCHI='https://s-shiraishi-hue.github.io/demen-liff/iriguchi-test.html';
+  var b=document.createElement('div');b.id='kbar';if(!KAKO_PRACTICE)b.className='nop';
+  b.innerHTML='<button type="button" class="kback" id="kBack">‹ 業務管理</button>'+(KAKO_PRACTICE?'<span class="kprac">練習用：ここで受け付けた依頼は保存されません（LINE には本当に送られます）</span>':'');
+  document.body.insertBefore(b,document.body.firstChild);document.body.className+=' haskbar';
+  document.getElementById('kBack').onclick=function(){
+    try{window.close();}catch(e){}
+    setTimeout(function(){if(!window.closed){try{window.top.location.href=IRIGUCHI;}catch(e){location.href=IRIGUCHI;}}},300);
+  };
 })();
 </script>
 
