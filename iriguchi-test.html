@@ -138,7 +138,8 @@
   .h-pin.is-other .h-pin-head{width:9px;height:9px;padding:0;gap:0;border-radius:50%;background:var(--co,#9cc3ff);box-shadow:0 0 0 1.5px #fff}
   .h-pin.is-other .h-pin-stem{opacity:.7}
   .h-pin-name{position:absolute;bottom:calc(var(--h) + 13px);left:0;transform:translateX(-50%);padding:1px 6px;border-left:3px solid var(--co,#9cc3ff);border-radius:3px;background:rgba(8,14,38,.66);color:#e6ecff;font:500 10px/1.5 "Noto Sans JP",sans-serif;white-space:nowrap}
-  .h-pin.no-name .h-pin-name,.h-pin.is-other .h-pin-name{display:none}   /* 11/26 見た目用：ほかの現場は点だけ */
+  .h-pin.no-name .h-pin-name{display:none}   /* 重なる名前だけ隠す */
+  .h-pin.is-other .h-pin-name{bottom:calc(var(--h) + 9px);padding:0 4px;border-left-width:2px;font-size:8.5px;line-height:1.45;background:rgba(8,14,38,.55);color:#dfe7ff}   /* 11/26 今日以外の現場は小さく名前 */
   .co-sh{--co:#5AA9FF}.co-nk{--co:#3DDC97}.co-ym{--co:#FF8A5B}
   .m3-views{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;display:flex;gap:6px;justify-content:center}
   .m3-views button{flex:none;border:0;border-radius:999px;padding:7px 11px;background:rgba(10,18,48,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;font:600 11.5px/1 "Noto Sans JP",sans-serif;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);cursor:pointer}
@@ -177,7 +178,7 @@
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>window.M3D_LITE = true; window.M3D_START = 'iri'; window.MAP_PATCHES = [];</script>
-<script src="m3d.js?v=2"></script>
+<script src="m3d.js?v=3"></script>
 <script>
 var LIFF = '2011897591-HBBipfnN';
 var PASS_KEY = 'gyomu-pass';
@@ -367,7 +368,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-16";
+var BUILD_ID = "20261126-17";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){

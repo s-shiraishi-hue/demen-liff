@@ -493,7 +493,7 @@
       last = t;
       const hold = paused?.() || dragging;
       // 入口の［回る］：触っていない間、ぐるっと回り続ける（11/26）
-      if (orbitOn && !dragging) goal.az += dt * 0.16;
+      if (orbitOn && !dragging) goal.az += dt * 0.07;
       const ease = reduced ? 1 : 1 - Math.pow(0.02, dt);
       if (introAnim) {
         if (introAnim.t0 == null) introAnim.t0 = t;
