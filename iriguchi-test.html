@@ -21,7 +21,7 @@
   /* 入口（2026-11-26 決定：Apple風。上は会社のホームページのような紺の帯に英字の社名と小さく「業務管理」、下は iPhone のホーム画面のようなアイコン）
      ライト・ダークは携帯の設定どおり。字は Inter（英数字）＋Noto Sans JP（日本語。11/26 白石さんが D を選んだ） */
   :root{
-    --bg:#F2F2F7; --ink:#000; --ink2:#3C3C43; --sub:rgba(60,60,67,.6); --sep:rgba(60,60,67,.12); --wg1:#E9EEFF; --wg2:#F4F0FF; --field:#FFFFFF; --navy:#0B1A48;
+    --bg:#F2F2F7; --ink:#000; --ink2:#3C3C43; --sub:rgba(60,60,67,.6); --sep:rgba(60,60,67,.28); --wg1:#E9EEFF; --wg2:#F4F0FF; --field:#FFFFFF; --navy:#0B1A48;
     color-scheme:light;
   }
   @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#000; --ink:#FFF; --ink2:#EBEBF5; --sub:rgba(235,235,245,.6); --sep:rgba(84,84,88,.6); --wg1:#16213F; --wg2:#221A3A; --field:#1C1C1E; color-scheme:dark } }
@@ -56,7 +56,7 @@
 
   /* アイコン：iPhone のホーム画面と同じ並び。グループは見出しと細い線だけ */
   main{padding:24px max(20px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 40px) max(20px,env(safe-area-inset-left,0px))}
-  .grp{padding:4px 0 18px;margin-bottom:16px;border-bottom:.5px solid var(--sep)}
+  .grp{padding:4px 0 18px;margin-bottom:16px;border-bottom:1px solid var(--sep)}   /* 区切りの線を少し濃く（11/26） */
   .grp:last-child{border-bottom:0}
   .grp h2{margin:0 2px 14px;font-size:17px;font-weight:700;color:var(--ink2);letter-spacing:.06em}   /* 現場・加工・その他を大きく（11/26） */
   .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));row-gap:18px;margin:0 -4px}
@@ -106,7 +106,7 @@
 <div class="bar" id="bar">業務管理</div>
 <header class="hero"><div class="wrap">
   <div>
-  <h1>業務管理<span class="test">TEST</span></h1>
+  <h1>業務管理</h1>
   <div class="dt" id="dt"></div>
   </div>
   <div class="seg" role="radiogroup" aria-label="表示の明るさ">
