@@ -295,7 +295,7 @@ var GROUPS = [
   ['加工', [ { k:'kak', label:'加工管理', c:['#FFA24D','#E0620F'], dyn:'kako' },
               { k:'req', label:'加工依頼', c:['#FFC24D','#D9822B'], line:'kako-req' } ]],   // 11/26 白石さんOK：職人は Google が無いので、依頼は LINE の通り道（kako-test.html）で開く。加工管理は Google にログインした人だけ
    // 11/26 管理と依頼を分ける（依頼は ?open=request でフォームから開く）。iPad は画面の幅で自動で iPad の形   // 11/26：昨日の練習用 Web 版を開く。アドレスは合言葉のあとに受け取る
-  ['その他', [ { k:'alc', label:'アルコール', c:['#5BC8F5','#1680C9'] }, { k:'kin', label:'勤怠', c:['#FF7A6B','#D9363E'] } ]]
+  ['その他', [ { k:'alc', label:'アルコール', c:['#5BC8F5','#1680C9'], dyn:'alc' }, { k:'kin', label:'勤怠', c:['#FF7A6B','#D9363E'], dyn:'kin' } ]]   // 11/26 白石さん「両方おいてみて」：行き先は加工管理と同じく合言葉のあとに受け取る
 ];
 // iPhone のアイコンの角（なめらかな四角）
 var SQ = (function(s){ var r=s/2,p=[]; for(var i=0;i<96;i++){ var t=i/96*2*Math.PI,c=Math.cos(t),n=Math.sin(t); p.push((r+r*Math.sign(c)*Math.pow(Math.abs(c),.4)).toFixed(2)+','+(r+r*Math.sign(n)*Math.pow(Math.abs(n),.4)).toFixed(2)); } return 'M'+p.join('L')+'Z'; })(62);
@@ -520,7 +520,7 @@ else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-27";
+var BUILD_ID = "20261126-28";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
