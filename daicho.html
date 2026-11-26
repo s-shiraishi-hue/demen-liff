@@ -171,7 +171,8 @@
 
   <section class="card" id="screen-fail" hidden>
     <p style="margin:0;font-family:var(--font-d);font-weight:700;font-size:16px">登録できませんでした</p>
-    <div class="fail" id="fail-msg">—</div>
+    <div class="fail" id="fail-msg" style="white-space:pre-line">—</div>
+    <p class="note">入れた内容は残っています。直してもう一度送れます。</p>
     <button type="button" class="again" id="back">入力に戻る</button>
   </section>
 </div>
@@ -394,7 +395,8 @@
       }
     }).catch(function (err) {
       $('screen-busy').hidden = true;
-      showFail('通信に失敗しました：' + err);
+      // 11/26 通信が切れても、台帳では登録が済んでいることがある（40秒かかるため）。二重登録を防ぐ
+      showFail('通信が切れて、登録できたか分かりません。\n台帳に「' + genba + '」が入っていないか確かめてから、もう一度送ってください。\n（' + err + '）');
     });
   });
 
@@ -417,7 +419,12 @@
     window.scrollTo(0, 0);
   }
   $('again').addEventListener('click', reset);
-  $('back').addEventListener('click', reset);
+  // 11/26 失敗から戻るときは、入れた内容を消さない（前は全部消えていた）
+  $('back').addEventListener('click', function () {
+    $('screen-fail').hidden = true;
+    $('screen-form').hidden = false;
+    window.scrollTo(0, 0);
+  });
 
   rebuildKana();
 })();
