@@ -15,7 +15,7 @@
 // LINEはリンクを開くとき、最初にこのページを開き、ここから目的のページへ移る（2026-11-05 古いテスト画面から差し替え）
 var hadTarget = /liff\.state=/.test(location.search);
 // 2026-11-26：?to=〇〇 で行き先を決める（入口のテスト）。LINE がアドレスの後ろのページ名を落とすことがあるため
-var TO = { 'iriguchi-test': 'iriguchi-test.html', 'demen-test': 'form-test.html?pick=1&mode=sekou', 'gencho-test': 'form-test.html?pick=1&mode=gencho' };
+var TO = { 'iriguchi-test': 'iriguchi-test.html', 'demen-test': 'form-test.html?pick=1&mode=sekou', 'gencho-test': 'form-test.html?pick=1&mode=gencho', 'kako-req': 'kako-test.html?open=request' };   // 11/26 加工依頼も LINE の通り道
 var raw = location.search; try { raw = decodeURIComponent(raw); } catch (e) {}
 var mTo = /[?&]to=([a-z-]+)/.exec(raw);
 if (mTo && TO[mTo[1]]) { location.replace(TO[mTo[1]]); }

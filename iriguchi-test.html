@@ -205,7 +205,7 @@ var PASS_KEY = 'gyomu-pass';
 var CHECK_API = 'https://script.google.com/macros/s/AKfycbz_T9F0l7sHffSRxrU-nSa8dRd954UMMi7Q6veE-dkuzDBS-NIOoOjGOf6J8jR04Mmx/exec';
 // 入口と人員配置は Safari（ホーム画面のアイコン）のまま。出面・現調を押したときだけ LINE に移る（11/26）
 // LINE へは ?to= で行き先を渡す（アドレスの後ろのページ名は LINE が落とすことがある）。振り分けは index.html
-var LOCAL = { 'demen-test': 'form-test.html?pick=1&mode=sekou', 'gencho-test': 'form-test.html?pick=1&mode=gencho' };
+var LOCAL = { 'demen-test': 'form-test.html?pick=1&mode=sekou', 'gencho-test': 'form-test.html?pick=1&mode=gencho', 'kako-req': 'kako-test.html?open=request' };
 var inLine = /Line\//i.test(navigator.userAgent);
 var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
 
@@ -231,7 +231,8 @@ var GROUPS = [
     { k:'dai', label:'台帳登録',     c:['#9B7BFF','#5B34D6'], href:'daicho.html' }   // 11/26 工事台帳に新規登録（社長／専務を選ぶ）
   ]],
   ['加工', [ { k:'kak', label:'加工管理', c:['#FFA24D','#E0620F'], dyn:'kako' },
-              { k:'req', label:'加工依頼', c:['#FFC24D','#D9822B'], dyn:'kakoReq' } ]],   // 11/26 管理と依頼を分ける（依頼は ?open=request でフォームから開く）。iPad は画面の幅で自動で iPad の形   // 11/26：昨日の練習用 Web 版を開く。アドレスは合言葉のあとに受け取る
+              { k:'req', label:'加工依頼', c:['#FFC24D','#D9822B'], line:'kako-req' } ]],   // 11/26 白石さんOK：職人は Google が無いので、依頼は LINE の通り道（kako-test.html）で開く。加工管理は Google にログインした人だけ
+   // 11/26 管理と依頼を分ける（依頼は ?open=request でフォームから開く）。iPad は画面の幅で自動で iPad の形   // 11/26：昨日の練習用 Web 版を開く。アドレスは合言葉のあとに受け取る
   ['その他', [ { k:'alc', label:'アルコール', c:['#5BC8F5','#1680C9'] }, { k:'kin', label:'勤怠', c:['#FF7A6B','#D9363E'] } ]]
 ];
 // iPhone のアイコンの角（なめらかな四角）
@@ -422,7 +423,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-22";
+var BUILD_ID = "20261126-23";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
