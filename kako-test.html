@@ -1095,6 +1095,31 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
 @media (max-width:600px){
   .col>.card{border:1.5px solid #8e939b!important;box-shadow:0 1px 3px rgba(0,0,0,.14)}
 }
+/* プロの見直し 1〜3（白石さん 11/26「1〜3 をまとめて」）。iPad・PC の幅だけ。携帯は今のまま
+   1. 上の操作を2段に：題（加工管理）はタブが兼ねるので隠し、［画面のタブ］［一覧｜カレンダー］［表示 ▼］を1段に並べる
+   2. 画面のタブ（加工管理｜納品済み）は下線のタブ、一覧｜カレンダーは小さい切り替え、と形を分ける
+   3. カードの状態ボタンは白地に「状態を変える ▼」だけ（状態は列の色で分かる。急ぎの札を目立たせる） */
+@media (min-width:601px){
+  .top{display:-webkit-flex!important;display:flex!important;-webkit-flex-wrap:nowrap!important;flex-wrap:nowrap!important;-webkit-align-items:flex-end!important;align-items:flex-end!important;margin:0 0 8px!important;border-bottom:1.5px solid #c9ccd2;gap:0}
+  .top>h1,.top>#today,.top>.sp{display:none!important}
+  .top>.viewbar{-webkit-order:-1;order:-1;margin:0 auto 0 0!important;-webkit-justify-content:flex-start;justify-content:flex-start}
+  .top>#updated{-webkit-order:5;order:5;font-size:11px;line-height:1.3;color:var(--sub);margin:0 0 6px 10px;max-width:84px;-webkit-flex:0 1 auto;flex:0 1 auto}
+  .top>#vt{-webkit-order:2;order:2;margin:0 10px 6px 0}
+  .top>#who{-webkit-order:3;order:3;float:none!important;margin:0 0 6px 0!important}
+  .top>#vt .vtabs{margin:0;max-width:none;border-width:1.5px;border-radius:8px}
+  .top>#vt,.top>#who{-webkit-flex:none;flex:none}
+  .top>#vt .vtabs button{-webkit-flex:none;flex:none;min-height:34px;font-size:14px;padding:0 14px;white-space:nowrap;width:auto}
+  .top>#who label,.top>#who select{white-space:nowrap}
+  /* 画面のタブ：箱をやめて下線 */
+  .viewbar .vsw{border:0!important;border-radius:0;width:auto;overflow:visible;background:none}
+  .viewbar .vsw button{background:none!important;color:#6b6f78!important;font-size:17px!important;font-weight:700;min-height:46px!important;padding:0 16px;border-bottom:4px solid transparent!important;margin-bottom:-1.5px}
+  .viewbar .vsw button[aria-selected="true"]{color:var(--ink)!important;border-bottom-color:#3a3d44!important;background:none!important}
+  /* カードの状態ボタン */
+  .board>.col>.card .stbtn{background:#fff!important;border:1.5px solid #c9ccd2!important;color:#3a3d44!important;min-height:34px!important;-webkit-justify-content:center;justify-content:center;padding:0 8px}
+  .board>.col>.card .stbtn .lbl,.board>.col>.card .stbtn b{display:none!important}
+  .board>.col>.card .stbtn .arr{color:#3a3d44!important;font-size:13px!important;font-weight:700}
+  .board>.col>.card .stview{min-height:30px}
+}
 </style>
 
 <div class="wrap">
@@ -1229,7 +1254,7 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
   function cact(r){var i=STATES.indexOf(r.status),id=esc(r.id);
     if(WORKER&&i<2){i=0;r={status:'依頼中'};}
     if(WORKER||!canEdit())return '<div class="cact"><div class="stview s'+(i<0?0:i)+'"><span class="lbl">状態</span><b>'+esc(r.status||'未設定')+'</b></div></div>';
-    return '<div class="cact"><button type="button" class="stbtn s'+(i<0?0:i)+'" data-st="'+id+'" aria-expanded="false"><span class="lbl">状態</span><b>'+esc(r.status||'未設定')+'</b><span class="arr">▼ 変える</span></button>'+
+    return '<div class="cact"><button type="button" class="stbtn s'+(i<0?0:i)+'" data-st="'+id+'" aria-expanded="false"><span class="lbl">状態</span><b>'+esc(r.status||'未設定')+'</b><span class="arr">'+(isPhone()?'▼ 変える':'状態を変える ▼')+'</span></button>'+
       '<div class="stmenu" data-menu="'+id+'" hidden>'+STATES.map(function(s,k){var c=s===r.status;return '<button type="button" class="stopt'+(c?' cur':'')+'" data-set="'+id+'" data-to="'+esc(s)+'"><span class="sdot s'+k+'" aria-hidden="true"></span>'+esc(s)+(c?'<small>いまの状態</small>':'')+'</button>';}).join('')+
       '<button type="button" class="stclose" data-st="'+id+'">閉じる</button></div></div>';}
   function card(r){
@@ -1399,8 +1424,11 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
   function byDue(a,b){return (a.due||'9999').localeCompare(b.due||'9999')||(b.rush-a.rush)||a.id.localeCompare(b.id);}
   function setView(v){view=v;render();window.scrollTo(0,0);}
   function mine(){return rows.filter(function(r){return !me||r.worker===me;});}
+  /* iPad・PC の幅では［一覧｜カレンダー］と［表示 ▼］を上の段に入れる（携帯は上の段の下のまま） */
+  function placeBar(){var t=document.querySelector('.top'),vt=$('vt'),wh=$('who');if(!t||!vt||!wh)return;if(!isPhone()){if(vt.parentNode!==t){t.appendChild(vt);t.appendChild(wh);}}else if(vt.parentNode===t){t.parentNode.insertBefore(vt,t.nextSibling);t.parentNode.insertBefore(wh,t.nextSibling);}}
   function render(){
     var all=rows;rows=mine();
+    placeBar();
     try{
     var isDone=view==='done',done=rows.filter(function(r){return r.status==='納品済み';});
     $('title').textContent=isDone?'納品済み':'加工管理';
