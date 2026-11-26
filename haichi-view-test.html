@@ -257,7 +257,7 @@ function draw(){ drawBand(); if (view==='site') drawSite(); else drawDay(); }
 function go(){
   document.getElementById('main').innerHTML = '<div class="msg">配置表を読んでいます…</div>';
   drawBand();
-  load(weekStart).then(draw).catch(function(e){
+  load(weekStart).then(function(){ draw(); load(addDays(weekStart,7)).catch(function(){}); }).catch(function(e){   // 次の週も先に読んでおく
     if (e.bad){ setPass(''); askPass('合言葉が違うか、変わりました。もう一度入れてください'); return; }
     document.getElementById('main').innerHTML = '<div class="msg">配置を読めませんでした。<br>'+esc(e.message||e)+'<br><button type="button" onclick="go()" style="margin-top:12px;padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:var(--ground);color:var(--ink)">もう一度</button></div>';
   });
