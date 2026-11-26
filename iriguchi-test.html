@@ -63,6 +63,7 @@
   .bar{position:fixed;left:0;right:0;top:0;z-index:10;padding:calc(env(safe-area-inset-top,0px) + 10px) 0 10px;text-align:center;font:600 15px/1.2 "Inter",sans-serif;letter-spacing:.04em;color:var(--ink);
     background:color-mix(in srgb,var(--bg) 72%,transparent);-webkit-backdrop-filter:blur(20px) saturate(1.6);backdrop-filter:blur(20px) saturate(1.6);border-bottom:.5px solid var(--sep);opacity:0;transform:translateY(-6px);transition:opacity .2s,transform .2s;pointer-events:none}
   .bar.on{opacity:1;transform:none}
+  .bar{display:none!important}   /* 11/26 夜 下に送ると上に白いすりガラスの帯が出て、地図が曇って見えた → ロゴがあるので帯は出さない */
 
   /* アイコン：iPhone のホーム画面と同じ並び。グループは見出しと細い線だけ */
   main{padding:14px max(20px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 16px) max(20px,env(safe-area-inset-left,0px))}
@@ -533,7 +534,7 @@ else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-30";
+var BUILD_ID = "20261126-31";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
