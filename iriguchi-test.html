@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="業務管理テスト">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0B1A48">
+<meta name="theme-color" content="#070F2E">
 <script>
 // 明るさ：自動（携帯の設定）／ライト／ダーク。読み込む前に決めて、白く光るのを防ぐ（人員配置の画面と同じ覚え方）
 (function () { var t = null; try { t = localStorage.getItem('iriguchi-theme'); } catch (e) {} if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); })();
@@ -25,7 +25,7 @@
     --bg:#070F2E; --ink:#F4F6FF; --ink2:rgba(232,238,255,.86); --sub:rgba(220,228,255,.55); --sep:rgba(255,255,255,.13); --wg1:rgba(46,92,220,.22); --wg2:rgba(120,80,230,.14); --field:#111C44; --navy:#0B1A48;
     color-scheme:dark;
   }
-  html{background:var(--navy)}   /* 上に引っぱったときも帯の色 */
+  html{background:var(--bg)}   /* 引っぱったときも同じ紺（11/26） */
   html,body{margin:0;min-height:100%;-webkit-text-size-adjust:100%}
   body{font-family:"Inter","Noto Sans JP","Hiragino Sans",sans-serif;font-feature-settings:"palt";-webkit-font-smoothing:antialiased;color:var(--ink);
     background:radial-gradient(80% 40% at 0% 22%,var(--wg1),transparent 70%),radial-gradient(70% 40% at 100% 40%,var(--wg2),transparent 70%),var(--bg);min-height:100vh}
@@ -125,42 +125,45 @@
   [hidden]{display:none!important}
   /* ===== 立体の地図（11/26 PC の業務管理と同じ作り。three.js＋m3d.js） ===== */
   .hero.map.is-3d{height:30vh;min-height:200px;max-height:300px;background:#070f2e}   /* 11/26 前の7割くらい */
-  .hero.map.is-3d::before{background:linear-gradient(180deg,rgba(7,12,31,.45) 0%,rgba(7,12,31,0) 22%)}   /* 下はぼかさず、アイコンとはっきり分ける */
+  .hero.map.is-3d::before{display:none}   /* 11/26 ピンが暗くならないように（地図の上はもともと夜空） */
   .m3-stage{position:absolute;inset:0;z-index:1;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
   .m3-stage .h-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   .m3-plane{position:absolute;inset:0;pointer-events:none}
-  .m3-plane .h-town{position:absolute;left:0;top:0;margin:-.6rem 0 0 -1.5rem;font:700 11px/1 "Noto Sans JP",sans-serif;letter-spacing:.22em;white-space:nowrap;color:#eef3ff;text-shadow:0 1px 4px rgba(5,12,40,.95),0 0 2px rgba(5,12,40,.95)}
+  .m3-plane .h-town i{position:absolute;left:0;top:0;transform:translate(-50%,-50%);font-style:normal}
+  .m3-plane .h-town{position:absolute;left:0;top:0;width:0;height:0;font:700 11px/1 "Noto Sans JP",sans-serif;letter-spacing:.22em;white-space:nowrap;color:#eef3ff;text-shadow:0 1px 4px rgba(5,12,40,.95),0 0 2px rgba(5,12,40,.95)}
   .m3-plane .h-town.big{font-size:14px;letter-spacing:.28em}
   .m3-plane .h-pin{position:absolute;left:0;top:0;width:0;height:0;will-change:transform}
   .h-pin-stem{position:absolute;bottom:0;left:-1px;width:2px;height:var(--h);background:linear-gradient(180deg,#fff,rgba(255,255,255,.45));pointer-events:none}
   .h-pin-head{position:absolute;bottom:var(--h);left:var(--dx,0);display:flex;align-items:center;gap:6px;width:max-content;max-width:9.5rem;height:26px;padding:0 4px 0 10px;transform:translate(-50%,0);border-radius:999px;background:#ffd43d;color:#16204a;font:700 11px/1 "Noto Sans JP",sans-serif;white-space:nowrap;box-shadow:0 6px 16px rgba(4,9,32,.55),0 0 0 2px #fff}
+  .h-pin.is-today .h-pin-head b::before{content:"";display:inline-block;width:8px;height:8px;margin-right:5px;border-radius:50%;background:var(--co,#16204a);box-shadow:0 0 0 1.5px #16204a;vertical-align:.02em}   /* 11/26 会社の色 */
   .h-pin-head b{min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:700}
   .h-pin-head em{flex:none;padding:3px 7px;border-radius:999px;background:#16204a;color:#fff;font:600 12px/1 "Inter",sans-serif;font-style:normal}
   .h-pin.is-other .h-pin-head{width:9px;height:9px;padding:0;gap:0;border-radius:50%;background:var(--co,#9cc3ff);box-shadow:0 0 0 1.5px #fff}
   .h-pin.is-other .h-pin-stem{opacity:.7}
   .h-pin-name{position:absolute;bottom:calc(var(--h) + 13px);left:0;transform:translateX(-50%);padding:1px 6px;border-left:3px solid var(--co,#9cc3ff);border-radius:3px;background:rgba(8,14,38,.66);color:#e6ecff;font:500 10px/1.5 "Noto Sans JP",sans-serif;white-space:nowrap}
   .h-pin.no-name .h-pin-name{display:none}   /* 重なる名前だけ隠す */
-  .h-pin.is-other .h-pin-name{bottom:calc(var(--h) + 9px);padding:0 4px;border-left-width:2px;font-size:8.5px;line-height:1.45;background:rgba(8,14,38,.55);color:#dfe7ff}   /* 11/26 今日以外の現場は小さく名前 */
+  .h-pin.is-other .h-pin-name{bottom:calc(var(--h) + 9px);padding:0 4px;border-left-width:2px;font-size:9.5px;line-height:1.45;background:rgba(8,14,38,.55);color:#dfe7ff}   /* 11/26 今日以外の現場は小さく名前 */
   .co-sh{--co:#5AA9FF}.co-nk{--co:#3DDC97}.co-ym{--co:#FF8A5B}
   .m3-views{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;display:flex;gap:6px;justify-content:center}
-  .m3-views button{flex:none;border:0;border-radius:999px;padding:7px 11px;background:rgba(10,18,48,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;font:600 11.5px/1 "Noto Sans JP",sans-serif;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);cursor:pointer}
+  .m3-views button{flex:none;border:0;border-radius:999px;padding:10px 12px;min-height:34px;background:rgba(10,18,48,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;font:600 11.5px/1 "Noto Sans JP",sans-serif;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);cursor:pointer}
   .m3-views button.on{background:rgba(255,255,255,.92);color:#0B1A48}
+  .m3-views button[data-orbit].on{background:rgba(255,212,61,.18);color:#FFD43D;box-shadow:inset 0 0 0 1.5px #FFD43D}
   .m3-plane .h-pin{pointer-events:auto;cursor:pointer}
   .m3-plane .h-pin.is-other::after{content:"";position:absolute;left:-14px;bottom:-6px;width:28px;height:calc(var(--h) + 22px)}   /* 小さい点でも指で押しやすく */
   .h-pin.is-open .h-pin-head{background:#fff}
-  .m3-card{position:absolute;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 8px);max-height:calc(100% - 56px - env(safe-area-inset-top,0px));overflow:auto;box-sizing:border-box;z-index:5;display:grid;gap:6px;padding:12px 14px 12px 16px;border-radius:16px;background:rgba(255,255,255,.95);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#14192B;box-shadow:0 10px 30px rgba(4,9,32,.45);border-left:5px solid var(--co,#ffd43d);animation:cardin .22s ease both}
+  .m3-card{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);max-width:496px;margin:0 auto;max-height:55vh;overflow:auto;box-sizing:border-box;z-index:40;display:grid;gap:8px;padding:14px 16px 14px 18px;border-radius:16px;background:rgba(255,255,255,.95);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#14192B;box-shadow:0 10px 30px rgba(4,9,32,.45);border-left:5px solid var(--co,#ffd43d);animation:cardin .22s ease both}
   @keyframes cardin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   .m3-card h3{margin:0;padding-right:26px;font:700 15px/1.35 "Noto Sans JP",sans-serif}
   .m3-card .row{display:flex;flex-wrap:wrap;gap:6px;font:600 11.5px/1 "Noto Sans JP",sans-serif}
   .m3-card .row span{padding:5px 8px;border-radius:999px;background:#EEF1F8;color:#3A4466}
   .m3-card .row span.today{background:#ffd43d;color:#16204a}
-  .m3-card .mem{display:flex;flex-wrap:wrap;gap:4px 10px;max-height:66px;overflow:auto;font:500 12px/1.5 "Noto Sans JP",sans-serif;color:#2A3352}
+  .m3-card .mem{display:flex;flex-wrap:wrap;gap:4px 10px;font:500 12px/1.5 "Noto Sans JP",sans-serif;color:#2A3352}
   .m3-card .mem .lead{font-weight:700}
   .m3-card .mem .lead::before{content:"職長 ";font-size:10px;color:#8A93AE}
   .m3-card .go{display:flex;gap:8px;margin-top:2px}
-  .m3-card .go a{flex:1;text-align:center;padding:9px 0;border-radius:10px;background:#0B1A48;color:#fff;text-decoration:none;font:700 12.5px/1 "Noto Sans JP",sans-serif}
+  .m3-card .go a{flex:1;text-align:center;padding:12px 0;border-radius:10px;background:#0B1A48;color:#fff;text-decoration:none;font:700 12.5px/1 "Noto Sans JP",sans-serif}
   .m3-card .go a.sub{background:#EEF1F8;color:#0B1A48}
-  .m3-card .x{position:absolute;right:8px;top:6px;width:28px;height:28px;border:0;background:none;font-size:18px;color:#8A93AE;cursor:pointer}
+  .m3-card .x{position:absolute;right:6px;top:4px;width:40px;height:40px;border:0;background:none;font-size:20px;color:#5A6385;cursor:pointer}
   .m3-stage.is-space .h-pin,.m3-stage.is-space .h-town{opacity:0}
   #toast{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);z-index:30;padding:14px 16px;border-radius:14px;background:rgba(20,25,43,.94);color:#fff;font:600 14px/1.5 "Noto Sans JP",sans-serif;text-align:center;opacity:0;transform:translateY(10px);transition:opacity .2s,transform .2s;pointer-events:none}
   #toast.on{opacity:1;transform:none}
@@ -170,9 +173,9 @@
 </head>
 <body>
 <div class="bar" id="bar">業務管理</div>
+<div class="m3-card" id="m3card" hidden role="dialog" aria-live="polite"></div>
 <header class="hero map" id="map">
   <div class="m3-stage" id="m3stage" hidden><div class="m3-plane" id="m3plane"></div></div>
-  <div class="m3-card" id="m3card" hidden role="dialog" aria-live="polite"></div>
   <div class="m3-views" id="m3views" hidden role="group" aria-label="地図の見る場所"><button type="button" data-view="iri" class="on">全体</button><button type="button" data-view="kita">北九州</button><button type="button" data-view="chiku">筑豊</button><button type="button" data-view="fuku">福岡</button><button type="button" data-orbit="1" aria-pressed="true" class="on">↻ 回る</button></div>
   <div id="tiles" aria-hidden="true"></div>
   <div id="labels" aria-hidden="true"></div>
@@ -193,10 +196,9 @@
   </form>
 </main>
 
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>window.M3D_LITE = true; window.M3D_START = 'iri'; window.MAP_PATCHES = [];</script>
-<script src="m3d.js?v=4"></script>
+<script defer src="m3d.js?v=5"></script>
 <script>
 var LIFF = '2011897591-HBBipfnN';
 var PASS_KEY = 'gyomu-pass';
@@ -269,7 +271,7 @@ function drawMap(){
   tiles.innerHTML = h; tiles.style.transform = 'scale('+s+')';
   var pos = function(lat,lon){ return [ (mx(lon,z)-left)*s, (my(lat,z)-top)*s ]; };
   document.getElementById('labels').innerHTML = AREAS.map(function(a){ var p = pos(a[1],a[2]); return '<span class="area'+(a[3]?' big':'')+'" style="left:'+p[0]+'px;top:'+p[1]+'px">'+a[0]+'</span>'; }).join('');
-  document.getElementById('pins').innerHTML = PINS.filter(function(p){ return p.lat && p.lon; }).map(function(p){
+  document.getElementById('pins').innerHTML = PINS.filter(function(p){ return p.lat && p.lon && !p.other; }).map(function(p){
     var q = pos(p.lat,p.lon); if (q[0]<-40||q[0]>W+40||q[1]<0||q[1]>H) return '';
     return '<span class="dotp" style="left:'+q[0]+'px;top:'+q[1]+'px"></span><span class="pin" style="left:'+q[0]+'px;top:'+q[1]+'px">'+String(p.name).replace(/[<>&]/g,'')+'<b>'+p.n+'人</b></span>';
   }).join('');
@@ -277,6 +279,7 @@ function drawMap(){
 function loadPins(){
   if (!getPass()) return;
   fetch(CHECK_API + '?pins=1&p=' + encodeURIComponent(getPass())).then(function(r){ return r.json(); }).then(function(j){
+    if (j.bad) { setPass(''); askPass('合言葉が変わりました。もう一度入れてください'); return; }
     if (!j.ok) return; var same = JSON.stringify(j.pins || []) === JSON.stringify(PINS); PINS = j.pins || []; try { localStorage.setItem('gyomu-pins', JSON.stringify(PINS)); } catch(e){} if (same) return; if (M3) draw3d(); else drawMap();
   }).catch(function(){});
 }
@@ -284,18 +287,21 @@ function loadPins(){
 var M3 = null, orbiting = true;   // 最初から ゆっくり回る
 function draw3d(){
   var stage = document.getElementById('m3stage'), plane = document.getElementById('m3plane');
-  if (M3) { try { M3.destroy(); } catch(e){} M3 = null; var c = stage.querySelector('canvas'); if (c) c.remove(); }
-  var esc = function(t){ return String(t).replace(/[<>&"]/g,''); };
-  plane.innerHTML = AREAS.map(function(a){ return '<span class="h-town'+(a[3]?' big':'')+'" data-lng="'+a[2]+'" data-lat="'+a[1]+'">'+a[0]+'</span>'; }).join('')
+  var snap = null;
+  if (M3) { try { snap = M3.snapshot(); M3.destroy(); } catch(e){} M3 = null; var c = stage.querySelector('canvas'); if (c) c.remove(); }
+  var esc = function(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); };
+  plane.innerHTML = AREAS.map(function(a){ return '<span class="h-town'+(a[3]?' big':'')+'" data-lng="'+a[2]+'" data-lat="'+a[1]+'"><i>'+a[0]+'</i></span>'; }).join('')
     + (PIN_LIST = PINS.filter(function(p){ return p.lat && p.lon; })).map(function(p, i){
       if (p.other) return '<span class="h-pin is-other co-'+(p.own||'sh')+'" data-pin="'+i+'" data-lng="'+p.lon+'" data-lat="'+p.lat+'" style="--h:10px"><span class="h-pin-stem"></span><span class="h-pin-head"></span><span class="h-pin-name">'+esc(p.name)+'</span></span>';
       return '<span class="h-pin is-today co-'+(p.own||'sh')+'" data-pin="'+i+'" data-lng="'+p.lon+'" data-lat="'+p.lat+'" style="--h:'+Math.round(26+Math.min(p.n||1,20)*1.6)+'px"><span class="h-pin-stem"></span><span class="h-pin-head"><b>'+esc(p.name)+'</b><em>'+(p.n||0)+'</em></span></span>';
     }).join('');
   closeCard();
-  M3 = window.Map3D.create({ stage: stage, plane: plane, layer: 'photo', base: 'm3d-', paused: function(){ return !!openPin; }, onMove: closeCard });
+  M3 = window.Map3D.create({ stage: stage, plane: plane, layer: 'photo', base: 'm3d-', paused: function(){ return !!openPin; }, onMove: closeCard, restore: snap });
   if (orbiting) M3.orbit(true);
+  var cv = stage.querySelector('canvas');
+  if (cv) cv.addEventListener('webglcontextlost', function(e){ e.preventDefault(); setTimeout(draw3d, 400); });   // iOS でほかのアプリから戻ったときに黒くなるのを防ぐ
 }
-// ===== ピンを押すと現場の情報（11/26 PC と同じ考え。個人の名前は出さない） =====
+// ===== ピンを押すと現場の情報（11/26 PC と同じ考え。今日の現場は誰がいるかも出す＝白石さん指示。合言葉のあとだけ） =====
 var openPin = null, PIN_LIST = [];
 var CO_NAME = { sh: '白石工業', nk: '中嶋板金工業', ym: '山下板金工作所', kakou: '加工' };
 function closeCard(){ var c = document.getElementById('m3card'); if (c) c.hidden = true; if (openPin) openPin.classList.remove('is-open'); openPin = null; }
@@ -303,14 +309,14 @@ function showCard(el){
   var p = PIN_LIST[Number(el.dataset.pin)]; if (!p) return;
   if (openPin) openPin.classList.remove('is-open');
   openPin = el; el.classList.add('is-open');
-  var esc = function(t){ return String(t == null ? '' : t).replace(/[<>&"]/g, ''); };
+  var esc = function(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); };
   var c = document.getElementById('m3card');
   c.className = 'm3-card co-' + (p.own || 'sh');
   var tags = p.other ? '<span>' + esc(p.st || '工事中') + '</span>' : '<span class="today">今日 ' + (p.n || 0) + '人</span>';
   c.innerHTML = '<button type="button" class="x" aria-label="閉じる">×</button><h3>' + esc(p.name) + '</h3>' + (p.title && p.title !== p.name ? '<p style="margin:-2px 0 2px;font:500 12px/1.4 Noto Sans JP,sans-serif;color:#5A6385">' + esc(p.title) + '</p>' : '')
     + '<div class="row">' + tags + '<span>' + (CO_NAME[p.own] || '') + '</span></div>'
     + (p.mem && p.mem.length ? '<div class="mem">' + p.mem.map(function(m, k){ return '<span' + (k === 0 ? ' class="lead"' : '') + '>' + esc(m) + '</span>'; }).join('') + '</div>' : '')
-    + '<div class="go"><a href="https://www.google.com/maps/search/?api=1&query=' + p.lat + ',' + p.lon + '" target="_blank" rel="noopener">地図で開く</a>'
+    + '<div class="go"><a href="' + String(/^https:\/\//.test(p.url || '') ? p.url : 'https://www.google.com/maps/search/?api=1&query=' + p.lat + ',' + p.lon).replace(/["<>]/g, encodeURIComponent) + '" target="_blank" rel="noopener">地図で開く</a>'
     + (p.other ? '' : '<a class="sub" href="haichi-view-test.html">人員配置を見る</a>') + '</div>';
   c.hidden = false;
   c.querySelector('.x').onclick = function(e){ e.stopPropagation(); closeCard(); };
@@ -321,6 +327,9 @@ function mapStart(){
     document.getElementById('m3stage').hidden = false;
     document.getElementById('tiles').hidden = true; document.getElementById('labels').hidden = true; document.getElementById('pins').hidden = true;
     draw3d();
+    document.addEventListener('click', function(e){   // 11/26 カードの外（アイコンのところも）を押したら閉じる
+      if (openPin && !e.target.closest('#m3card') && !e.target.closest('[data-pin]')) { closeCard(); if (!e.target.closest('#m3stage')) { e.preventDefault(); e.stopPropagation(); } }   // 閉じるだけで、アイコンは開かない
+    }, true);
     document.getElementById('m3stage').addEventListener('click', function(e){
       var el = e.target.closest('[data-pin]');
       if (el) { if (openPin === el) closeCard(); else showCard(el); return; }
@@ -335,7 +344,7 @@ function mapStart(){
     });
   } else { drawMap(); window.addEventListener('resize', drawMap); }
 }
-mapStart();
+if (window.Map3D) mapStart(); else document.addEventListener('DOMContentLoaded', mapStart);   // 地図の部品は後から読む（アイコンを先に出す）
 
 // 下に送ったら上に小さいタイトル
 window.addEventListener('scroll', function(){ document.getElementById('bar').classList.toggle('on', window.scrollY > 80); }, { passive:true });
@@ -352,7 +361,7 @@ document.getElementById('groups').addEventListener('click', function (e) {
   var a = e.target.closest('a[data-line]'); if (!a) return;
   e.preventDefault(); goLine(a.dataset.line);
 });
-if (inLine && window.liff) liff.init({ liffId: LIFF }).catch(function () {});
+if (inLine) { var ls = document.createElement('script'); ls.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'; ls.onload = function(){ liff.init({ liffId: LIFF }).catch(function () {}); }; document.head.appendChild(ls); }   // 11/26 LINE の中のときだけ読む
 
 // ホーム画面のアイコンにしていないとき（Safari でふつうに開いたとき）は、下に追加のしかたを出す
 if (!inLine && !standalone) {
@@ -367,6 +376,7 @@ if (!inLine && !standalone) {
 var LINKS = {}; try { LINKS = JSON.parse(localStorage.getItem('gyomu-links') || '{}') || {}; } catch(e){}
 function loadLinks(){
   return fetch(CHECK_API + '?check=1&p=' + encodeURIComponent(getPass())).then(function(r){ return r.json(); }).then(function(j){
+    if (j.bad) { setPass(''); askPass('合言葉が変わりました。もう一度入れてください'); return j; }
     if (j.ok && j.links){ LINKS = j.links; try { localStorage.setItem('gyomu-links', JSON.stringify(LINKS)); } catch(e){} }
     return j;
   });
@@ -412,7 +422,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-21";
+var BUILD_ID = "20261126-22";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){

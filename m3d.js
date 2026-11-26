@@ -90,7 +90,7 @@
     });
   }
 
-  function create({ stage, plane, paused, onMove, onView, base = 'map3d/', layer = 'relief', intro = false }) {
+  function create({ stage, plane, paused, onMove, onView, base = 'map3d/', layer = 'relief', intro = false, restore = null }) {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -109,6 +109,9 @@
     const stopIntro = () => { introPending = false; introAnim = null; };
     let orbitOn = false;
     let heights = null, alive = true, dragging = false, touched = false, visible = true, last = 0, swayT = 0;
+    // 11/26 ピンが届いて作り直すときは、前のカメラの位置をそのまま使う（寄ってくる動きをくり返さない）
+    if (restore) { Object.assign(goal, restore.goal); Object.assign(now, restore.now); touched = true; }
+    let lastTouchT = -1e9, lastDraw = 0, lastDecl = 0, lastCamKey = "";
     const heightAt = (x, z) => {
       if (!heights) return 0;
       const u = clamp((x + WIDTH / 2) / WIDTH * (heights.w - 1), 0, heights.w - 1), v = clamp((z + DEPTH / 2) / DEPTH * (heights.h - 1), 0, heights.h - 1);
@@ -140,7 +143,7 @@
         }, undefined, () => resolve());
       });
     };
-    loadHeights(`${base}height.png`).then(h => {
+    const buildGround = h => {
       if (!alive) return;
       heights = h;
       const geo = new THREE.PlaneBufferGeometry(WIDTH, DEPTH, h.w - 1, h.h - 1);
@@ -169,7 +172,8 @@
         scene.add(dot);
         dots.push(dot);
       });
-    }).catch(() => { /* 高さが読めなくても平らな板のまま動かす */ });
+    };
+    loadHeights(`${base}height.png`).then(buildGround).catch(() => { if (alive) buildGround({ w: 2, h: 2, ys: new Float32Array(4) }); });   // 高さが読めなくても平らな板で出す（11/26）
 
     // 地球。奥行きを使わず、塗る順番で重ねる（裏側は面の向きで消える）
     const globe = new THREE.Group();
@@ -284,6 +288,7 @@
     const onDown = e => {
       if ((e.button !== 0 && e.button !== 2) || e.target.closest('[data-pin], #h-card, a, button')) return;
       if (e.pointerType === 'touch' && window.M3D_LITE) {
+        lastTouchT = performance.now();
         touchPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
         stopIntro(); touched = true;
         if (touchPts.size === 2) { const p = pinchOf(); pinchD = p.d; pinchA = p.ang; dragging = false; return; }
@@ -329,7 +334,7 @@
       }
       if (moved > 4) { onMove?.(); onView?.(); }
     };
-    const onUp = e => { if (e && touchPts.has(e.pointerId)) { touchPts.delete(e.pointerId); pinchD = 0; } dragging = false; stage.classList.remove('is-grabbing'); };
+    const onUp = e => { if (e && touchPts.has(e.pointerId)) { touchPts.delete(e.pointerId); pinchD = 0; lastTouchT = performance.now(); } dragging = false; stage.classList.remove('is-grabbing'); };
     const pointHit = e => {
       const r = stage.getBoundingClientRect();
       raycaster.setFromCamera({ x: (e.clientX - r.left) / r.width * 2 - 1, y: -((e.clientY - r.top) / r.height) * 2 + 1 }, camera);
@@ -515,7 +520,8 @@
       last = t;
       const hold = paused?.() || dragging;
       // 入口の［回る］：触っていない間、ぐるっと回り続ける（11/26）
-      if (orbitOn && !dragging && !touchPts.size) goal.az += dt * 0.07;
+      if (orbitOn && !hold && !touchPts.size && !reduced && t - lastTouchT > 8000) goal.az += dt * 0.07;
+      if (goal.az > Math.PI * 2 || goal.az < -Math.PI * 2) { const k = Math.round(goal.az / (Math.PI * 2)) * Math.PI * 2; goal.az -= k; now.az -= k; }
       const ease = reduced ? 1 : 1 - Math.pow(0.02, dt);
       if (introAnim) {
         if (introAnim.t0 == null) introAnim.t0 = t;
@@ -565,6 +571,13 @@
       if (stars.visible) { stars.position.copy(camera.position); stars.scale.setScalar(camera.far * 0.8); stars.material.opacity = starOn; }
       stage.classList.toggle('is-space', now.dist > 125);
       { const k = clamp(now.dist / 62, 0.12, 1.3); dots.forEach(o => o.scale.set(k, k, k)); }
+      // 11/26 止まっているときは1秒に8回だけ描く（電池・熱のため）。名前のよけ方は動いたときと1秒ごとに
+      const camKey = camera.position.x.toFixed(3) + ',' + camera.position.y.toFixed(3) + ',' + camera.position.z.toFixed(3);
+      const still = camKey === lastCamKey; lastCamKey = camKey;
+      if (window.M3D_LITE && still && t - lastDraw < 120) return;
+      const doDeclutter = !still || t - lastDecl > 900;
+      if (doDeclutter) lastDecl = t;
+      lastDraw = t;
       rings.forEach(r => {
         const k = reduced ? 0.6 : ((t / 2600 + r.userData.phase) % 1);
         const s = (0.8 + k * 2.2) * clamp(now.dist / 62, 0.12, 1.3);
@@ -574,7 +587,7 @@
       stage.classList.toggle('is-near', now.dist < 42);
       if (patches.length && !(patchTick++ % 8)) updatePatches();
       renderer.render(scene, camera);
-      if (now.dist < 160) { place(stage.clientWidth, stage.clientHeight); declutter(); }
+      if (now.dist < 160) { place(stage.clientWidth, stage.clientHeight); if (!window.M3D_LITE || doDeclutter) declutter(); }
     };
     requestAnimationFrame(frame);
 
@@ -584,6 +597,7 @@
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onUp);
+      stage.removeEventListener('contextmenu', onContext); stage.removeEventListener('dblclick', onDbl); stage.removeEventListener('pointerdown', onDown); stage.removeEventListener('wheel', onWheel);
       scene.traverse(o => { o.geometry?.dispose?.(); o.material?.dispose?.(); });
       Object.values(textures).forEach(tex => tex.dispose());
       patchTextures.forEach(tex => tex.dispose());
@@ -593,10 +607,11 @@
       renderer.dispose();
     }
     return {
-      flyTo(name) { stopIntro(); Object.assign(goal, viewOf(name)); touched = name !== 'all'; if (name === 'all') swayT = 0; },
+      flyTo(name) { stopIntro(); const v = viewOf(name); let d = v.az - goal.az; d = ((d + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; v.az = goal.az + d; Object.assign(goal, v); touched = name !== 'all'; if (name === 'all') swayT = 0; },
       zoom(f) { stopIntro(); goal.dist = clamp(goal.dist * stepOf(f), 2.2, MAX_DIST); touched = true; },
       setLayer: applyLayer,
       orbit(on) { orbitOn = !!on; touched = true; },
+      snapshot() { return { goal: { ...goal }, now: { ...now } }; },
       destroy,
     };
   }
