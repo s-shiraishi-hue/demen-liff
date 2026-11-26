@@ -93,6 +93,61 @@
   .E .t svg{stroke:var(--k)}
   .E .g h3{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;color:#8a92ad}
   .E .g h3::after{content:"";flex:1;height:1px;background:#E3E6EF}
+
+  /* ===== おしゃれ案 F〜J（11/26） ===== */
+  .brandD{position:absolute;z-index:3;left:18px;top:22px;color:#fff;pointer-events:none}
+  .brandD::before{content:"";display:block;width:20px;height:2px;margin-bottom:7px;border-radius:2px;background:rgba(255,212,61,.75)}
+  .brandD b{display:block;font:500 15px/1 'Cormorant Garamond',serif;letter-spacing:.4em;color:rgba(255,255,255,.62)}
+  .brandD small{display:block;margin-top:5px;font:500 8px/1 'Noto Sans JP';letter-spacing:.34em;color:rgba(255,255,255,.5)}
+  .chic .low{padding:18px 18px 22px}
+  .chic h3.cap{display:flex;align-items:baseline;gap:8px;margin:0 2px 10px;font:500 15px/1 'Cormorant Garamond',serif;letter-spacing:.18em}
+  .chic h3.cap small{font:500 10px/1 'Noto Sans JP';letter-spacing:.2em;opacity:.6}
+
+  /* F：地図がそのまま下までぼけて続く、すりガラス */
+  .F{background:#070F2E}
+  .F .low{position:relative;background:linear-gradient(180deg,rgba(7,15,46,.2),rgba(7,15,46,.85)),url(m3d-photo.jpg) 58% 60%/260% auto;}
+  .F .low::before{content:"";position:absolute;inset:0;backdrop-filter:blur(26px) saturate(1.3);-webkit-backdrop-filter:blur(26px) saturate(1.3);background:rgba(10,20,60,.35)}
+  .F .low > *{position:relative}
+  .F .cap{color:#fff}
+  .F .t{background:rgba(255,255,255,.14)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28),0 8px 20px rgba(0,0,0,.25);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  .F .t svg{stroke:var(--k2)}
+  .F .lb{color:#EEF2FF}
+
+  /* G：紺に細い光の輪（夜景・高級） */
+  .G .low{background:radial-gradient(120% 80% at 50% 0%,#14205A 0%,#070F2E 60%)}
+  .G .cap{color:#E9D9A8}
+  .G .t{background:#0B1540!important;box-shadow:0 0 0 1px rgba(233,217,168,.35),0 0 18px -4px var(--k2) inset,0 10px 24px rgba(0,0,0,.4)}
+  .G .t svg{stroke:var(--k2)}
+  .G .lb{color:#E6EAF8;font-weight:500;letter-spacing:.06em}
+  .G .g + .g{border-top:1px solid rgba(233,217,168,.18);padding-top:12px}
+
+  /* H：生成りの紙＋細い線（雑誌風・ロゴの字体とそろえる） */
+  .H .low{background:#F5F1E8}
+  .H .cap{color:#1E2547}
+  .H .cap::after{content:"";flex:1;height:1px;background:#D9D0BC;margin-left:6px;align-self:center}
+  .H .t{background:#FFFDF8!important;border-radius:50%;box-shadow:0 0 0 1px #D9D0BC}
+  .H .t svg{stroke:#1E2547;stroke-width:1.4}
+  .H .lb{color:#1E2547;font-weight:500}
+  .H .app .dot{width:5px;height:5px;border-radius:50%;background:var(--k2);margin-top:-2px}
+
+  /* I：大きさの違うカード（ベントー・今どき） */
+  .I .low{background:#EEF1F7}
+  .I .bento{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+  .I .bx{border-radius:18px;padding:12px;background:#fff;box-shadow:0 1px 2px rgba(20,30,70,.06),0 6px 16px rgba(20,30,70,.06);display:flex;flex-direction:column;justify-content:space-between;min-height:84px}
+  .I .bx svg{width:24px;height:24px;stroke:var(--k2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .I .bx b{font:700 13px/1.2 'Noto Sans JP';color:#14192B}
+  .I .bx small{display:block;font:500 10px/1.3 'Noto Sans JP';color:#7b84a3;margin-top:3px}
+  .I .bx.w2{grid-column:span 2}
+  .I .bx.hero{background:linear-gradient(150deg,#2B4BD8,#0B1A48);color:#fff}
+  .I .bx.hero svg{stroke:#fff}.I .bx.hero b{color:#fff;font-size:16px}.I .bx.hero small{color:rgba(255,255,255,.75)}
+  .I .bx.soon{opacity:.45}
+
+  /* J：白地に色のにじみ（やわらかいグラデの光） */
+  .J .low{background:#FFFFFF;position:relative;overflow:hidden}
+  .J .low::before{content:"";position:absolute;inset:-40px;background:radial-gradient(40% 30% at 15% 20%,rgba(91,140,255,.25),transparent 70%),radial-gradient(35% 30% at 85% 35%,rgba(168,139,255,.22),transparent 70%),radial-gradient(40% 35% at 30% 85%,rgba(255,176,97,.22),transparent 70%);filter:blur(10px)}
+  .J .low > *{position:relative}
+  .J .cap{color:#1E2547}
+  .J .t{border-radius:20px!important;box-shadow:0 10px 24px -6px var(--k2),inset 0 1px 0 rgba(255,255,255,.4)}
 </style>
 </head>
 <body>
@@ -140,6 +195,27 @@ OPTS.forEach(([k, title, desc, logoNo]) => {
   }
   html += '<section class="opt"><h2>' + title + '</h2><p>' + desc + '　ロゴは ' + (logoNo + 1) + ' 番</p><div class="phone ' + k + '">' + MAP(LOGOS[logoNo]) + '<div class="low">' + low + '</div></div></section>';
 });
+
+// ===== おしゃれ案 F〜J =====
+const K2 = { dem:'#7FA6FF', gch:'#5FE39A', hai:'#4FE0CD', dai:'#B9A2FF', kak:'#FFB067', req:'#FFD27A', alc:'#7FD3FA', kin:'#FF9C90' };
+const brandD = '<div class="brandD"><b>SHIRAISHI</b><small>業務管理</small></div>';
+const appC = (k, colored) => '<div class="app' + ((k==='alc'||k==='kin')?' soon':'') + '"><div class="t ' + (colored ? COL[k][0] : '') + '" style="--k:' + COL[k][1] + ';--k2:' + K2[k] + '">' + svg(k) + '</div><div class="lb">' + NAME[k] + '</div></div>';
+const groupsC = (colored, extra) => G.map(([jp, en, ks]) => '<div class="g"><h3 class="cap">' + en.charAt(0) + en.slice(1).toLowerCase() + '<small>' + jp + '</small></h3><div class="grid">' + ks.map(x => appC(x, colored) + '').join('') + '</div></div>').join('');
+const CHIC = [
+  ['F', 'F：地図がぼけて下まで続く（すりガラス）', '上の地図の写真が、下ではぼけて続きます。アイコンはすりガラスの札。ロゴの字体で英字の見出し。夜の雰囲気のまま、いちばん今っぽい。', () => groupsC(false)],
+  ['G', 'G：紺に細い金の線（夜景・高級ホテル風）', '紺の地に、うすい金色の線とアイコンの光。見出しも金色の細い字。落ち着いた高級感。', () => groupsC(false)],
+  ['H', 'H：生成りの紙と細い線（雑誌風）', '少しクリームがかった白に、丸い枠と細い線のアイコン。見出しはロゴと同じ字体。色は小さな点だけ。上品で、明るい。', () => G.map(([jp, en, ks]) => '<div class="g"><h3 class="cap">' + en.charAt(0) + en.slice(1).toLowerCase() + '<small>' + jp + '</small></h3><div class="grid">' + ks.map(k => '<div class="app' + ((k==="alc"||k==="kin")?' soon':'') + '"><div class="t" style="--k2:' + COL[k][1] + '">' + svg(k) + '</div><div class="lb">' + NAME[k] + '</div><span class="dot" style="--k2:' + COL[k][1] + '"></span></div>').join('') + '</div></div>').join('')],
+  ['I', 'I：大きさの違うカード（今どきのベントー型）', 'よく使うものほど大きいカード。出面報告がいちばん大きく、ひと言の説明つき。アプリのホーム画面のような今どきの形。', () => {
+    const bx = (k, cls, sub) => '<div class="bx ' + (cls||'') + ((k==='alc'||k==='kin')?' soon':'') + '" style="--k2:' + COL[k][1] + '">' + svg(k) + '<div><b>' + NAME[k] + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</div></div>';
+    return '<div class="bento">' + bx('dem','w2 hero','今日の出面を送る') + bx('hai','','今週の配置') + bx('gch','','') + bx('dai','','') + bx('req','','') + bx('kak','w2','依頼の状況を見る') + bx('alc','','Coming soon') + bx('kin','w2','Coming soon') + '</div>';
+  }],
+  ['J', 'J：白に色のにじみ（やわらかい光）', '白い地に、青・紫・オレンジの光がうっすらにじむ。アイコンの下にその色の影。明るくて、やさしい今っぽさ。', () => groupsC(true)]
+];
+let chic = '<section class="opt"><h2 style="font-size:17px">おしゃれ案 F〜J（ロゴは D-9 で入れています）</h2><p>下のアイコンの部分を、もう一歩おしゃれにした案です。地図は見本の写真です。</p></section>';
+CHIC.forEach(([k, title, desc, body]) => {
+  chic += '<section class="opt"><h2>' + title + '</h2><p>' + desc + '</p><div class="phone chic ' + k + '"><div class="map">' + brandD + '<span class="pin" style="left:46%;top:44%">ネグロス電工<em>6</em></span><span class="pin" style="left:8%;top:64%">LP福岡古賀<em>4</em></span><div class="views"><span class="on">全体</span><span>北九州</span><span>筑豊</span><span>福岡</span><span>↻ 回る</span></div></div><div class="low">' + body() + '</div></div></section>';
+});
+html = chic + html;
 html += '<section class="opt"><h2>ロゴの5つ（どの案とも組み合わせられます）</h2><p>1：細い字を広くあける　2：ふちだけの太字　3：すりガラスの札　4：黄色の線＋細い字　5：大きく透ける字</p>' +
   LOGOS.map((l, i) => '<div class="phone" style="height:150px;margin-bottom:12px"><div class="map" style="height:150px">' + l + '<span style="position:absolute;right:14px;bottom:10px;z-index:3;color:#fff;font:700 18px Inter;opacity:.8">' + (i + 1) + '</span></div></div>').join('') + '</section>';
 const FONTS = [
