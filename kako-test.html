@@ -546,11 +546,11 @@ textarea.fin{min-height:64px;line-height:1.5}
 .rq .rtile button{position:absolute;right:2px;top:2px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:14px;line-height:22px;padding:0}
 .rq .rtile.add{background:#f2f2f7;border:1.5px dashed #a8a8ad;cursor:pointer}
 .rq .rtile.add input{position:absolute;opacity:0;width:1px;height:1px}
-.rq .rtile.add span{position:absolute;left:0;top:0;width:100%;height:100%;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;color:var(--blue);font-size:11px}
+.rq .rtile.add>span{position:absolute;left:0;top:0;width:100%;height:100%;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;color:var(--blue);font-size:11px}
 .rq .rtile.add svg{width:22px;height:22px;margin-bottom:1px}
 .rq .rtile.add.big{width:100%;height:44px;margin:0;border:0;border-radius:0;background:#fff}
 .rq .rtile.add.big{margin:-8px -10px -2px;width:calc(100% + 20px)}
-.rq .rtile.add.big span{-webkit-flex-direction:row;flex-direction:row;-webkit-justify-content:flex-start;justify-content:flex-start;padding:0 14px;font-size:16px}
+.rq .rtile.add.big>span{-webkit-flex-direction:row;flex-direction:row;-webkit-justify-content:flex-start;justify-content:flex-start;padding:0 14px;font-size:16px}
 .rq .rtile.add.big svg{margin:0 8px 0 0}
 .rq .iv textarea.fin{min-height:44px;padding:11px 0;line-height:1.4;resize:none}
 /* 急ぎ：設定画面のスイッチ */
@@ -566,6 +566,27 @@ textarea.fin{min-height:64px;line-height:1.5}
 .rq .rsum:empty{display:none}
 .rq .rsend{max-width:430px;border-radius:12px;min-height:50px;font-size:17px}
 .rq .rhelp{color:#6d6d72;font-size:13px}
+/* 3回目（白石さん「質素」）：行の左に色つきアイコン、上に大きな題、送るボタンに紙飛行機、表に薄い影 */
+.rq .fband .ttl{visibility:hidden}
+.rq .lt{max-width:430px;margin:6px auto 2px;padding:0 4px}
+.rq .lt h1{margin:0;font-size:28px;line-height:1.25;font-weight:700;letter-spacing:.01em}
+.rq .lt p{margin:2px 0 0;font-size:14px;color:#6d6d72}
+.rq .ib{box-shadow:0 1px 2px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.04)}
+.rq .ico{-webkit-flex:none;flex:none;width:28px;height:28px;border-radius:7px;margin-right:12px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+.rq .ico svg{width:17px;height:17px}
+.rq .ir{padding-left:12px}
+.rq .rerr{padding-left:132px}
+.rq .ib>.rhelp{padding-left:132px}
+.rq .ir.memo{-webkit-align-items:flex-start;align-items:flex-start}.rq .ir.memo .ico{margin-top:8px}
+.rq .rtile.add.big>span{padding:0 12px;color:var(--ink)}
+.rq .rtile.add.big>span em{color:var(--blue)}
+.rq .rtile.add.big .ico{margin-right:12px}
+.rq .rtile.add:not(.big) .ico{width:24px;height:24px;margin:0 0 2px}
+.rq .rtile.add:not(.big) .ico svg{width:15px;height:15px}
+.rq .frad.seg button[aria-checked="true"]{color:var(--blue)}
+.rq .rsend{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;background:var(--blue);box-shadow:0 4px 12px rgba(0,49,216,.28)}
+.rq .rsend .plane{width:20px;height:20px;margin-right:8px}
+.rq .rsum{color:var(--ink)}
 .rq .iv{-webkit-flex-wrap:wrap;flex-wrap:wrap}.rq .iv>.fin{width:100%;-webkit-flex:none;flex:none}.rq .iv>.frad.seg{-webkit-flex:1 1 100%;flex:1 1 100%}
 .rq .ival:empty{display:none}
 .rq .ib>.rhelp{margin:0;padding:0 14px 8px 104px}
@@ -1678,7 +1699,12 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
   function bindRad(id,fn){Array.prototype.forEach.call($(id).querySelectorAll('[data-v]'),function(b){b.onclick=function(){Array.prototype.forEach.call($(id).querySelectorAll('[data-v]'),function(x){x.setAttribute('aria-checked',String(x===b));});clearErr(id);if(fn)fn(b.getAttribute('data-v'));};});}
   function setRad(id,v){var hit=null;Array.prototype.forEach.call($(id).querySelectorAll('[data-v]'),function(b){if(b.getAttribute('data-v')===v)hit=b;});if(!hit)hit=$(id).querySelector('[data-v="other"]');if(hit)hit.click();}
   /* 設定画面の1行：左に項目名、右に中身。赤い文は行のすぐ下 */
-  function irow(label,req,body,id){return '<div class="ir"><label class="il"'+(id?' for="'+id+'"':'')+'>'+label+(req?'<b>＊</b>':'')+'</label><div class="iv">'+body+'</div></div><p class="rerr" id="e-'+(id||'')+'"></p>';}
+  /* 11/26 白石さん「バランスはいいけど質素」：設定画面と同じく、行の左に色つきの小さいアイコン */
+  var ICO={co:['#007aff','<path d="M4 20V5l8-2v17M12 9h7v11M7 8h2M7 12h2M7 16h2M15 13h2M15 17h2"/>'],me:['#ff9500','<circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/>'],
+    site:['#34c759','<path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>'],cust:['#af52de','<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5h6v2M3 13h18"/>'],
+    cam:['#30b0c7','<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'],memo:['#8e8e93','<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>'],due:['#ff3b30','<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>']};
+  function ico(k){var c=ICO[k];return c?'<span class="ico" style="background:'+c[0]+'"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+c[1]+'</svg></span>':'';}
+  function irow(label,req,body,id,ic){return '<div class="ir">'+ico(ic)+'<label class="il"'+(id?' for="'+id+'"':'')+'>'+label+(req?'<b>＊</b>':'')+'</label><div class="iv">'+body+'</div></div><p class="rerr" id="e-'+(id||'')+'"></p>';}
   function row(label,req,body,id){return '<div class="fr"><label class="fl"'+(id?' for="'+id+'"':'')+'>'+label+(req?'<b>＊</b>':'')+'</label><div class="fv">'+body+'<p class="rerr" id="e-'+(id||'')+'"></p></div></div>';}
   function err(id,msg){var e=$('e-'+id);if(e)e.textContent=msg;var el=$(id);if(el)el.setAttribute('aria-invalid','true');}
   function clearErr(id){var e=$('e-'+id);if(e)e.textContent='';var el=$(id);if(el)el.removeAttribute('aria-invalid');}
@@ -1724,30 +1750,31 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
   window.openRequestForm=function(edit){photos=[];oldPh=[];busy=false;editing=edit||null;
     var me=load('kako-me'),co=load('kako-company')||COMPANIES[0];if(editing){co=editing.company||co;me=editing.worker||'';}
     var box=document.createElement('div');box.className='ed rq';box.id='rqBox';box.setAttribute('role','dialog');box.setAttribute('aria-label','加工を依頼する');
-    box.innerHTML='<div class="fband"><button class="eb" type="button" id="rqClose">← やめる</button><span class="ttl">'+(editing?'依頼を直す（'+esc(editing.id)+'）':'加工を依頼する')+'</span></div>'+
+    box.innerHTML='<div class="fband"><button class="eb" type="button" id="rqClose">← やめる</button><span class="ttl">'+(editing?'依頼を直す':'加工を依頼する')+'</span></div>'+
      '<div class="rqbody" id="rqBody"><div class="ig">'+
+      '<div class="lt"><h1>'+(editing?'依頼を直す':'加工を依頼する')+'</h1><p>'+(editing?esc(editing.id):'写真と現場を選んで送るだけ')+'</p></div>'+
       /* 11/26 白石さん：会社 → 依頼者 → 現場名（元請は自動）。2回目「iPhone の設定画面みたいにぎゅっと」：1行44pxの表 */
       '<p class="ih">依頼する現場</p><div class="ib">'+
-       irow('会社',true,radios('rqCo',COMPANIES.map(function(c){return [c,c.replace(/工業$|板金.*$/,'')];}),co).replace('class="frad"','class="frad seg"'),'rqCo')+
-       irow('依頼者',true,'<select class="fin" id="rqMe" aria-label="依頼者（3社全員。押した会社が上）"></select><input class="fin" id="rqMeT" aria-label="名前を入れる" placeholder="名前を入れる" hidden>','rqMe')+
-       irow('現場名',true,'<select class="fin" id="rqSite"></select><input class="fin" id="rqSiteT" aria-label="現場名を入れる" placeholder="現場名を入れる" hidden>','rqSite')+
-       irow('元請',true,'<span class="ival" id="rqCustV"></span><button type="button" class="lnk" id="rqCustE" hidden>直す</button><input class="fin" id="rqCust" autocomplete="off" aria-label="元請" placeholder="元請を入れる" hidden>','rqCust')+
+       irow('会社',true,radios('rqCo',COMPANIES.map(function(c){return [c,c.replace(/工業$|板金.*$/,'')];}),co).replace('class="frad"','class="frad seg"'),'rqCo','co')+
+       irow('依頼者',true,'<select class="fin" id="rqMe" aria-label="依頼者（3社全員。押した会社が上）"></select><input class="fin" id="rqMeT" aria-label="名前を入れる" placeholder="名前を入れる" hidden>','rqMe','me')+
+       irow('現場名',true,'<select class="fin" id="rqSite"></select><input class="fin" id="rqSiteT" aria-label="現場名を入れる" placeholder="現場名を入れる" hidden>','rqSite','site')+
+       irow('元請',true,'<span class="ival" id="rqCustV"></span><button type="button" class="lnk" id="rqCustE" hidden>直す</button><input class="fin" id="rqCust" autocomplete="off" aria-label="元請" placeholder="元請を入れる" hidden>','rqCust','cust')+
       '</div>'+
       '<p class="ih">加工の内容</p><div class="ib">'+
        (editing?'<div id="rqOld" style="padding:8px 14px 0"></div>':'')+
-       '<div class="rtiles" id="rqPh"><label class="rtile add big" id="rqAdd"><input type="file" id="rqFile" accept="image/*" multiple><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><em id="rqPhCnt" style="font-style:normal">写真を撮る・選ぶ</em></span></label></div>'+
+       '<div class="rtiles" id="rqPh"><label class="rtile add big" id="rqAdd"><input type="file" id="rqFile" accept="image/*" multiple><span>'+ico('cam')+'<em id="rqPhCnt" style="font-style:normal">写真を撮る・選ぶ</em></span></label></div>'+
        '<p class="rerr" id="e-rqFile"></p>'+
-       '<div class="ir top"><div class="iv"><textarea class="fin" id="rqMemo" rows="1" aria-label="加工の内容" placeholder="'+(editing?'足したいこと':'足したいこと（なければ空でOK）')+'"></textarea></div></div><p class="rerr" id="e-rqMemo"></p>'+
+       '<div class="ir top memo">'+ico('memo')+'<div class="iv"><textarea class="fin" id="rqMemo" rows="1" aria-label="加工の内容" placeholder="'+(editing?'足したいこと':'足したいこと（なければ空でOK）')+'"></textarea></div></div><p class="rerr" id="e-rqMemo"></p>'+
       '</div>'+
       /* 11/26 白石さん「依頼日の修正はいらない・急ぎもいらない・日付を選ぶで、明日がデフォルト。今日とか明日の選択肢はいらない」：納期は日付1つだけ。依頼日は今日、急ぎはなし（直すときは前の値をそのまま残す） */
       '<div class="ib" style="margin-top:14px">'+
-       irow('納期',true,'<input class="fin" type="date" id="rqDue" value="'+day(1)+'" aria-label="納期">','rqDue')+
+       irow('納期',true,'<input class="fin" type="date" id="rqDue" value="'+day(1)+'" aria-label="納期">','rqDue','due')+
        '<div hidden><div id="rqDueQ"><button type="button" data-v="other" aria-checked="true"></button></div><span id="rqRushL"><i></i></span><input type="checkbox" id="rqRush"><span id="rqDateL"></span><span id="rqDateV"></span><button type="button" id="rqDateE"></button><input type="date" id="rqDate" value="'+day(0)+'"></div>'+
       '</div>'+
       /* 「そのほか」は消した（白石さん 11/26「いらない、開きにくい」）。値は決まった値（自社・その他・空）で送る。直すときは前の値をそのまま残す */
       '<div hidden>'+radios('rqCat',[['自社'],['外注'],['卸']],'自社')+'<select id="rqMeth">'+['その他','LINE','電話','FAX','メール','手書き'].map(function(m){return '<option>'+m+'</option>';}).join('')+'</select><input id="rqContact"></div>'+
      '</div></div>'+
-     '<div class="rqfoot"><p class="rerr" id="rqErr" role="alert"></p><p class="rsum" id="rqSum"></p><button class="rsend" type="button" id="rqSend">'+(editing?'直して送る':'依頼を送る')+'</button></div>';
+     '<div class="rqfoot"><p class="rerr" id="rqErr" role="alert"></p><p class="rsum" id="rqSum"></p><button class="rsend" type="button" id="rqSend"><svg class="plane" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M21 3L3 10.5l7 2.5 2.5 7z"/><path d="M10 13l11-10"/></svg>'+(editing?'直して送る':'依頼を送る')+'</button></div>';
     document.body.appendChild(box);
     $('rqClose').onclick=function(){if(busy)return;var dirty=photos.length||$('rqMemo').value;(dirty?K.ask('入力した内容を消して、やめますか？','消してやめる','続ける'):Promise.resolve(true)).then(function(y){if(y)box.remove();});};
     $('rqFile').onchange=function(){var fs=Array.prototype.slice.call(this.files||[]);this.value='';if(!fs.length)return;$('rqPhCnt').textContent='読み込み中…';
