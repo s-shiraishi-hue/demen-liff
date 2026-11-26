@@ -123,7 +123,8 @@
   .gform{margin-top:6vh}
   [hidden]{display:none!important}
   /* ===== 立体の地図（11/26 PC の業務管理と同じ作り。three.js＋m3d.js） ===== */
-  .hero.map.is-3d{height:42vh;min-height:260px;max-height:420px;background:#070f2e}
+  .hero.map.is-3d{height:30vh;min-height:200px;max-height:300px;background:#070f2e}   /* 11/26 前の7割くらい */
+  .hero.map.is-3d::before{background:linear-gradient(180deg,rgba(7,12,31,.45) 0%,rgba(7,12,31,0) 22%)}   /* 下はぼかさず、アイコンとはっきり分ける */
   .m3-stage{position:absolute;inset:0;z-index:1;overflow:hidden;touch-action:pan-y;user-select:none;-webkit-user-select:none}
   .m3-stage .h-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   .m3-plane{position:absolute;inset:0;pointer-events:none}
@@ -134,6 +135,14 @@
   .h-pin-head{position:absolute;bottom:var(--h);left:var(--dx,0);display:flex;align-items:center;gap:6px;width:max-content;max-width:9.5rem;height:26px;padding:0 4px 0 10px;transform:translate(-50%,0);border-radius:999px;background:#ffd43d;color:#16204a;font:700 11px/1 "Noto Sans JP",sans-serif;white-space:nowrap;box-shadow:0 6px 16px rgba(4,9,32,.55),0 0 0 2px #fff}
   .h-pin-head b{min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:700}
   .h-pin-head em{flex:none;padding:3px 7px;border-radius:999px;background:#16204a;color:#fff;font:600 12px/1 "Inter",sans-serif;font-style:normal}
+  .h-pin.is-other .h-pin-head{width:9px;height:9px;padding:0;gap:0;border-radius:50%;background:var(--co,#9cc3ff);box-shadow:0 0 0 1.5px #fff}
+  .h-pin.is-other .h-pin-stem{opacity:.7}
+  .h-pin-name{position:absolute;bottom:calc(var(--h) + 13px);left:0;transform:translateX(-50%);padding:1px 6px;border-left:3px solid var(--co,#9cc3ff);border-radius:3px;background:rgba(8,14,38,.66);color:#e6ecff;font:500 10px/1.5 "Noto Sans JP",sans-serif;white-space:nowrap}
+  .h-pin.no-name .h-pin-name,.h-pin.is-other .h-pin-name{display:none}   /* 11/26 見た目用：ほかの現場は点だけ */
+  .co-sh{--co:#5AA9FF}.co-nk{--co:#3DDC97}.co-ym{--co:#FF8A5B}
+  .m3-views{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;display:flex;gap:6px;justify-content:center}
+  .m3-views button{flex:none;border:0;border-radius:999px;padding:7px 11px;background:rgba(10,18,48,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;font:600 11.5px/1 "Noto Sans JP",sans-serif;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);cursor:pointer}
+  .m3-views button.on{background:rgba(255,255,255,.92);color:#0B1A48}
   .m3-stage.is-space .h-pin,.m3-stage.is-space .h-town{opacity:0}
   #toast{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);z-index:30;padding:14px 16px;border-radius:14px;background:rgba(20,25,43,.94);color:#fff;font:600 14px/1.5 "Noto Sans JP",sans-serif;text-align:center;opacity:0;transform:translateY(10px);transition:opacity .2s,transform .2s;pointer-events:none}
   #toast.on{opacity:1;transform:none}
@@ -145,6 +154,7 @@
 <div class="bar" id="bar">業務管理</div>
 <header class="hero map" id="map">
   <div class="m3-stage" id="m3stage" hidden><div class="m3-plane" id="m3plane"></div></div>
+  <div class="m3-views" id="m3views" hidden role="group" aria-label="地図の見る場所"><button type="button" data-view="iri" class="on">全体</button><button type="button" data-view="kita">北九州</button><button type="button" data-view="chiku">筑豊</button><button type="button" data-view="fuku">福岡</button><button type="button" data-orbit="1" aria-pressed="true" class="on">↻ 回る</button></div>
   <div id="tiles" aria-hidden="true"></div>
   <div id="labels" aria-hidden="true"></div>
   <div id="pins"></div>
@@ -167,7 +177,7 @@
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>window.M3D_LITE = true; window.M3D_START = 'iri'; window.MAP_PATCHES = [];</script>
-<script src="m3d.js?v=1"></script>
+<script src="m3d.js?v=2"></script>
 <script>
 var LIFF = '2011897591-HBBipfnN';
 var PASS_KEY = 'gyomu-pass';
@@ -252,16 +262,18 @@ function loadPins(){
   }).catch(function(){});
 }
 // 立体が使えるときは立体、使えないとき（古い携帯など）は今までの平らな写真の地図
-var M3 = null;
+var M3 = null, orbiting = true;   // 最初から ゆっくり回る
 function draw3d(){
   var stage = document.getElementById('m3stage'), plane = document.getElementById('m3plane');
   if (M3) { try { M3.destroy(); } catch(e){} M3 = null; var c = stage.querySelector('canvas'); if (c) c.remove(); }
   var esc = function(t){ return String(t).replace(/[<>&"]/g,''); };
   plane.innerHTML = AREAS.map(function(a){ return '<span class="h-town'+(a[3]?' big':'')+'" data-lng="'+a[2]+'" data-lat="'+a[1]+'">'+a[0]+'</span>'; }).join('')
-    + PINS.filter(function(p){ return p.lat && p.lon; }).map(function(p){
+    + PINS.filter(function(p){ return p.lat && p.lon; }).map(function(p, i){
+      if (p.other) return '<span class="h-pin is-other co-'+(p.own||'sh')+'" data-pin="'+i+'" data-lng="'+p.lon+'" data-lat="'+p.lat+'" style="--h:10px"><span class="h-pin-stem"></span><span class="h-pin-head"></span><span class="h-pin-name">'+esc(p.name)+'</span></span>';
       return '<span class="h-pin is-today" data-lng="'+p.lon+'" data-lat="'+p.lat+'" style="--h:'+Math.round(26+Math.min(p.n||1,20)*1.6)+'px"><span class="h-pin-stem"></span><span class="h-pin-head"><b>'+esc(p.name)+'</b><em>'+(p.n||0)+'</em></span></span>';
     }).join('');
   M3 = window.Map3D.create({ stage: stage, plane: plane, layer: 'photo', base: 'm3d-' });
+  if (orbiting) M3.orbit(true);
 }
 function mapStart(){
   if (window.Map3D && window.Map3D.supported()) {
@@ -269,6 +281,13 @@ function mapStart(){
     document.getElementById('m3stage').hidden = false;
     document.getElementById('tiles').hidden = true; document.getElementById('labels').hidden = true; document.getElementById('pins').hidden = true;
     draw3d();
+    var vb = document.getElementById('m3views'); vb.hidden = false;
+    vb.addEventListener('click', function(e){
+      var b = e.target.closest('button'); if (!b || !M3) return;
+      if (b.dataset.orbit) { orbiting = !orbiting; b.classList.toggle('on', orbiting); b.setAttribute('aria-pressed', String(orbiting)); M3.orbit(orbiting); return; }
+      vb.querySelectorAll('[data-view]').forEach(function(x){ x.classList.toggle('on', x === b); });
+      M3.flyTo(b.dataset.view);
+    });
   } else { drawMap(); window.addEventListener('resize', drawMap); }
 }
 mapStart();
@@ -348,7 +367,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-15";
+var BUILD_ID = "20261126-16";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){

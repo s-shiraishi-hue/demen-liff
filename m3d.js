@@ -56,6 +56,7 @@
     earth: { lng: 130.64, lat: 33.74, dist: EARTH_DIST, pol: 0.98, az: -0.3 },
     all: { lng: 130.64, lat: 33.74, dist: 62, pol: 0.98, az: -0.3 },
     kita: { lng: 130.84, lat: 33.86, dist: 30, pol: 0.98, az: -0.5 },
+    chiku: { lng: 130.70, lat: 33.72, dist: 24, pol: 0.98, az: -0.2 },
     iri: { lng: 130.74, lat: 33.80, dist: 30, pol: 0.98, az: -0.3 },
     fuku: { lng: 130.42, lat: 33.61, dist: 30, pol: 0.98, az: 0.28 },
   };
@@ -106,6 +107,7 @@
     // 最初の読み込みだけ、地球から降りてくる。地球の画像が間に合わなければ、いつもの始まり方にする
     let introPending = wantIntro, introAnim = null, spinYaw = wantIntro ? -0.75 : 0, spinPitch = 0;
     const stopIntro = () => { introPending = false; introAnim = null; };
+    let orbitOn = false;
     let heights = null, alive = true, dragging = false, touched = false, visible = true, last = 0, swayT = 0;
     const heightAt = (x, z) => {
       if (!heights) return 0;
@@ -490,6 +492,8 @@
       const dt = Math.min(0.1, (t - last) / 1000 || 0.016);
       last = t;
       const hold = paused?.() || dragging;
+      // 入口の［回る］：触っていない間、ぐるっと回り続ける（11/26）
+      if (orbitOn && !dragging) goal.az += dt * 0.16;
       const ease = reduced ? 1 : 1 - Math.pow(0.02, dt);
       if (introAnim) {
         if (introAnim.t0 == null) introAnim.t0 = t;
@@ -570,6 +574,7 @@
       flyTo(name) { stopIntro(); Object.assign(goal, viewOf(name)); touched = name !== 'all'; if (name === 'all') swayT = 0; },
       zoom(f) { stopIntro(); goal.dist = clamp(goal.dist * stepOf(f), 2.2, MAX_DIST); touched = true; },
       setLayer: applyLayer,
+      orbit(on) { orbitOn = !!on; touched = true; },
       destroy,
     };
   }
