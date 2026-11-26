@@ -115,7 +115,7 @@
 <div id="outside" hidden>
   <img src="icon-180.png" alt="">
   <h1>業務管理</h1>
-  <p id="how-ios" hidden>下の共有ボタン（□↑）→「ホーム画面に追加」<br>アイコンから開くと LINE の中で開きます。</p>
+  <p id="how-ios" hidden>下の「≡」→「共有」→「ホーム画面に追加」<br>（古い iPhone は共有ボタン □↑ から）<br>アイコンから開くと LINE の中で開きます。</p>
   <p id="how-android" hidden>右上の ⋮ →「ホーム画面に追加」<br>アイコンから開くと LINE の中で開きます。</p>
   <a id="open" href="#">LINE で開く</a>
 </div>
@@ -126,8 +126,9 @@ var LIFF = '2011897591-HBBipfnN';
 var PASS_KEY = 'gyomu-pass';
 var CHECK_API = 'https://script.google.com/macros/s/AKfycbz_T9F0l7sHffSRxrU-nSa8dRd954UMMi7Q6veE-dkuzDBS-NIOoOjGOf6J8jR04Mmx/exec';
 var PAGE = 'iriguchi-test.html';
-var app = 'line://app/' + LIFF + '/' + PAGE;              // LINE アプリを直接開く
-var web = 'https://liff.line.me/' + LIFF + '/' + PAGE;    // LINE アプリが開かないときの予備
+// 行き先はアドレスの後ろ（/iriguchi-test.html）ではなく ?to= で渡す。LINE が後ろを落として出面が開いたため（11/26）
+var app = 'line://app/' + LIFF + '?to=iriguchi-test';              // LINE アプリを直接開く
+var web = 'https://liff.line.me/' + LIFF + '?to=iriguchi-test';    // LINE アプリが開かないときの予備
 var inLine = /Line\//i.test(navigator.userAgent) || /[?&]preview=1/.test(location.search);
 var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
 
