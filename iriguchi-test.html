@@ -148,12 +148,15 @@
   .m3-plane .h-pin{pointer-events:auto;cursor:pointer}
   .m3-plane .h-pin.is-other::after{content:"";position:absolute;left:-14px;bottom:-6px;width:28px;height:calc(var(--h) + 22px)}   /* 小さい点でも指で押しやすく */
   .h-pin.is-open .h-pin-head{background:#fff}
-  .m3-card{position:absolute;left:12px;right:12px;bottom:48px;z-index:5;display:grid;gap:6px;padding:12px 14px 12px 16px;border-radius:16px;background:rgba(255,255,255,.95);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#14192B;box-shadow:0 10px 30px rgba(4,9,32,.45);border-left:5px solid var(--co,#ffd43d);animation:cardin .22s ease both}
+  .m3-card{position:absolute;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 8px);max-height:calc(100% - 56px - env(safe-area-inset-top,0px));overflow:auto;box-sizing:border-box;z-index:5;display:grid;gap:6px;padding:12px 14px 12px 16px;border-radius:16px;background:rgba(255,255,255,.95);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#14192B;box-shadow:0 10px 30px rgba(4,9,32,.45);border-left:5px solid var(--co,#ffd43d);animation:cardin .22s ease both}
   @keyframes cardin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   .m3-card h3{margin:0;padding-right:26px;font:700 15px/1.35 "Noto Sans JP",sans-serif}
   .m3-card .row{display:flex;flex-wrap:wrap;gap:6px;font:600 11.5px/1 "Noto Sans JP",sans-serif}
   .m3-card .row span{padding:5px 8px;border-radius:999px;background:#EEF1F8;color:#3A4466}
   .m3-card .row span.today{background:#ffd43d;color:#16204a}
+  .m3-card .mem{display:flex;flex-wrap:wrap;gap:4px 10px;max-height:66px;overflow:auto;font:500 12px/1.5 "Noto Sans JP",sans-serif;color:#2A3352}
+  .m3-card .mem .lead{font-weight:700}
+  .m3-card .mem .lead::before{content:"職長 ";font-size:10px;color:#8A93AE}
   .m3-card .go{display:flex;gap:8px;margin-top:2px}
   .m3-card .go a{flex:1;text-align:center;padding:9px 0;border-radius:10px;background:#0B1A48;color:#fff;text-decoration:none;font:700 12.5px/1 "Noto Sans JP",sans-serif}
   .m3-card .go a.sub{background:#EEF1F8;color:#0B1A48}
@@ -306,6 +309,7 @@ function showCard(el){
   var tags = p.other ? '<span>' + esc(p.st || '工事中') + '</span>' : '<span class="today">今日 ' + (p.n || 0) + '人</span>';
   c.innerHTML = '<button type="button" class="x" aria-label="閉じる">×</button><h3>' + esc(p.name) + '</h3>' + (p.title && p.title !== p.name ? '<p style="margin:-2px 0 2px;font:500 12px/1.4 Noto Sans JP,sans-serif;color:#5A6385">' + esc(p.title) + '</p>' : '')
     + '<div class="row">' + tags + '<span>' + (CO_NAME[p.own] || '') + '</span></div>'
+    + (p.mem && p.mem.length ? '<div class="mem">' + p.mem.map(function(m, k){ return '<span' + (k === 0 ? ' class="lead"' : '') + '>' + esc(m) + '</span>'; }).join('') + '</div>' : '')
     + '<div class="go"><a href="https://www.google.com/maps/search/?api=1&query=' + p.lat + ',' + p.lon + '" target="_blank" rel="noopener">地図で開く</a>'
     + (p.other ? '' : '<a class="sub" href="haichi-view-test.html">人員配置を見る</a>') + '</div>';
   c.hidden = false;
@@ -408,7 +412,7 @@ if (getPass()) showMenu(); else askPass('');
 </script>
 <script>
 // 新しい版があれば自動で読み直す（11/26：ホーム画面のアイコンが前の画面を出し続けるため）。数字は上げるたびに変える
-var BUILD_ID = "20261126-19";
+var BUILD_ID = "20261126-20";
 (function(){
   function check(){
     fetch(location.pathname + "?bust=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.text(); }).then(function(t){
