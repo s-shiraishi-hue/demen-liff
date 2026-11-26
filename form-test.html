@@ -269,6 +269,8 @@ async function main() {
     try { editor = (await liff.getProfile()).displayName || ''; } catch (e) {}
     src += '?edit=' + q.get('edit') + '&editor=' + encodeURIComponent(editor);
   }
+  // 入口のアイコンごとに出面・現調を分ける（?mode=sekou／gencho、2026-11-26）
+  else if (q.get('mode') === 'sekou' || q.get('mode') === 'gencho') src += '?mode=' + q.get('mode');
   // フォームの外側が読めたら、続きはフォームの中の待機画面に引き継ぐ
   // フォームが「準備できた」と知らせるまで読み込み画面を消さない。知らせが来ないときも、遅くとも閉じる
   waitTo(.92);
