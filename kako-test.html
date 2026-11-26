@@ -567,7 +567,7 @@ textarea.fin{min-height:64px;line-height:1.5}
 .rq .rsend{max-width:430px;border-radius:12px;min-height:50px;font-size:17px}
 .rq .rhelp{color:#6d6d72;font-size:13px}
 /* 3回目（白石さん「質素」）：行の左に色つきアイコン、上に大きな題、送るボタンに紙飛行機、表に薄い影 */
-.rq .fband .ttl{visibility:hidden}
+.rq .fband .ttl{visibility:visible;font-weight:700;font-size:17px} /* 7回目：大きな題と説明は消した（白石さん「幅とりすぎ・説明が寒い」）。題は上の帯に戻す */
 .rq .lt{max-width:430px;margin:6px auto 2px;padding:0 4px}
 .rq .lt h1{margin:0;font-size:28px;line-height:1.25;font-weight:700;letter-spacing:.01em}
 .rq .lt p{margin:2px 0 0;font-size:14px;color:#6d6d72}
@@ -601,6 +601,7 @@ textarea.fin{min-height:64px;line-height:1.5}
 .rq .rqbody{padding:4px 16px 20px}
 .rq .lt{margin:10px auto 6px}
 .rq .ih{margin:16px 16px 7px;font-size:14px}
+.rq .ig>.ih:first-child{margin-top:8px}
 .rq .ir{min-height:54px}
 .rq .il{font-size:16px}
 .rq .iv .fin{min-height:54px;font-size:17px}
@@ -1095,31 +1096,40 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
 @media (max-width:600px){
   .col>.card{border:1.5px solid #8e939b!important;box-shadow:0 1px 3px rgba(0,0,0,.14)}
 }
-/* プロの見直し 1〜3（白石さん 11/26「1〜3 をまとめて」）。iPad・PC の幅だけ。携帯は今のまま
-   1. 上の操作を2段に：題（加工管理）はタブが兼ねるので隠し、［画面のタブ］［一覧｜カレンダー］［表示 ▼］を1段に並べる
-   2. 画面のタブ（加工管理｜納品済み）は下線のタブ、一覧｜カレンダーは小さい切り替え、と形を分ける
+/* プロの見直し 3（白石さん 11/26「1〜3 をまとめて」→「上のほうは前のがよかった。配置とかは。色はいいけど」で 1・2 は戻した）。iPad・PC の幅だけ
    3. カードの状態ボタンは白地に「状態を変える ▼」だけ（状態は列の色で分かる。急ぎの札を目立たせる） */
 @media (min-width:601px){
-  .top{display:-webkit-flex!important;display:flex!important;-webkit-flex-wrap:nowrap!important;flex-wrap:nowrap!important;-webkit-align-items:flex-end!important;align-items:flex-end!important;margin:0 0 8px!important;border-bottom:1.5px solid #c9ccd2;gap:0}
-  .top>h1,.top>#today,.top>.sp{display:none!important}
-  .top>.viewbar{-webkit-order:-1;order:-1;margin:0 auto 0 0!important;-webkit-justify-content:flex-start;justify-content:flex-start}
-  .top>#updated{-webkit-order:5;order:5;font-size:11px;line-height:1.3;color:var(--sub);margin:0 0 6px 10px;max-width:84px;-webkit-flex:0 1 auto;flex:0 1 auto}
-  .top>#vt{-webkit-order:2;order:2;margin:0 10px 6px 0}
-  .top>#who{-webkit-order:3;order:3;float:none!important;margin:0 0 6px 0!important}
-  .top>#vt .vtabs{margin:0;max-width:none;border-width:1.5px;border-radius:8px}
-  .top>#vt,.top>#who{-webkit-flex:none;flex:none}
-  .top>#vt .vtabs button{-webkit-flex:none;flex:none;min-height:34px;font-size:14px;padding:0 14px;white-space:nowrap;width:auto}
-  .top>#who label,.top>#who select{white-space:nowrap}
-  /* 画面のタブ：箱をやめて下線 */
-  .viewbar .vsw{border:0!important;border-radius:0;width:auto;overflow:visible;background:none}
-  .viewbar .vsw button{background:none!important;color:#6b6f78!important;font-size:17px!important;font-weight:700;min-height:46px!important;padding:0 16px;border-bottom:4px solid transparent!important;margin-bottom:-1.5px}
-  .viewbar .vsw button[aria-selected="true"]{color:var(--ink)!important;border-bottom-color:#3a3d44!important;background:none!important}
   /* カードの状態ボタン */
   .board>.col>.card .stbtn{background:#fff!important;border:1.5px solid #c9ccd2!important;color:#3a3d44!important;min-height:34px!important;-webkit-justify-content:center;justify-content:center;padding:0 8px}
   .board>.col>.card .stbtn .lbl,.board>.col>.card .stbtn b{display:none!important}
   .board>.col>.card .stbtn .arr{color:#3a3d44!important;font-size:13px!important;font-weight:700}
   .board>.col>.card .stview{min-height:30px}
 }
+/* チャットの形（11/26）：LINE のように相手は左の白い吹き出し、自分は右の濃い吹き出し。状態を変えた記録は真ん中の小さい札。日付の区切りつき */
+.chat{background:#fff;border:1.5px solid #c9ccd2;border-radius:12px;margin:0 0 8px;overflow:hidden}
+.chath{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-between;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #e1e3e7;font-size:15px}
+.chath span{font-size:13px;color:var(--sub)}
+.chatl{background:#eef1f5;min-height:120px;max-height:300px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 10px 4px}
+.cdsep{text-align:center;margin:2px 0 8px}.cdsep span{display:inline-block;font-size:11px;color:#5d6169;background:rgba(0,0,0,.06);border-radius:999px;padding:1px 10px}
+.csys{text-align:center;margin:0 0 8px}.csys span{display:inline-block;max-width:92%;font-size:12px;line-height:1.5;color:#4d5058;background:#fff;border:1px solid #d5d8dd;border-radius:999px;padding:2px 12px}
+.cempty{text-align:center;font-size:13px;color:var(--sub);margin:28px 0}
+.cb{margin:0 0 10px;max-width:86%}.cb.me{margin-left:auto}
+.cbn{margin:0 0 2px 4px;font-size:11px;color:#5d6169}
+.cbr{display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end}
+.cb.me .cbr{-webkit-flex-direction:row-reverse;flex-direction:row-reverse}
+.cbt{margin:0;padding:8px 12px;border-radius:16px 16px 16px 4px;background:#fff;border:1px solid #d5d8dd;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.cb.me .cbt{border-radius:16px 16px 4px 16px;background:#3a3d44;border-color:#3a3d44;color:#fff}
+.cbm{-webkit-flex:none;flex:none;font-size:10px;color:#7a7e86;margin:0 4px 2px}
+.chati{display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;padding:8px;border-top:1px solid #e1e3e7;background:#fff}
+.chatph{-webkit-flex:none;flex:none;width:48px;min-height:44px;margin-right:6px;border:1.5px solid #c9ccd2;border-radius:10px;background:#fff;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;line-height:1.1;padding:2px 0}
+.chatph span{font-size:18px}.chatph small{font-size:10px;color:#4d5058}
+.chatin{-webkit-flex:1;flex:1;min-width:0;min-height:44px;max-height:120px;margin:0 6px 0 0;padding:10px 12px;border:1.5px solid #c9ccd2;border-radius:22px;font-size:16px;line-height:1.4;resize:none;background:#f6f7f9;font-family:inherit}
+.chatin:focus{outline:none;border-color:#3a3d44;background:#fff}
+.chats{-webkit-flex:none;flex:none;min-height:44px;padding:0 16px;border:0;border-radius:22px;background:#3a3d44;color:#fff;font-weight:700;font-size:15px}
+.chats:disabled{opacity:.45}
+.chatno{margin:0;padding:10px 12px;font-size:13px;color:var(--sub);text-align:center;border-top:1px solid #e1e3e7}
+.chat .talkme{margin:8px 8px 0;width:calc(100% - 16px)}
+.chat .talkline{padding:0 10px 8px}
 </style>
 
 <div class="wrap">
@@ -1284,18 +1294,18 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
   function calPopup(){var pr=calPop?rows.filter(function(r){return r.id===calPop;})[0]:null;if(!pr)return '';
     return '<div class="cpop" data-popx="1"><div class="cpin" role="dialog" aria-modal="true" aria-label="'+esc(pr.site)+'"><div class="cpbar"><span><i class="kid">'+esc(pr.id)+'</i>納期 '+esc(md(pr.due)||'なし')+'</span><button type="button" class="cpx" data-popx="1">× 閉じる</button></div>'+
       card(pr)+
-      /* 日付と写真は小窓の中だけ（白石さん 11/25「iPad も携帯と同じく1回挟む。日にちと写真の入れ替え・追加はそこに」） */
-      (pr.status==='納品済み'?'<div class="cpdd"><span>納品日 <b>'+esc(md(pr.deliveredAt)||'—')+'</b></span>'+(canEdit()?'<button type="button" class="cpddb" data-dd="'+esc(pr.id)+'">📅 納品日を直す</button>':'')+'</div>':
-        '<div class="cpdd due"><span>納期 <b>'+esc(md(pr.due)||'なし')+'</b>'+(pr.rush?'<i>即日</i>':'')+'</span>'+(canEdit()?'<button type="button" class="cpddb" data-due="'+esc(pr.id)+'">📅 納期を変える</button>':'')+'</div>'+
-        '<div class="cpdd ph"><span>写真 <b>'+(pr.imageCount||0)+'枚</b></span>'+(canEdit()?'<button type="button" class="cpddb" data-fix="'+esc(pr.id)+'">📷 入れ替え・追加</button>':'')+'</div>')+
-      /* やりとり（白石さん 11/25「カードにチャットみたいな欄」）：書いたことと、変えた記録が時刻の順に並ぶ。LINE から開いたときはグループにも送れる */
-      '<div class="talk"><p class="talkh">やりとり</p><div class="talkl" id="talkL"><p class="tlog">読み込み中…</p></div>'+
-        (!canEdit()?'<p class="tlog talkno">直してほしいこと・連絡は、LINE のグループへ</p>':(whoAmI()?'':'<input class="fin talkme" id="talkMe" placeholder="あなたの名前" autocomplete="name">')+
-        '<div class="talki"><textarea class="fin" id="talkIn" rows="2" placeholder="ひとこと（例：寸法が変わりました）"></textarea><button type="button" class="talks" data-talk-send="'+esc(pr.id)+'">送る</button></div>'+
+      /* 11/26 白石さん「工場長が納期は変えないだろう」「写真入れ替えや、やり取りも質上げれる？チャット的なイメージ」「こんな履歴がありますみたいな素人感」：
+         納期を変える行は外した（納期はカードに出ている）。写真とやりとりは LINE のようなチャットに。下の入力欄の左の［📷］で写真を足す・入れ替える */
+      (pr.status==='納品済み'?'<div class="cpdd"><span>納品日 <b>'+esc(md(pr.deliveredAt)||'—')+'</b></span>'+(canEdit()?'<button type="button" class="cpddb" data-dd="'+esc(pr.id)+'">📅 納品日を直す</button>':'')+'</div>':'')+
+      '<div class="chat"><div class="chath"><b>やりとり</b><span>写真 '+(pr.imageCount||0)+'枚</span></div><div class="chatl" id="talkL"><p class="csys">読み込み中…</p></div>'+
+        (!canEdit()?'<p class="chatno">直してほしいこと・連絡は、LINE のグループへ</p>':(whoAmI()?'':'<input class="fin talkme" id="talkMe" placeholder="あなたの名前" autocomplete="name">')+
+        '<div class="chati"><button type="button" class="chatph" data-fix="'+esc(pr.id)+'" aria-label="写真を足す・入れ替える"><span aria-hidden="true">📷</span><small>写真</small></button><textarea class="chatin" id="talkIn" rows="1" placeholder="メッセージを入力"></textarea><button type="button" class="chats" data-talk-send="'+esc(pr.id)+'" aria-label="送る">送る</button></div>'+
         (LINE_NOTICE_ALL?'<label class="fchk talkline"><input type="checkbox" id="talkLine"'+(window.KAKO_IN_LINE?' checked':'')+'>LINE のグループにも送る</label>':''))+'</div>'+
       '</div></div>';}
   function loadTalk(id){rpc('shiraishiListRequestTalk',id).then(function(res){var box=$('talkL');if(!box||calPop!==id)return;var items=(res&&res.items)||[],me=whoAmI();
-    box.innerHTML=items.length?items.map(function(t){return t.kind==='msg'?'<div class="tm'+(me&&t.by===me?' me':'')+'"><p class="tmh"><b>'+esc(t.by||'名前なし')+'</b><span>'+esc(t.at)+'</span></p><p class="tmb">'+esc(t.text)+'</p></div>':'<p class="tlog">'+esc(t.at)+'　'+esc(t.by||'')+(t.by?'：':'')+esc(t.text)+'</p>';}).join(''):'<p class="tlog">まだやりとりはありません</p>';
+    var prev='';box.innerHTML=items.length?items.map(function(t){var mine=!!(me&&t.by===me),day=String(t.at||'').split(' ')[0],dsep=(/\//.test(day)&&day!==prev)?'<p class="cdsep"><span>'+esc(day)+'</span></p>':'';if(/\//.test(day))prev=day;var tm=String(t.at||'').split(' ').pop();
+      if(t.kind!=='msg')return dsep+'<p class="csys"><span>'+esc(t.by||'')+(t.by?' が ':'')+esc(t.text)+'　'+esc(tm)+'</span></p>';
+      return dsep+'<div class="cb'+(mine?' me':'')+'">'+(mine?'':'<p class="cbn">'+esc(t.by||'名前なし')+'</p>')+'<div class="cbr"><p class="cbt">'+esc(t.text)+'</p><span class="cbm">'+esc(tm)+'</span></div></div>';}).join(''):'<p class="cempty">まだやりとりはありません。<br>下の欄から書けます。</p>';
     box.scrollTop=box.scrollHeight;},function(){var box=$('talkL');if(box)box.innerHTML='<p class="tlog">読めませんでした</p>';});}
   /* LINE のグループにも送る：LINE から開いたとき（LIFF）は、その人の名前でグループに送る（シロの送る数には入らない）。見本では送る中身を出すだけ */
   /* 加工ID も入れる（白石さん 11/25「加工番号もどこかに入ったほうが事務は分かりやすい」） */
@@ -1424,11 +1434,8 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
   function byDue(a,b){return (a.due||'9999').localeCompare(b.due||'9999')||(b.rush-a.rush)||a.id.localeCompare(b.id);}
   function setView(v){view=v;render();window.scrollTo(0,0);}
   function mine(){return rows.filter(function(r){return !me||r.worker===me;});}
-  /* iPad・PC の幅では［一覧｜カレンダー］と［表示 ▼］を上の段に入れる（携帯は上の段の下のまま） */
-  function placeBar(){var t=document.querySelector('.top'),vt=$('vt'),wh=$('who');if(!t||!vt||!wh)return;if(!isPhone()){if(vt.parentNode!==t){t.appendChild(vt);t.appendChild(wh);}}else if(vt.parentNode===t){t.parentNode.insertBefore(vt,t.nextSibling);t.parentNode.insertBefore(wh,t.nextSibling);}}
   function render(){
     var all=rows;rows=mine();
-    placeBar();
     try{
     var isDone=view==='done',done=rows.filter(function(r){return r.status==='納品済み';});
     $('title').textContent=isDone?'納品済み':'加工管理';
@@ -1871,7 +1878,6 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
     var box=document.createElement('div');box.className='ed rq';box.id='rqBox';box.setAttribute('role','dialog');box.setAttribute('aria-label','加工を依頼する');
     box.innerHTML='<div class="fband"><button class="eb" type="button" id="rqClose" aria-label="加工管理の画面へ戻る">‹ 加工管理へ</button><span class="ttl">'+(editing?'依頼を直す':'加工を依頼する')+'</span></div>'+
      '<div class="rqbody" id="rqBody"><div class="ig">'+
-      '<div class="lt"><h1>'+(editing?'依頼を直す':'加工を依頼する')+'</h1><p>'+(editing?esc(editing.id):'写真と現場を選んで送るだけ')+'</p></div>'+
       /* 11/26 白石さん：会社 → 依頼者 → 現場名（元請は自動）。2回目「iPhone の設定画面みたいにぎゅっと」：1行44pxの表 */
       '<p class="ih">依頼する現場</p><div class="ib">'+
        irow('会社',true,radios('rqCo',COMPANIES.map(function(c){return [c,c.replace(/工業$|板金.*$/,'')];}),co).replace('class="frad"','class="frad seg"'),'rqCo','co')+
