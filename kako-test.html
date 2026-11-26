@@ -1327,7 +1327,8 @@ body.haskbar .ed,body.haskbar .sheet,body.haskbar .viewer,body.haskbar .cpop{top
       '<div class="chat"><div class="chath"><b>やりとり</b><span>写真 '+(pr.imageCount||0)+'枚</span></div><div class="chatl" id="talkL"><p class="csys">読み込み中…</p></div>'+
         ('<p class="chatwho">'+esc(talkName(pr))+' として書きます</p>'+
         '<div class="chati"><button type="button" class="chatph" data-fix="'+esc(pr.id)+'" aria-label="写真を足す・入れ替える"><span aria-hidden="true">📷</span><small>写真</small></button><textarea class="chatin" id="talkIn" rows="1" placeholder="メッセージを入力"></textarea><button type="button" class="chats" data-talk-send="'+esc(pr.id)+'" aria-label="送る">送る</button></div>'+
-        (LINE_NOTICE_ALL?'<label class="fchk talkline"><input type="checkbox" id="talkLine"'+(window.KAKO_IN_LINE?' checked':'')+'>LINE のグループにも送る</label>':''))+'</div>'+
+        /* 11/26 白石さん「このコメントは一応グループに返すかやね。機能はつけておこうか」：やりとりに書いたことを、加工番号つきでグループにも送る（最初からチェックあり。外せば送らない） */
+        '<label class="fchk talkline"><input type="checkbox" id="talkLine" checked>LINE のグループにも送る</label>')+'</div>'+
       '</div></div>';}
   function loadTalk(id){rpc('shiraishiListRequestTalk',id).then(function(res){var box=$('talkL');if(!box||calPop!==id)return;var items=((res&&res.items)||[]).slice(),tr0=rows.filter(function(x){return x.id===id;})[0],me=talkName(tr0);
     /* 依頼のメモ（加工の内容）を、いちばん上に頼んだ人の吹き出しで出す（白石さん 11/26「メモがちゃんと出るように」） */
